@@ -1,0 +1,3558 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <meta name="description"
+    content="اختبار سرعة الإنترنت للألعاب — منصة تيراكس بلاس (Terrax Plus) لقياس زمن الاستجابة (Ping) والتذبذب (Jitter) وسرعتي التنزيل والرفع للألعاب التنافسية والبث المباشر بهوية 4K زجاجية." />
+  <meta property="og:title" content="Terrax Plus — اختبار سرعة الإنترنت للألعاب 4K" />
+  <meta property="og:description"
+    content="منصة الفحص المركزية للألعاب التنافسية والبث المباشر مبنية على محرك LibreSpeed الفعلي." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#0c1f3f" />
+  <link rel="shortcut icon" href="images/favicon.svg" />
+  <link rel="manifest" href="../manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="../images/icon-192.png" />
+  <script>
+    (function () {
+      function isTransitionAbort(err) {
+        if (!err) return false;
+        var msg = String((err && (err.message || err.toString())) || err || "");
+        var name = String((err && err.name) || "");
+        return (
+          msg.indexOf("Transition was skipped") !== -1 ||
+          msg.indexOf("Transition was aborted") !== -1 ||
+          msg.indexOf("Document hidden") !== -1 ||
+          msg.indexOf("Navigation aborted") !== -1 ||
+          ((name === "AbortError" || name === "InvalidStateError") &&
+            (msg.indexOf("Transition") !== -1 || msg.indexOf("navigation") !== -1 || msg.indexOf("Document") !== -1))
+        );
+      }
+      window.addEventListener("unhandledrejection", function (event) {
+        if (isTransitionAbort(event.reason)) {
+          if (typeof event.preventDefault === "function") event.preventDefault();
+          if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+          return true;
+        }
+      }, true);
+      window.addEventListener("error", function (event) {
+        var err = event && (event.error || event.message);
+        if (isTransitionAbort(err) || isTransitionAbort(event && event.message)) {
+          if (typeof event.preventDefault === "function") event.preventDefault();
+          if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+          return true;
+        }
+      }, true);
+      if (typeof document !== "undefined" && typeof document.startViewTransition === "function") {
+        var origVt = document.startViewTransition;
+        document.startViewTransition = function (cb) {
+          if (document.visibilityState === "hidden") {
+            if (typeof cb === "function") {
+              try { cb(); } catch (err) {}
+            }
+            return {
+              finished: Promise.resolve(),
+              ready: Promise.resolve(),
+              updateCallbackDone: Promise.resolve(),
+              skipTransition: function () {}
+            };
+          }
+          try {
+            var vt = origVt.call(document, cb);
+            if (vt) {
+              if (typeof vt.finished === "object" && vt.finished && typeof vt.finished.catch === "function") {
+                vt.finished.catch(function () {});
+              }
+              if (typeof vt.ready === "object" && vt.ready && typeof vt.ready.catch === "function") {
+                vt.ready.catch(function () {});
+              }
+            }
+            return vt;
+          } catch (e) {
+            if (typeof cb === "function") {
+              try { cb(); } catch (cbErr) {}
+            }
+            return {
+              finished: Promise.resolve(),
+              ready: Promise.resolve(),
+              updateCallbackDone: Promise.resolve(),
+              skipTransition: function () {}
+            };
+          }
+        };
+      }
+    })();
+  </script>
+  <link rel="stylesheet" type="text/css" href="styling/fonts.css" onerror="this.onerror=null;this.href='frontend/styling/fonts.css';" />
+  <link rel="stylesheet" type="text/css" href="styling/toast.css" onerror="this.onerror=null;this.href='frontend/styling/toast.css';" />
+  <link rel="stylesheet" type="text/css" href="styling/button.css" onerror="this.onerror=null;this.href='frontend/styling/button.css';" />
+  <link rel="prefetch" href="index.html" />
+  <link rel="prefetch" href="stability.html" />
+  <script>window.yaContextCb=window.yaContextCb||[]</script>
+  <script src="https://yandex.ru/ads/system/context.js" async></script>
+  <script type="text/javascript" src="../speedtest.js" onerror="this.onerror=null;this.src='speedtest.js';"></script>
+  <script type="text/javascript" src="javascript/telemetry-math.js" onerror="this.onerror=null;this.src='frontend/javascript/telemetry-math.js';"></script>
+  <script type="text/javascript" src="javascript/ad-slots.js" onerror="this.onerror=null;this.src='frontend/javascript/ad-slots.js';"></script>
+  <title>Terrax Plus — اختبار سرعة الإنترنت للألعاب | Gaming Speed Test 4K</title>
+  <style>
+    :root {
+      --bg-primary: #0c1f3f;
+      --bg-secondary: #132d58;
+      --glass-panel: #19386b;
+      --cyber-cyan: #27DDF8;
+      --electric-blue: #378DFF;
+      --holo-purple: #C477FF;
+      --status-green: #78E7A0;
+      --status-yellow: #F5C46B;
+      --status-red: #FF647C;
+      --text-primary: #FFFFFF;
+      --text-secondary: #C4D6ED;
+      --font-sans-ar: "Cairo", "Inter", system-ui, -apple-system, sans-serif;
+      --font-ar: "Cairo", "Inter", system-ui, -apple-system, sans-serif;
+      --font-num: "Inter", "Cairo", system-ui, -apple-system, sans-serif;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    @view-transition {
+      navigation: none;
+    }
+
+    ::view-transition-old(root) {
+      animation: gamingPageFadeOut 170ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    ::view-transition-new(root) {
+      animation: gamingPageFadeIn 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes gamingPageFadeOut {
+      from { opacity: 1; transform: scale(1) translate3d(0, 0, 0); }
+      to { opacity: 0; transform: scale(0.992) translate3d(0, 4px, 0); }
+    }
+
+    @keyframes gamingPageFadeIn {
+      from { opacity: 0; transform: scale(0.992) translate3d(0, 6px, 0); }
+      to { opacity: 1; transform: scale(1) translate3d(0, 0, 0); }
+    }
+
+    html {
+      font-size: 62.5%;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      color-scheme: dark;
+      scroll-behavior: smooth;
+      overscroll-behavior-y: none;
+      -webkit-overflow-scrolling: touch;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(39, 221, 248, 0.45) rgba(8, 22, 48, 0.45);
+      overflow-x: clip;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      width: 100%;
+      max-width: 100vw;
+      font-family: var(--font-ar);
+      font-size: 1.45rem;
+      line-height: 1.55;
+      color: var(--text-primary);
+      background:
+        radial-gradient(circle at 50% 0%, rgba(39, 221, 248, 0.24) 0%, transparent 55%),
+        radial-gradient(circle at 82% 28%, rgba(196, 119, 255, 0.20) 0%, transparent 48%),
+        radial-gradient(circle at 18% 75%, rgba(55, 141, 255, 0.22) 0%, transparent 52%),
+        linear-gradient(180deg, rgba(12, 31, 63, 0.84) 0%, rgba(19, 45, 88, 0.88) 55%, rgba(14, 36, 72, 0.92) 100%),
+        url("images/background.jpeg");
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding:
+        max(0.85rem, env(safe-area-inset-top, 0px))
+        clamp(0.75rem, 2.2vw, 1.8rem)
+        calc(1.35rem + env(safe-area-inset-bottom, 0px));
+      overflow-x: clip;
+      position: relative;
+      touch-action: manipulation;
+      transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    body.terrax-page-leaving {
+      opacity: 0;
+      transform: scale(0.992) translate3d(0, 4px, 0);
+      pointer-events: none;
+    }
+
+    /* Ambient Cyber Backdrop & Electronic Traces */
+    .gaming-backdrop {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .gaming-grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(39, 221, 248, 0.085) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(39, 221, 248, 0.085) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0.98) 38%, transparent 92%);
+      -webkit-mask-image: radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0.98) 38%, transparent 92%);
+    }
+
+    .gaming-traces-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.9;
+    }
+
+    .trace-line {
+      stroke: rgba(39, 221, 248, 0.24);
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .trace-pulse-cyan {
+      stroke: var(--cyber-cyan);
+      stroke-width: 2.5;
+      fill: none;
+      stroke-dasharray: 220 900;
+      animation: traceFlow 6.5s linear infinite;
+      filter: drop-shadow(0 0 7px var(--cyber-cyan));
+    }
+
+    .trace-pulse-purple {
+      stroke: var(--holo-purple);
+      stroke-width: 2.5;
+      fill: none;
+      stroke-dasharray: 220 900;
+      animation: traceFlow 8s linear infinite reverse;
+      filter: drop-shadow(0 0 7px var(--holo-purple));
+    }
+
+    @keyframes traceFlow {
+      0% { stroke-dashoffset: 1120; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    /* Main 4K Cyber Glass Shell */
+    .gaming-shell {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 112rem;
+      min-width: 0;
+      background: linear-gradient(
+        165deg,
+        rgba(22, 50, 96, 0.28) 0%,
+        rgba(16, 38, 76, 0.34) 55%,
+        rgba(14, 34, 68, 0.30) 100%
+      );
+      border: 1.5px solid rgba(39, 221, 248, 0.48);
+      border-radius: clamp(1.5rem, 2.2vw, 2.4rem);
+      box-shadow:
+        0 20px 56px rgba(8, 22, 48, 0.38),
+        0 0 38px rgba(39, 221, 248, 0.22),
+        inset 0 1px 1px rgba(240, 246, 255, 0.32);
+      backdrop-filter: blur(4px) saturate(145%);
+      -webkit-backdrop-filter: blur(4px) saturate(145%);
+      padding: clamp(0.85rem, 1.5vw, 1.35rem) clamp(0.85rem, 1.8vw, 1.85rem);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(0.85rem, 1.2vw, 1.1rem);
+      animation: gamingShellEntrance 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      will-change: transform, opacity;
+      overflow: hidden;
+    }
+
+    @keyframes gamingShellEntrance {
+      0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.988); }
+      100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    /* Header */
+    .gaming-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.9rem 1.2rem;
+      padding: clamp(0.7rem, 1.2vw, 0.9rem) clamp(0.9rem, 1.6vw, 1.5rem);
+      border-radius: 1.5rem;
+      background:
+        repeating-linear-gradient(90deg, rgba(39, 221, 248, 0.04) 0px, rgba(39, 221, 248, 0.04) 1px, transparent 1px, transparent 36px),
+        linear-gradient(90deg, rgba(20, 48, 96, 0.34) 0%, rgba(14, 34, 72, 0.30) 100%);
+      border: 1px solid rgba(39, 221, 248, 0.46);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      min-width: 0;
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 0.95rem;
+      min-width: 0;
+    }
+
+    .brand-shield {
+      width: 4rem;
+      height: 4rem;
+      border-radius: 1.1rem;
+      background: radial-gradient(circle at 30% 30%, rgba(39, 221, 248, 0.28), rgba(16, 35, 66, 0.95));
+      border: 1px solid rgba(39, 221, 248, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--cyber-cyan);
+      box-shadow: 0 0 16px rgba(39, 221, 248, 0.28);
+      flex-shrink: 0;
+    }
+
+    .brand-shield svg {
+      width: 2.2rem;
+      height: 2.2rem;
+    }
+
+    .brand-titles {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .brand-ar {
+      font-size: clamp(1.55rem, 1.8vw, 1.85rem);
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.25;
+    }
+
+    .brand-ar span {
+      color: var(--cyber-cyan);
+      text-shadow: 0 0 12px rgba(39, 221, 248, 0.45);
+    }
+
+    .brand-tag {
+      font-size: clamp(1rem, 1.15vw, 1.12rem);
+      font-weight: 600;
+      color: var(--text-secondary);
+      line-height: 1.3;
+    }
+
+    .page-title-cluster {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .page-main-title {
+      font-size: clamp(1.55rem, 2vw, 2rem);
+      font-weight: 800;
+      color: var(--text-primary);
+      text-shadow: 0 0 16px rgba(39, 221, 248, 0.35);
+      line-height: 1.3;
+    }
+
+    .page-sub-caption {
+      font-family: var(--font-num);
+      font-size: clamp(0.9rem, 1.05vw, 1.08rem);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--cyber-cyan);
+      line-height: 1.25;
+    }
+
+    .header-status-text {
+      font-size: clamp(1.12rem, 1.2vw, 1.25rem);
+      font-weight: 700;
+      color: var(--cyber-cyan);
+      padding: 0.48rem 1.15rem;
+      border-radius: 0.95rem;
+      background: rgba(16, 38, 78, 0.65);
+      border: 1px solid rgba(39, 221, 248, 0.38);
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Section A: Integrated Server Selector Bar */
+    .gaming-server-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem 1.2rem;
+      padding: clamp(0.7rem, 1.1vw, 0.85rem) clamp(0.9rem, 1.5vw, 1.35rem);
+      border-radius: 1.4rem;
+      background:
+        repeating-linear-gradient(90deg, rgba(39, 221, 248, 0.035) 0px, rgba(39, 221, 248, 0.035) 1px, transparent 1px, transparent 32px),
+        rgba(18, 44, 86, 0.38);
+      border: 1px solid rgba(55, 141, 255, 0.46);
+      min-width: 0;
+    }
+
+    .server-bar-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem 1rem;
+      flex: 1 1 26rem;
+      min-width: 0;
+    }
+
+    .server-bar-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-size: clamp(1.18rem, 1.25vw, 1.3rem);
+      font-weight: 700;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .server-bar-label svg {
+      width: 1.75rem;
+      height: 1.75rem;
+      color: var(--cyber-cyan);
+      flex-shrink: 0;
+    }
+
+    .cyber-select {
+      font-family: var(--font-ar);
+      font-size: clamp(1.2rem, 1.25vw, 1.3rem);
+      font-weight: 700;
+      color: var(--text-primary);
+      background: rgba(14, 34, 72, 0.78);
+      border: 1px solid rgba(39, 221, 248, 0.52);
+      border-radius: 0.95rem;
+      padding: 0.5rem 1.1rem;
+      min-height: 3.6rem;
+      cursor: pointer;
+      outline: none;
+      flex: 1 1 18rem;
+      min-width: 0;
+      max-width: 100%;
+      text-overflow: ellipsis;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .cyber-select:hover:not(:disabled),
+    .cyber-select:focus-visible {
+      border-color: var(--cyber-cyan);
+      box-shadow: 0 0 12px rgba(39, 221, 248, 0.32);
+    }
+
+    .cyber-select:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .cyber-select option {
+      background-color: #132d58;
+      color: #ffffff;
+    }
+
+    .server-meta-inline {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem 0.85rem;
+      font-size: clamp(1.1rem, 1.18vw, 1.22rem);
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .server-meta-inline > span,
+    .server-meta-inline > a {
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .server-meta-inline strong {
+      color: var(--text-primary);
+      font-weight: 700;
+      unicode-bidi: plaintext;
+    }
+
+    .meta-sep {
+      color: rgba(39, 221, 248, 0.5);
+    }
+
+    /* Section B & C Grid: Gaming Core HUD + Smart Verdict & Waveform */
+    .gaming-top-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+      gap: clamp(0.85rem, 1.2vw, 1.15rem);
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .cyber-panel-box {
+      border-radius: clamp(1.4rem, 1.8vw, 1.8rem);
+      background:
+        radial-gradient(circle at 50% 100%, rgba(39, 221, 248, 0.14) 0%, transparent 62%),
+        linear-gradient(165deg, rgba(20, 48, 96, 0.34) 0%, rgba(14, 34, 72, 0.40) 100%);
+      border: 1.2px solid rgba(39, 221, 248, 0.48);
+      box-shadow:
+        0 12px 32px rgba(8, 22, 48, 0.32),
+        inset 0 1px 1px rgba(240, 246, 255, 0.24);
+      padding: clamp(0.95rem, 1.5vw, 1.3rem) clamp(0.95rem, 1.6vw, 1.5rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.95rem;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    /* Section B: Gaming Core HUD & Speed Gauge */
+    .hud-main-stage {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: clamp(0.9rem, 1.4vw, 1.35rem);
+      min-width: 0;
+    }
+
+    .gaming-core-dial {
+      position: relative;
+      width: clamp(16.8rem, 19vw, 20.8rem);
+      height: clamp(16.8rem, 19vw, 20.8rem);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .gaming-core-dial svg.dial-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .dial-outer-ring {
+      fill: none;
+      stroke: rgba(39, 221, 248, 0.32);
+      stroke-width: 1.5;
+    }
+
+    .dial-inner-ring {
+      fill: rgba(12, 28, 60, 0.58);
+      stroke: rgba(196, 119, 255, 0.38);
+      stroke-width: 1.5;
+    }
+
+    .dial-ticks {
+      fill: none;
+      stroke: rgba(39, 221, 248, 0.38);
+      stroke-width: 4;
+    }
+
+    .dial-track {
+      fill: none;
+      stroke: rgba(18, 44, 88, 0.85);
+      stroke-width: 10;
+      stroke-linecap: round;
+    }
+
+    .dial-active-arc {
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dasharray 0.16s ease-out;
+    }
+
+    .dial-center-readout {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1.6rem;
+      pointer-events: none;
+    }
+
+    .dial-kicker {
+      font-size: clamp(1.02rem, 1.1vw, 1.15rem);
+      font-weight: 700;
+      color: var(--text-secondary);
+      line-height: 1.25;
+    }
+
+    .dial-ping-number {
+      font-family: var(--font-num);
+      font-size: clamp(3rem, 3.4vw, 3.7rem);
+      font-weight: 900;
+      line-height: 1.05;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 0 18px rgba(39, 221, 248, 0.78);
+      margin: 0.15rem 0;
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+
+    .dial-ping-unit {
+      font-family: var(--font-num);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--cyber-cyan);
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+
+    .dial-phase-tag {
+      font-size: clamp(1rem, 1.1vw, 1.14rem);
+      font-weight: 700;
+      color: #bae6fd;
+      margin-top: 0.28rem;
+      max-width: 100%;
+      line-height: 1.25;
+    }
+
+    /* Core Telemetry Metrics Grid next to Dial */
+    .hud-telemetry-grid {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.7rem;
+    }
+
+    .hud-metric-tile {
+      padding: 0.8rem 0.95rem;
+      border-radius: 1.2rem;
+      background: rgba(14, 34, 72, 0.58);
+      border: 1px solid rgba(39, 221, 248, 0.36);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.25rem;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .hud-metric-tile.purple-accent {
+      border-color: rgba(196, 119, 255, 0.44);
+    }
+
+    .hud-metric-tile.green-accent {
+      border-color: rgba(120, 231, 160, 0.44);
+    }
+
+    .tile-label-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.15rem 0.35rem;
+      font-size: clamp(0.96rem, 1.04vw, 1.12rem);
+      font-weight: 700;
+      color: var(--text-secondary);
+      min-width: 0;
+    }
+
+    .tile-label-row > span:first-child {
+      min-width: 0;
+      line-height: 1.25;
+    }
+
+    .tile-label-en {
+      font-family: var(--font-num);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #94a3b8;
+      flex-shrink: 0;
+      letter-spacing: 0.02em;
+    }
+
+    .tile-value-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: flex-start;
+      gap: 0.4rem;
+      direction: ltr;
+      unicode-bidi: isolate;
+      min-width: 0;
+    }
+
+    .tile-num {
+      display: inline-block;
+      font-family: var(--font-num);
+      font-size: clamp(1.85rem, 2.1vw, 2.2rem);
+      font-weight: 900;
+      line-height: 1.15;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1, "zero" 1;
+      transform-origin: center baseline;
+      will-change: transform, opacity, filter;
+      transition:
+        transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
+        filter 180ms ease;
+      text-shadow: 0 0 12px rgba(39, 221, 248, 0.55);
+      white-space: nowrap;
+    }
+
+    @keyframes gamingTileNumPulse {
+      0% {
+        transform: translateY(1.2px) scale(0.985);
+        opacity: 0.92;
+      }
+      45% {
+        transform: translateY(0) scale(1.03);
+        opacity: 1;
+        filter: brightness(1.12);
+      }
+      100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+        filter: brightness(1);
+      }
+    }
+
+    .tile-num.num-scaling {
+      animation: gamingTileNumPulse 210ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .hud-metric-tile.purple-accent .tile-num {
+      text-shadow: 0 0 12px rgba(196, 119, 255, 0.55);
+    }
+
+    .hud-metric-tile.green-accent .tile-num {
+      text-shadow: 0 0 12px rgba(120, 231, 160, 0.55);
+    }
+
+    .tile-unit {
+      font-family: var(--font-num);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--cyber-cyan);
+      white-space: nowrap;
+    }
+
+    /* Sub-metrics strip for Min / Avg / Max Ping & Packet Loss */
+    .hud-submetrics-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.55rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 1.15rem;
+      background: rgba(10, 25, 54, 0.62);
+      border: 1px solid rgba(39, 221, 248, 0.3);
+      min-width: 0;
+    }
+
+    .submetric-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.14rem;
+      text-align: center;
+      min-width: 0;
+      padding: 0.15rem 0.2rem;
+    }
+
+    .submetric-label {
+      font-size: clamp(0.96rem, 1.05vw, 1.04rem);
+      font-weight: 700;
+      color: var(--text-secondary);
+      line-height: 1.25;
+      max-width: 100%;
+    }
+
+    .submetric-val {
+      font-family: var(--font-num);
+      font-size: clamp(1.15rem, 1.25vw, 1.28rem);
+      font-weight: 800;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+      unicode-bidi: isolate;
+      white-space: nowrap;
+    }
+
+    .submetric-val.loss-alert {
+      color: var(--status-red);
+    }
+
+    /* 5-Tier Ping Classification Scale Bar */
+    .ping-scale-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.45rem;
+      margin-top: 0.15rem;
+      min-width: 0;
+    }
+
+    .ping-tier-pill {
+      padding: 0.42rem 0.35rem;
+      border-radius: 0.85rem;
+      background: rgba(12, 28, 60, 0.65);
+      border: 1px solid rgba(39, 221, 248, 0.22);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.12rem;
+      text-align: center;
+      opacity: 0.68;
+      min-width: 0;
+      transition: transform 0.2s ease, opacity 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .ping-tier-pill .tier-range {
+      font-family: var(--font-num);
+      font-size: clamp(0.88rem, 0.98vw, 0.98rem);
+      font-weight: 700;
+      color: var(--text-secondary);
+      direction: ltr;
+      unicode-bidi: isolate;
+      white-space: nowrap;
+    }
+
+    .ping-tier-pill .tier-name {
+      font-size: clamp(0.98rem, 1.06vw, 1.08rem);
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.25;
+    }
+
+    .ping-tier-pill.active-tier {
+      opacity: 1;
+      transform: translateY(-1px);
+      background: rgba(20, 48, 96, 0.88);
+      border-color: var(--cyber-cyan);
+      box-shadow: 0 0 14px rgba(39, 221, 248, 0.3);
+    }
+
+    .ping-tier-pill.active-tier[data-tier="1"] { border-color: var(--status-green); box-shadow: 0 0 14px rgba(120, 231, 160, 0.35); }
+    .ping-tier-pill.active-tier[data-tier="1"] .tier-name { color: var(--status-green); }
+    .ping-tier-pill.active-tier[data-tier="2"] { border-color: var(--cyber-cyan); }
+    .ping-tier-pill.active-tier[data-tier="2"] .tier-name { color: var(--cyber-cyan); }
+    .ping-tier-pill.active-tier[data-tier="3"] { border-color: var(--electric-blue); }
+    .ping-tier-pill.active-tier[data-tier="3"] .tier-name { color: #7cc4ff; }
+    .ping-tier-pill.active-tier[data-tier="4"] { border-color: var(--status-yellow); }
+    .ping-tier-pill.active-tier[data-tier="4"] .tier-name { color: var(--status-yellow); }
+    .ping-tier-pill.active-tier[data-tier="5"] { border-color: var(--status-red); box-shadow: 0 0 14px rgba(255, 100, 124, 0.35); }
+    .ping-tier-pill.active-tier[data-tier="5"] .tier-name { color: var(--status-red); }
+
+    .ping-scale-note {
+      font-size: clamp(0.98rem, 1.04vw, 1.05rem);
+      color: var(--text-secondary);
+      line-height: 1.45;
+      margin-top: 0.1rem;
+    }
+
+    /* CTA Control Row inside HUD */
+    .gaming-cta-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      margin-top: 0.15rem;
+      min-width: 0;
+    }
+
+    .gaming-cta-buttons {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      min-width: 0;
+    }
+
+    button#gaming-start-btn {
+      flex: 1;
+      min-height: 4.6rem;
+      padding: 0.6rem 1.8rem;
+      border-radius: 1.35rem;
+      border: 1.5px solid rgba(39, 221, 248, 0.78);
+      background: linear-gradient(
+        90deg,
+        rgba(12, 42, 78, 0.95) 0%,
+        rgba(39, 221, 248, 0.28) 50%,
+        rgba(55, 141, 255, 0.35) 100%
+      );
+      color: var(--text-primary);
+      font-family: var(--font-ar);
+      font-size: clamp(1.42rem, 1.6vw, 1.6rem);
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      text-align: center;
+      box-shadow:
+        0 10px 26px rgba(39, 221, 248, 0.24),
+        inset 0 1px 2px rgba(255, 255, 255, 0.32);
+      transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    button#gaming-start-btn:hover:not(.disabled) {
+      transform: translateY(-1px);
+      border-color: #a5f3fc;
+      box-shadow:
+        0 14px 32px rgba(39, 221, 248, 0.36),
+        0 0 24px rgba(39, 221, 248, 0.42);
+    }
+
+    button#gaming-start-btn.running {
+      border-color: rgba(255, 100, 124, 0.85);
+      background: linear-gradient(
+        90deg,
+        rgba(76, 5, 25, 0.92) 0%,
+        rgba(225, 29, 72, 0.82) 50%,
+        rgba(76, 5, 25, 0.92) 100%
+      );
+    }
+
+    button#gaming-start-btn.disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .gaming-progress-track {
+      width: 100%;
+      height: 0.42rem;
+      border-radius: 999px;
+      background: rgba(18, 44, 88, 0.85);
+      border: 1px solid rgba(39, 221, 248, 0.36);
+      overflow: hidden;
+    }
+
+    .gaming-progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--electric-blue), var(--cyber-cyan), var(--holo-purple));
+      transition: width 0.18s linear;
+    }
+
+    .gaming-progress-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: clamp(1.05rem, 1.15vw, 1.15rem);
+      color: var(--text-secondary);
+      min-width: 0;
+    }
+
+    #gamingProgressPhase {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #gamingProgressPct {
+      font-family: var(--font-num);
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      color: var(--cyber-cyan);
+      flex-shrink: 0;
+    }
+
+    /* Section C: Smart Verdict & Section E: Real-time Waveform */
+    .verdict-and-wave-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    .verdict-cards-split {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem;
+      min-width: 0;
+    }
+
+    .verdict-box {
+      padding: 0.9rem 1.05rem;
+      border-radius: 1.3rem;
+      background: rgba(14, 34, 72, 0.56);
+      border: 1px solid rgba(39, 221, 248, 0.38);
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      min-width: 0;
+    }
+
+    .verdict-box.streaming-box {
+      border-color: rgba(196, 119, 255, 0.42);
+    }
+
+    .verdict-kicker {
+      font-size: clamp(1.04rem, 1.12vw, 1.14rem);
+      font-weight: 700;
+      color: var(--text-secondary);
+      line-height: 1.3;
+    }
+
+    .verdict-headline {
+      font-size: clamp(1.3rem, 1.45vw, 1.46rem);
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.32;
+    }
+
+    .verdict-headline.great { color: var(--status-green); }
+    .verdict-headline.good { color: var(--cyber-cyan); }
+    .verdict-headline.poor { color: var(--status-yellow); }
+    .verdict-headline.bad { color: var(--status-red); }
+
+    .verdict-desc {
+      font-size: clamp(1.05rem, 1.12vw, 1.14rem);
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    /* Section E: Real-time Ping & Jitter Stability Waveform */
+    .waveform-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      padding: 0.9rem 1.05rem;
+      border-radius: 1.3rem;
+      background: rgba(12, 28, 60, 0.58);
+      border: 1px solid rgba(55, 141, 255, 0.42);
+      min-width: 0;
+    }
+
+    .waveform-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem 0.8rem;
+      min-width: 0;
+    }
+
+    .waveform-title {
+      font-size: clamp(1.18rem, 1.3vw, 1.32rem);
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    .waveform-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem 1.1rem;
+      font-size: clamp(1.02rem, 1.1vw, 1.12rem);
+      color: var(--text-secondary);
+    }
+
+    .wave-swatch {
+      display: inline-block;
+      width: 1.3rem;
+      height: 0.3rem;
+      border-radius: 999px;
+      margin-inline-end: 0.4rem;
+      vertical-align: middle;
+    }
+
+    .wave-swatch.cyan { background: var(--cyber-cyan); }
+    .wave-swatch.purple { background: var(--holo-purple); }
+
+    .waveform-canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: clamp(9.8rem, 12vw, 11.5rem);
+      border-radius: 1rem;
+      background: rgba(10, 24, 52, 0.65);
+      border: 1px solid rgba(39, 221, 248, 0.28);
+      overflow: hidden;
+    }
+
+    #gamingWaveformCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .waveform-empty-hint {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0.8rem;
+      font-size: clamp(1.05rem, 1.18vw, 1.2rem);
+      color: var(--text-secondary);
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .waveform-empty-hint.hidden {
+      opacity: 0;
+    }
+
+    /* Section D: Live Game Performance Cards (رادار أداء الألعاب الشهيرة) */
+    .games-radar-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      min-width: 0;
+    }
+
+    .games-radar-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem 1rem;
+      min-width: 0;
+    }
+
+    .radar-title-block {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem 1rem;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .radar-title {
+      font-size: clamp(1.42rem, 1.6vw, 1.6rem);
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    .radar-subtitle {
+      font-size: clamp(1.08rem, 1.18vw, 1.2rem);
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+
+    .games-filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(14, 34, 72, 0.55);
+      padding: 0.35rem;
+      border-radius: 1.05rem;
+      border: 1px solid rgba(39, 221, 248, 0.34);
+      max-width: 100%;
+    }
+
+    .game-filter-btn {
+      font-family: var(--font-ar);
+      font-size: clamp(1.08rem, 1.16vw, 1.18rem);
+      font-weight: 700;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+      padding: 0.42rem 0.95rem;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.16s ease, background-color 0.16s ease;
+    }
+
+    .game-filter-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .game-filter-btn.active {
+      color: #ffffff;
+      background: rgba(39, 221, 248, 0.24);
+      box-shadow: 0 0 12px rgba(39, 221, 248, 0.22);
+    }
+
+    /* 6-Card Symmetrical Grid on Desktop -> 3 on Tablet -> 2 on Phone */
+    .games-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-auto-rows: 1fr;
+      gap: 0.85rem;
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .game-perf-card {
+      text-align: right;
+      font-family: var(--font-ar);
+      color: var(--text-primary);
+      padding: 0.95rem 1.05rem;
+      border-radius: 1.4rem;
+      background: linear-gradient(
+        155deg,
+        rgba(20, 48, 96, 0.36) 0%,
+        rgba(14, 34, 72, 0.42) 100%
+      );
+      border: 1.2px solid rgba(39, 221, 248, 0.4);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.6rem;
+      min-width: 0;
+      min-height: 11.4rem;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .game-perf-card:hover,
+    .game-perf-card.selected-game {
+      transform: translateY(-2px);
+      border-color: var(--cyber-cyan);
+      box-shadow: 0 10px 24px rgba(8, 22, 48, 0.36), 0 0 18px rgba(39, 221, 248, 0.24);
+    }
+
+    .game-perf-card.hidden-card {
+      display: none;
+    }
+
+    .game-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    .game-card-top > div:first-child {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .game-name {
+      font-family: var(--font-num), var(--font-ar);
+      font-size: clamp(1.26rem, 1.38vw, 1.42rem);
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.25;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .booster-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.3rem;
+      color: #67e8f9;
+    }
+
+    .booster-pill-rec {
+      font-size: 0.88rem;
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid rgba(34, 197, 94, 0.45);
+      color: #4ade80;
+      border-radius: 4px;
+      padding: 0.04rem 0.35rem;
+      font-weight: 800;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .booster-pill-pro {
+      font-family: var(--font-num);
+      font-size: 0.86rem;
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #38bdf8;
+      border-radius: 4px;
+      padding: 0.04rem 0.35rem;
+      font-weight: 800;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .game-genre {
+      font-size: clamp(1rem, 1.08vw, 1.1rem);
+      color: var(--text-secondary);
+      line-height: 1.3;
+      margin-top: 0.15rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .game-icon-box {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 0.85rem;
+      background: rgba(18, 44, 88, 0.75);
+      border: 1px solid rgba(39, 221, 248, 0.38);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--cyber-cyan);
+      flex-shrink: 0;
+    }
+
+    .game-icon-box svg {
+      width: 1.7rem;
+      height: 1.7rem;
+    }
+
+    .game-metrics-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.25rem 0.45rem;
+      min-width: 0;
+    }
+
+    .game-ping-readout {
+      font-family: var(--font-num);
+      font-size: clamp(1.65rem, 1.85vw, 1.95rem);
+      font-weight: 900;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+      unicode-bidi: isolate;
+      white-space: nowrap;
+      line-height: 1.1;
+    }
+
+    .game-ping-readout small {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--cyber-cyan);
+      margin-inline-start: 0.22rem;
+    }
+
+    .game-fps-state {
+      font-size: clamp(1rem, 1.1vw, 1.12rem);
+      font-weight: 700;
+      color: var(--text-secondary);
+      line-height: 1.25;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .game-fps-state.great { color: var(--status-green); }
+    .game-fps-state.good { color: var(--cyber-cyan); }
+    .game-fps-state.poor { color: var(--status-yellow); }
+    .game-fps-state.bad { color: var(--status-red); }
+
+    .game-bar-track {
+      width: 100%;
+      height: 0.36rem;
+      border-radius: 999px;
+      background: rgba(12, 28, 60, 0.85);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .game-bar-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: 999px;
+      background: var(--cyber-cyan);
+      transition: width 0.25s ease, background-color 0.25s ease;
+    }
+
+    /* Bottom 5-Tab Cyber Glass Navigation Bar */
+    .terrax-bottom-nav {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      align-items: stretch;
+      gap: clamp(0.35rem, 0.8vw, 0.75rem);
+      padding: clamp(0.45rem, 0.8vw, 0.6rem) clamp(0.45rem, 1vw, 0.85rem);
+      border-radius: 1.6rem;
+      background:
+        repeating-linear-gradient(90deg, rgba(39, 221, 248, 0.04) 0px, rgba(39, 221, 248, 0.04) 1px, transparent 1px, transparent 36px),
+        linear-gradient(180deg, rgba(20, 48, 96, 0.32) 0%, rgba(14, 35, 74, 0.38) 100%);
+      border: 1px solid rgba(39, 221, 248, 0.48);
+      box-shadow:
+        0 10px 26px rgba(8, 22, 48, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.26);
+      min-width: 0;
+    }
+
+    .nav-dock-item {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.28rem;
+      padding: 0.55rem 0.35rem;
+      min-height: 4.5rem;
+      min-width: 0;
+      border-radius: 1.2rem;
+      border: 1px solid rgba(39, 221, 248, 0.08);
+      background: rgba(16, 35, 66, 0.25);
+      color: var(--text-secondary);
+      font-family: var(--font-ar);
+      font-size: clamp(1.02rem, 1.2vw, 1.24rem);
+      font-weight: 700;
+      text-decoration: none;
+      text-align: center;
+      line-height: 1.2;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .nav-dock-item > span:not(.nav-active-bar) {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nav-dock-item svg {
+      width: 2rem;
+      height: 2rem;
+      flex-shrink: 0;
+      transform-origin: center center;
+      will-change: transform, filter;
+      transition:
+        transform 240ms var(--ease-4k-spring, cubic-bezier(0.22, 1, 0.36, 1)),
+        filter 240ms var(--ease-4k-spring, cubic-bezier(0.22, 1, 0.36, 1)),
+        color 150ms var(--ease-4k-spring, cubic-bezier(0.22, 1, 0.36, 1));
+    }
+
+    .nav-dock-item:hover {
+      color: var(--text-primary);
+      background: rgba(39, 221, 248, 0.12);
+      border-color: rgba(39, 221, 248, 0.32);
+      transform: translate3d(0, -1.5px, 0);
+    }
+
+    .nav-dock-item:hover svg {
+      color: #67e8f9;
+      transform: translate3d(0, -1.5px, 0) scale(1.12);
+      filter:
+        drop-shadow(0 0 8px rgba(103, 232, 249, 0.85))
+        drop-shadow(0 0 16px rgba(39, 221, 248, 0.55));
+    }
+
+    .nav-dock-item.active {
+      color: var(--text-primary);
+      background: radial-gradient(circle at 50% 0%, rgba(39, 221, 248, 0.24) 0%, rgba(16, 35, 66, 0.85) 100%);
+      border-color: rgba(39, 221, 248, 0.65);
+      box-shadow: 0 0 20px rgba(39, 221, 248, 0.24);
+    }
+
+    .nav-dock-item.active svg {
+      color: var(--cyber-cyan);
+      filter: drop-shadow(0 0 8px var(--cyber-cyan));
+    }
+
+    .nav-dock-item.active:hover svg {
+      transform: translate3d(0, -1.5px, 0) scale(1.12);
+      filter:
+        drop-shadow(0 0 10px rgba(103, 232, 249, 0.95))
+        drop-shadow(0 0 18px rgba(39, 221, 248, 0.68));
+    }
+
+    .nav-active-bar {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2.6rem;
+      height: 0.25rem;
+      border-radius: 0 0 999px 999px;
+      background: var(--cyber-cyan);
+      box-shadow: 0 0 10px var(--cyber-cyan);
+      opacity: 0;
+    }
+
+    .nav-dock-item.active .nav-active-bar {
+      opacity: 1;
+    }
+
+    /* Smart State-Driven Yandex RTB & Technical Sponsor Glassmorphic Card */
+    .terrax-yan-card {
+      position: relative;
+      width: 100%;
+      max-width: 76rem;
+      min-height: 92px;
+      margin: 0.15rem auto;
+      padding: clamp(0.75rem, 1.2vw, 0.95rem) clamp(0.9rem, 1.5vw, 1.35rem);
+      border-radius: 1.4rem;
+      background: rgba(11, 27, 50, 0.70);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 210, 255, 0.25);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 10px 28px rgba(2, 8, 23, 0.42),
+        0 0 18px rgba(0, 210, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.65rem;
+      box-sizing: border-box;
+      overflow: hidden;
+      min-width: 0;
+      transition: border-color 0.28s ease, box-shadow 0.28s ease;
+    }
+    .terrax-yan-card.terrax-yan-isolated {
+      border-color: rgba(34, 197, 94, 0.42);
+    }
+    .terrax-yan-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid rgba(0, 210, 255, 0.14);
+      min-width: 0;
+    }
+    .terrax-yan-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      min-width: 0;
+    }
+    .terrax-yan-dot {
+      width: 0.75rem;
+      height: 0.75rem;
+      border-radius: 50%;
+      background: #00d2ff;
+      box-shadow: 0 0 10px #00d2ff, 0 0 4px #67e8f9;
+      flex-shrink: 0;
+    }
+    .terrax-yan-title {
+      font-size: 1.14rem;
+      font-weight: 700;
+      color: #bae6fd;
+    }
+    .terrax-yan-isolation-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(20, 83, 45, 0.58);
+      border: 1px solid rgba(74, 222, 128, 0.45);
+      color: #86efac;
+      font-size: 1.02rem;
+      font-weight: 700;
+      max-width: 100%;
+    }
+    .terrax-yan-isolation-badge[hidden] {
+      display: none !important;
+    }
+    .terrax-yan-body,
+    .terrax-yan-rtb-mount {
+      width: 100%;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+    }
+    .terrax-yan-sponsor-fallback {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      padding: 0.55rem 0.85rem;
+      border-radius: 10px;
+      background: linear-gradient(90deg, rgba(14, 36, 70, 0.65) 0%, rgba(8, 22, 46, 0.5) 100%);
+      border: 1px solid rgba(0, 210, 255, 0.18);
+      text-decoration: none;
+      color: #f8fafc;
+      min-width: 0;
+    }
+    .terrax-yan-sponsor-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.18rem;
+      flex: 1 1 16rem;
+      min-width: 0;
+    }
+    .terrax-yan-sponsor-headline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem;
+      min-width: 0;
+    }
+    .terrax-yan-sponsor-badge {
+      font-family: var(--font-num);
+      font-size: 0.94rem;
+      font-weight: 800;
+      color: #00d2ff;
+      background: rgba(0, 210, 255, 0.12);
+      border: 1px solid rgba(0, 210, 255, 0.32);
+      padding: 0.08rem 0.5rem;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .terrax-yan-sponsor-title {
+      font-size: clamp(1.1rem, 1.2vw, 1.2rem);
+      font-weight: 800;
+      color: #f0f9ff;
+      line-height: 1.35;
+    }
+    .terrax-yan-sponsor-desc {
+      font-size: clamp(1rem, 1.08vw, 1.06rem);
+      color: #94a3b8;
+      margin: 0;
+      line-height: 1.4;
+    }
+    .terrax-yan-sponsor-cta {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: #67e8f9;
+      padding: 0.32rem 0.8rem;
+      border-radius: 8px;
+      background: rgba(0, 210, 255, 0.12);
+      border: 1px solid rgba(0, 210, 255, 0.28);
+      white-space: nowrap;
+    }
+
+    /* Responsive Breakpoints Matrix */
+    /* 1. Large 4K & Ultra-Wide Desktop (> 1440px) */
+    @media screen and (min-width: 1441px) {
+      .gaming-shell {
+        max-width: 118rem;
+        padding: 1.45rem 2.1rem;
+        gap: 1.2rem;
+      }
+      .gaming-core-dial {
+        width: 21.5rem;
+        height: 21.5rem;
+      }
+    }
+
+    /* 2. Laptop & Medium Desktop (<= 1200px) */
+    @media screen and (max-width: 1200px) {
+      .games-cards-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    /* 3. Tablet & Split View (<= 1024px) */
+    @media screen and (max-width: 1024px) {
+      .gaming-top-grid {
+        grid-template-columns: 1fr;
+      }
+      .games-cards-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .hud-main-stage {
+        grid-template-columns: auto minmax(0, 1fr);
+      }
+    }
+
+    /* 4. Large & Medium Phones (<= 680px) */
+    @media screen and (max-width: 680px) {
+      body {
+        background-attachment: scroll;
+      }
+      .gaming-header {
+        justify-content: center;
+        text-align: center;
+      }
+      .brand-cluster {
+        width: 100%;
+        justify-content: center;
+      }
+      .page-title-cluster {
+        width: 100%;
+      }
+      .header-status-text {
+        margin: 0 auto;
+      }
+      .hud-main-stage {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+      .gaming-core-dial {
+        width: 19.2rem;
+        height: 19.2rem;
+      }
+      .hud-telemetry-grid {
+        width: 100%;
+      }
+      .hud-submetrics-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .verdict-cards-split {
+        grid-template-columns: 1fr;
+      }
+      .games-cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .terrax-bottom-nav {
+        gap: 0.35rem;
+        padding: 0.45rem;
+      }
+      .terrax-bottom-nav .nav-dock-item {
+        font-size: 1.04rem;
+        padding: 0.5rem 0.2rem;
+        min-height: 4.4rem;
+      }
+      .terrax-bottom-nav .nav-dock-item svg {
+        width: 1.85rem;
+        height: 1.85rem;
+      }
+    }
+
+    /* 5. Compact & Small Phones (320px - 420px) */
+    @media screen and (max-width: 420px) {
+      body {
+        padding:
+          max(0.55rem, env(safe-area-inset-top, 0px))
+          0.6rem
+          calc(1rem + env(safe-area-inset-bottom, 0px));
+      }
+      .gaming-shell {
+        padding: 0.75rem 0.75rem 0.9rem;
+        border-radius: 1.45rem;
+        gap: 0.75rem;
+      }
+      .cyber-panel-box {
+        padding: 0.85rem 0.8rem;
+        border-radius: 1.3rem;
+      }
+      .server-bar-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+      }
+      .cyber-select {
+        width: 100%;
+        flex: 1 1 auto;
+      }
+      .gaming-core-dial {
+        width: 17.4rem;
+        height: 17.4rem;
+      }
+      .ping-scale-strip {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .games-cards-grid {
+        gap: 0.6rem;
+      }
+      .game-perf-card {
+        padding: 0.75rem 0.7rem;
+        border-radius: 1.15rem;
+        min-height: 10.6rem;
+      }
+      .game-icon-box {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.7rem;
+      }
+      .game-icon-box svg {
+        width: 1.45rem;
+        height: 1.45rem;
+      }
+      .game-name {
+        font-size: 1.18rem;
+      }
+      .game-genre {
+        font-size: 0.95rem;
+      }
+      .game-ping-readout {
+        font-size: 1.5rem;
+      }
+      .game-fps-state {
+        font-size: 0.95rem;
+      }
+      .terrax-bottom-nav {
+        gap: 0.24rem;
+        padding: 0.35rem;
+      }
+      .terrax-bottom-nav .nav-dock-item {
+        font-size: 0.94rem;
+        padding: 0.42rem 0.12rem;
+        min-height: 4.2rem;
+        border-radius: 0.95rem;
+      }
+      .terrax-bottom-nav .nav-dock-item svg {
+        width: 1.65rem;
+        height: 1.65rem;
+      }
+    }
+
+    /* 6. Ultra-Small Viewport Safeguard (<= 350px) */
+    @media screen and (max-width: 350px) {
+      .games-cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .ping-scale-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    /* 7. Reduced Motion Accessibility Support */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Ambient 4K Cyber Backdrop -->
+  <div class="gaming-backdrop" aria-hidden="true">
+    <div class="gaming-grid-bg"></div>
+    <svg class="gaming-traces-svg" viewBox="0 0 1440 900" preserveAspectRatio="none">
+      <path d="M 0 75 L 260 75 L 310 50 L 1130 50 L 1180 75 L 1440 75" class="trace-line" />
+      <path d="M 0 75 L 260 75 L 310 50 L 1130 50 L 1180 75 L 1440 75" class="trace-pulse-cyan" />
+      <path d="M 0 155 L 240 155 L 290 185 L 1150 185 L 1200 155 L 1440 155" class="trace-line" />
+      <path d="M 0 155 L 240 155 L 290 185 L 1150 185 L 1200 155 L 1440 155" class="trace-pulse-purple" />
+      <path d="M 60 835 L 310 835 L 350 815 L 1090 815 L 1130 835 L 1380 835" class="trace-line" />
+      <path d="M 60 835 L 310 835 L 350 815 L 1090 815 L 1130 835 L 1380 835" class="trace-pulse-cyan" />
+    </svg>
+  </div>
+
+  <!-- Main 4K Cyber Glass Shell -->
+  <div class="gaming-shell">
+    <!-- Header -->
+    <header class="gaming-header">
+      <div class="brand-cluster">
+        <div class="brand-shield" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M16 2.5L27 7.5V15.5C27 22.8 22.2 27.9 16 30C9.8 27.9 5 22.8 5 15.5V7.5L16 2.5Z"
+              stroke="currentColor" stroke-width="1.8" />
+            <path d="M11 12H21M16 12V22M13 17H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <span class="brand-ar"><span>تيراكس</span> بلاس</span>
+          <span class="brand-tag">رؤى، مراجعات، ابتكار • Terrax Plus</span>
+        </div>
+      </div>
+
+      <div class="page-title-cluster">
+        <h1 class="page-main-title">اختبار سرعة الإنترنت للألعاب</h1>
+        <span class="page-sub-caption" dir="ltr">COMPETITIVE GAMING &amp; STREAMING BENCHMARK</span>
+      </div>
+
+      <div class="header-status-text" id="gamingHeaderStatus">جاهز لفحص الألعاب</div>
+    </header>
+
+    <!-- Section A: Integrated Server Selector (مدمج اختيار الخوادم) -->
+    <section class="gaming-server-bar" aria-label="اختيار خادم القياس للألعاب">
+      <div class="server-bar-group">
+        <label class="server-bar-label" for="gamingServerSelect">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+            <rect x="3" y="14" width="18" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+            <circle cx="7" cy="7" r="1" fill="currentColor" />
+            <circle cx="7" cy="17" r="1" fill="currentColor" />
+            <path d="M11 7H17M11 17H17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+          <span>خادم القياس الحالي:</span>
+        </label>
+        <select id="gamingServerSelect" class="cyber-select" aria-label="قائمة خوادم القياس للألعاب">
+          <option value="">جاري البحث عن أقرب خادم...</option>
+        </select>
+      </div>
+
+      <div class="server-meta-inline">
+        <a href="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" target="_blank" rel="noopener noreferrer sponsored" class="gaming-sponsor-tag-link" id="gamingSponsorTag" title="فتح عروض وتحديثات الراعي التقني" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; transition: color 0.2s ease;">
+          <span>الراعي التقني: <strong id="gamingSponsorName" style="color: #27ddf8; text-decoration: underline; text-decoration-color: rgba(39, 221, 248, 0.45); text-underline-offset: 3px;">Terrax Plus Fiber Core</strong></span>
+          <span style="font-size: 0.75rem; background: rgba(39, 221, 248, 0.18); border: 1px solid rgba(39, 221, 248, 0.4); color: #27ddf8; padding: 0.05rem 0.4rem; border-radius: 4px; font-weight: 800;">PRO</span>
+        </a>
+        <span class="meta-sep" aria-hidden="true">·</span>
+        <span>الشبكة: <strong id="gamingClientIp">ألياف بصرية / اتصال مباشر</strong></span>
+        <span class="meta-sep" aria-hidden="true">·</span>
+        <span>اللعبة المحددة: <strong id="focusedGameName">جميع الألعاب التنافسية</strong></span>
+      </div>
+    </section>
+
+    <!-- Section B, C & E: Gaming Core HUD + Smart Verdict & Live Waveform -->
+    <main class="gaming-top-grid">
+      <!-- Section B: Gaming Core HUD & Speed Gauge (منصة الفحص المركزية للألعاب) -->
+      <section class="cyber-panel-box" id="gamingHudStage" aria-label="منصة الفحص المركزية للألعاب">
+        <div class="hud-main-stage">
+          <!-- Central Gaming Ping & Speed Dial -->
+          <div class="gaming-core-dial" id="gamingCoreDial">
+            <svg class="dial-svg" viewBox="0 0 240 240" aria-hidden="true">
+              <defs>
+                <linearGradient id="gamingArcGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#22c55e" />
+                  <stop offset="50%" stop-color="#27DDF8" />
+                  <stop offset="100%" stop-color="#C477FF" />
+                </linearGradient>
+              </defs>
+              <circle cx="120" cy="120" r="112" class="dial-outer-ring" />
+              <circle cx="120" cy="120" r="84" class="dial-inner-ring" />
+              <circle cx="120" cy="120" r="104" class="dial-ticks" stroke-dasharray="2 12.5"
+                transform="rotate(135 120 120)" />
+              <circle cx="120" cy="120" r="95" class="dial-track" stroke-dasharray="448 600"
+                transform="rotate(135 120 120)" />
+              <circle cx="120" cy="120" r="95" id="gamingDialArc" class="dial-active-arc"
+                stroke="url(#gamingArcGrad)" stroke-dasharray="0 600" transform="rotate(135 120 120)" />
+            </svg>
+            <div class="dial-center-readout">
+              <span class="dial-kicker">زمن الاستجابة (PING)</span>
+              <div class="dial-ping-number" id="hudPingVal" dir="ltr">00</div>
+              <span class="dial-ping-unit" dir="ltr">ms</span>
+              <span class="dial-phase-tag" id="hudQualityBadge">جاهز للقياس</span>
+            </div>
+          </div>
+
+          <!-- 4 Core Telemetry Readouts (Jitter, Stability/Loss, Download, Upload) -->
+          <div class="hud-telemetry-grid">
+            <div class="hud-metric-tile purple-accent">
+              <div class="tile-label-row">
+                <span>تذبذب الاتصال</span>
+                <span class="tile-label-en" dir="ltr">JITTER</span>
+              </div>
+              <div class="tile-value-row" dir="ltr">
+                <span class="tile-num" id="hudJitterVal">00</span>
+                <span class="tile-unit">ms</span>
+              </div>
+            </div>
+
+            <div class="hud-metric-tile green-accent">
+              <div class="tile-label-row">
+                <span>استقرار اللعب</span>
+                <span class="tile-label-en" dir="ltr">STABILITY</span>
+              </div>
+              <div class="tile-value-row" dir="ltr">
+                <span class="tile-num" id="hudStabilityVal">--</span>
+                <span class="tile-unit">%</span>
+              </div>
+            </div>
+
+            <div class="hud-metric-tile">
+              <div class="tile-label-row">
+                <span>سرعة التنزيل</span>
+                <span class="tile-label-en" dir="ltr">DOWNLOAD</span>
+              </div>
+              <div class="tile-value-row" dir="ltr">
+                <span class="tile-num" id="hudDownloadVal">00</span>
+                <span class="tile-unit" id="hudDownloadUnit">Mbps</span>
+              </div>
+            </div>
+
+            <div class="hud-metric-tile purple-accent">
+              <div class="tile-label-row">
+                <span>سرعة الرفع</span>
+                <span class="tile-label-en" dir="ltr">UPLOAD</span>
+              </div>
+              <div class="tile-value-row" dir="ltr">
+                <span class="tile-num" id="hudUploadVal">00</span>
+                <span class="tile-unit" id="hudUploadUnit">Mbps</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-Time Sub-Metrics: Min Ping, Avg Ping, Max Ping, Packet Loss % -->
+        <div class="hud-submetrics-strip" aria-label="تفاصيل نبضات البنج وفقدان الحزم">
+          <div class="submetric-item">
+            <span class="submetric-label">أدنى بنج (Min)</span>
+            <span class="submetric-val" id="hudMinPingVal" dir="ltr">-- ms</span>
+          </div>
+          <div class="submetric-item">
+            <span class="submetric-label">متوسط البنج (Avg)</span>
+            <span class="submetric-val" id="hudAvgPingVal" dir="ltr">-- ms</span>
+          </div>
+          <div class="submetric-item">
+            <span class="submetric-label">أعلى بنج (Max)</span>
+            <span class="submetric-val" id="hudMaxPingVal" dir="ltr">-- ms</span>
+          </div>
+          <div class="submetric-item">
+            <span class="submetric-label">فقدان الطلبات (Loss)</span>
+            <span class="submetric-val" id="hudPacketLossVal" dir="ltr">0.0%</span>
+          </div>
+        </div>
+
+        <!-- Primary Gaming Test Start/Abort Button & Progress -->
+        <div class="gaming-cta-wrap">
+          <div class="gaming-cta-buttons">
+            <button type="button" id="gaming-start-btn" class="disabled">
+              <span id="gamingStartLabel">جاري تهيئة الخادم...</span>
+            </button>
+          </div>
+          <div class="gaming-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+            aria-valuenow="0" id="gamingProgressBar">
+            <div class="gaming-progress-fill" id="gamingProgressFill"></div>
+          </div>
+          <div class="gaming-progress-meta">
+            <span id="gamingProgressPhase">جاهز لبدء فحص الألعاب الشامل</span>
+            <span id="gamingProgressPct" dir="ltr">0%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section C & E Column: Smart Verdict + Real-time Waveform -->
+      <div class="verdict-and-wave-col">
+        <!-- Section C: مؤشر استقرار اللعب والتشخيص الذكي متعدد العوامل -->
+        <section class="cyber-panel-box" aria-label="مؤشر استقرار اللعب والتشخيص الذكي">
+          <div class="verdict-cards-split">
+            <article class="verdict-box">
+              <span class="verdict-kicker">التشخيص الشامل للألعاب (Ping + Jitter + Loss)</span>
+              <h2 class="verdict-headline" id="competitiveVerdictTitle">في انتظار القياس</h2>
+              <p class="verdict-desc" id="competitiveVerdictDesc">
+                لا يعتمد التقييم على البنج وحده؛ يتم فحص زمن الاستجابة مع التذبذب (Jitter) وفقدان الحزم لتحديد تجربة اللعب الفعلية.
+              </p>
+            </article>
+
+            <article class="verdict-box streaming-box">
+              <span class="verdict-kicker">جاهزية البث المباشر للألعاب (Game Streaming)</span>
+              <h2 class="verdict-headline" id="streamingVerdictTitle">في انتظار القياس</h2>
+              <p class="verdict-desc" id="streamingVerdictDesc">
+                يعتمد تقييم البث المباشر (4K / 1080p60) على سرعة الرفع الفعلية ونسبة ثبات الاتصال أثناء الاختبار.
+              </p>
+            </article>
+          </div>
+
+          <!-- 5-Tier Suggested Ping Classification Scale -->
+          <div class="ping-scale-strip" id="pingTierScale" aria-label="سلم تصنيف البنج المقترح">
+            <div class="ping-tier-pill" data-tier="1">
+              <span class="tier-range" dir="ltr">&lt; 30 ms</span>
+              <span class="tier-name">ممتاز</span>
+            </div>
+            <div class="ping-tier-pill" data-tier="2">
+              <span class="tier-range" dir="ltr">30 – 60 ms</span>
+              <span class="tier-name">جيد جدًا</span>
+            </div>
+            <div class="ping-tier-pill" data-tier="3">
+              <span class="tier-range" dir="ltr">61 – 100 ms</span>
+              <span class="tier-name">جيد</span>
+            </div>
+            <div class="ping-tier-pill" data-tier="4">
+              <span class="tier-range" dir="ltr">101 – 150 ms</span>
+              <span class="tier-name">مرتفع</span>
+            </div>
+            <div class="ping-tier-pill" data-tier="5">
+              <span class="tier-range" dir="ltr">&gt; 150 ms</span>
+              <span class="tier-name">مرتفع جدًا</span>
+            </div>
+          </div>
+          <p class="ping-scale-note">
+            ملاحظة: حدود التصنيف أعلاه استرشادية وتختلف حسب اللعبة والخادم وطريقة الاتصال (HTTP RTT). جودة اللعب الفعلية تعتمد على ثبات الخط (Jitter) وعدم فقدان الحزم (Loss) وليس على البنج وحده.
+          </p>
+
+          <!-- Section E: رسم بياني حي لاستقرار النبضات -->
+          <div class="waveform-box">
+            <div class="waveform-header">
+              <h3 class="waveform-title">مخطط استقرار النبضات اللحظي (Ping &amp; Jitter Waveform)</h3>
+              <div class="waveform-legend">
+                <span><i class="wave-swatch cyan"></i>زمن الاستجابة (Ping)</span>
+                <span><i class="wave-swatch purple"></i>التذبذب (Jitter)</span>
+              </div>
+            </div>
+            <div class="waveform-canvas-wrap">
+              <canvas id="gamingWaveformCanvas"></canvas>
+              <div class="waveform-empty-hint" id="waveformEmptyHint">
+                سيظهر المخطط الموجي الحي لنبضات الاتصال فور بدء الفحص
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Section D: رادار أداء الألعاب الشهيرة (Live Game Performance Cards) -->
+    <section class="cyber-panel-box games-radar-section" aria-label="رادار أداء الألعاب الشهيرة">
+      <div class="games-radar-header">
+        <div class="radar-title-block">
+          <h2 class="radar-title">رادار أداء الألعاب الشهيرة</h2>
+          <span class="radar-subtitle">تقييم ديناميكي مباشر بناءً على قراءات Ping و Jitter الحقيقية من خادم الفحص</span>
+        </div>
+
+        <div class="games-filter-bar" role="tablist" aria-label="تصنيف الألعاب">
+          <button type="button" class="game-filter-btn active" data-category="all">الكل</button>
+          <button type="button" class="game-filter-btn" data-category="fps">تصويب تنافسي FPS</button>
+          <button type="button" class="game-filter-btn" data-category="br">باتل رويال</button>
+          <button type="button" class="game-filter-btn" data-category="sports">رياضية</button>
+        </div>
+      </div>
+
+      <div class="games-cards-grid" id="gamesCardsGrid">
+        <!-- 1. PUBG -->
+        <button type="button" class="game-perf-card" data-game="PUBG: Battlegrounds" data-cat="br" data-ideal-ping="45" data-max-ping="95">
+          <div class="game-card-top">
+            <div>
+              <div class="game-name" dir="ltr">PUBG</div>
+              <div class="game-genre">باتل رويال · Battle Royale</div>
+            </div>
+            <div class="game-icon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8" />
+                <path d="M12 2V6M12 18V22M2 12H6M18 12H22" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg>
+            </div>
+          </div>
+          <div class="game-metrics-row">
+            <div class="game-ping-readout" dir="ltr"><span class="game-live-ping">--</span><small>ms</small></div>
+            <span class="game-fps-state">في انتظار الفحص</span>
+          </div>
+          <div class="game-bar-track"><div class="game-bar-fill"></div></div>
+        </button>
+
+        <!-- 2. Valorant -->
+        <button type="button" class="game-perf-card" data-game="Valorant" data-cat="fps" data-ideal-ping="30" data-max-ping="70">
+          <div class="game-card-top">
+            <div>
+              <div class="game-name" dir="ltr">Valorant</div>
+              <div class="game-genre">تصويب تكتيكي · 128-Tick FPS</div>
+            </div>
+            <div class="game-icon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 5L12 19L20 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div class="game-metrics-row">
+            <div class="game-ping-readout" dir="ltr"><span class="game-live-ping">--</span><small>ms</small></div>
+            <span class="game-fps-state">في انتظار الفحص</span>
+          </div>
+          <div class="game-bar-track"><div class="game-bar-fill"></div></div>
+        </button>
+
+        <!-- 3. Call of Duty -->
+        <button type="button" class="game-perf-card" data-game="Call of Duty" data-cat="fps" data-ideal-ping="40" data-max-ping="85">
+          <div class="game-card-top">
+            <div>
+              <div class="game-name" dir="ltr">Call of Duty</div>
+              <div class="game-genre">تصويب تنافسي · Fast FPS</div>
+            </div>
+            <div class="game-icon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M13 2L4 14H12L11 22L20 10H12L13 2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div class="game-metrics-row">
+            <div class="game-ping-readout" dir="ltr"><span class="game-live-ping">--</span><small>ms</small></div>
+            <span class="game-fps-state">في انتظار الفحص</span>
+          </div>
+          <div class="game-bar-track"><div class="game-bar-fill"></div></div>
+        </button>
+
+        <!-- 4. EA FC / FIFA -->
+        <button type="button" class="game-perf-card" data-game="EA Sports FC / FIFA" data-cat="sports" data-ideal-ping="35" data-max-ping="75">
+          <div class="game-card-top">
+            <div>
+              <div class="game-name" dir="ltr">EA FC / FIFA</div>
+              <div class="game-genre">رياضية تنافسية · Sports</div>
+            </div>
+            <div class="game-icon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8" />
+                <polygon points="12,7 16,10 14.5,15 9.5,15 8,10" stroke="currentColor" stroke-width="1.5" fill="none" />
+              </svg>
+            </div>
+          </div>
+          <div class="game-metrics-row">
+            <div class="game-ping-readout" dir="ltr"><span class="game-live-ping">--</span><small>ms</small></div>
+            <span class="game-fps-state">في انتظار الفحص</span>
+          </div>
+          <div class="game-bar-track"><div class="game-bar-fill"></div></div>
+        </button>
+
+        <!-- 5. Fortnite -->
+        <button type="button" class="game-perf-card" data-game="Fortnite" data-cat="br" data-ideal-ping="35" data-max-ping="80">
+          <div class="game-card-top">
+            <div>
+              <div class="game-name" dir="ltr">Fortnite</div>
+              <div class="game-genre">باتل رويال وبناء · Battle Royale</div>
+            </div>
+            <div class="game-icon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5L12 3Z" stroke="currentColor" stroke-width="1.8" />
+              </svg>
+            </div>
+          </div>
+          <div class="game-metrics-row">
+            <div class="game-ping-readout" dir="ltr"><span class="game-live-ping">--</span><small>ms</small></div>
+            <span class="game-fps-state">في انتظار الفحص</span>
+          </div>
+          <div class="game-bar-track"><div class="game-bar-fill"></div></div>
+        </button>
+
+        <!-- 6. Terrax Gaming Radar Booster Card (Slot 6 alongside Fortnite) -->
+        <a href="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" rel="noopener noreferrer sponsored" class="game-perf-card gaming-booster-card" id="gamingBoosterCard" data-game="Terrax Pro Gaming Booster" data-cat="fps br sports all" data-auto-ad="true" data-ideal-ping="20" data-max-ping="55" aria-label="Terrax Pro Gaming Booster — مسرع مسارات الألعاب التنافسية">
+          <div class="game-card-top">
+            <div>
+              <div class="game-name booster-title-row" dir="ltr">
+                <span>Game Turbo</span>
+                <span class="booster-pill-pro">PRO</span>
+              </div>
+              <div class="game-genre">تسريع المسارات · Terrax Booster</div>
+            </div>
+            <div class="game-icon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="rgba(39, 221, 248, 0.18)" />
+              </svg>
+            </div>
+          </div>
+          <div class="game-metrics-row">
+            <div class="game-ping-readout" dir="ltr"><span class="game-live-ping" id="boosterLivePing">&lt; 55</span><small>ms</small></div>
+            <span class="game-fps-state great" id="boosterFpsState">مسار مباشر &lt; 55ms</span>
+          </div>
+          <div class="game-bar-track">
+            <div class="game-bar-fill" id="boosterBarFill" style="width: 95%; background: linear-gradient(90deg, #27ddf8, #78e7a0);"></div>
+          </div>
+        </a>
+      </div>
+
+      <!-- GameQuery.dev Server-Side Live Server Status Adapter Panel -->
+      <div class="gamequery-live-panel" id="gamequeryLivePanel" style="margin-top:0.65rem;padding:0.75rem 1rem;border-radius:1.1rem;background:rgba(12,28,60,0.52);border:1px solid rgba(39,221,248,0.28);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0.65rem;">
+        <div style="display:flex;flex-direction:column;gap:0.15rem;min-width:0;flex:1 1 18rem;">
+          <strong style="font-size:1.05rem;color:#e0f2fe;">فحص حالة خوادم الألعاب المخصصة (GameQuery.dev Proxy)</strong>
+          <span id="gamequeryStatusText" style="font-size:0.95rem;color:#94a3b8;">استعلام آمن عبر الخادم (backend/gamequery.php) بدون كشف أي مفاتيح API في المتصفح.</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.45rem;">
+          <select id="gamequeryProtocolSelect" aria-label="بروتوكول اللعبة" style="padding:0.38rem 0.65rem;border-radius:0.65rem;background:rgba(15,35,72,0.85);border:1px solid rgba(39,221,248,0.38);color:#f8fafc;font-family:var(--font-ar);font-size:0.95rem;">
+            <option value="counterstrike2">Counter-Strike 2 (A2S)</option>
+            <option value="rust">Rust (A2S)</option>
+            <option value="minecraft">Minecraft (Java)</option>
+            <option value="fivem">FiveM / GTA RP</option>
+            <option value="arkse">ARK: Survival Evolved</option>
+          </select>
+          <input id="gamequeryAddressInput" type="text" dir="ltr" placeholder="185.25.180.1:27015" aria-label="عنوان خادم اللعبة IP:Port" style="padding:0.38rem 0.65rem;border-radius:0.65rem;background:rgba(15,35,72,0.85);border:1px solid rgba(39,221,248,0.38);color:#f8fafc;font-family:var(--font-num);font-size:0.95rem;width:11.5rem;" />
+          <button type="button" id="gamequeryCheckBtn" style="padding:0.38rem 0.85rem;border-radius:0.65rem;background:rgba(39,221,248,0.16);border:1px solid rgba(39,221,248,0.48);color:#67e8f9;font-family:var(--font-ar);font-size:0.95rem;font-weight:700;cursor:pointer;">فحص الخادم</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Smart Hybrid Yandex RTB + Adsterra Smartlink Glassmorphic Card -->
+    <aside class="terrax-yan-card" data-terrax-yan-slot="gaming-main" data-block-id="R-A-TERREX-GAME-1" data-auto-ad="true" data-smartlink-url="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" aria-label="برعاية تقنية • Terrax Partner">
+      <div class="terrax-yan-header">
+        <div class="terrax-yan-brand">
+          <span class="terrax-yan-dot" aria-hidden="true"></span>
+          <span class="terrax-yan-title">برعاية تقنية • Terrax Partner</span>
+        </div>
+        <div class="terrax-yan-header-actions">
+          <span class="terrax-yan-status-indicator" aria-live="polite" style="font-size:0.92rem;font-weight:700;color:#38bdf8;opacity:0.9;">عرض تلقائي نشط</span>
+          <span class="terrax-yan-isolation-badge" hidden>🛡️ وضع العزل الشبكي نشط لضمان دقة الفحص</span>
+        </div>
+      </div>
+      <div class="terrax-yan-body">
+        <div id="yandex_rtb_R-A-TERREX-GAME-1" class="terrax-yan-rtb-mount"></div>
+        <a href="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" rel="noopener noreferrer sponsored" class="terrax-yan-sponsor-fallback" data-smartlink-fallback="true">
+          <div class="terrax-yan-fallback-content terrax-yan-sponsor-content">
+            <div class="terrax-yan-sponsor-headline">
+              <span class="terrax-yan-fallback-pill terrax-yan-sponsor-badge">إعلان مدعوم • AD</span>
+              <strong class="terrax-yan-fallback-title terrax-yan-sponsor-title">Terrax Cloud DNS &amp; Fiber Optimizer — استجابة أسرع للألعاب والبث 4K</strong>
+            </div>
+            <span class="terrax-yan-fallback-sub terrax-yan-sponsor-desc">توجيه ذكي للحزم عبر مسارات الألياف المباشرة لتقليل الـ Ping والـ Jitter واستقرار البث</span>
+          </div>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Bottom 5-Tab Cyber Glass Navigation Bar (RTL Order: السرعة -> الاستهلاك -> الاستقرار -> اختبار الألعاب -> الإعدادات) -->
+    <nav class="terrax-bottom-nav" aria-label="التنقل الرئيسي" data-layer="bottom-navigation">
+      <a href="index-modern.html" class="nav-dock-item" data-nav="speed" id="nav-speed-btn" onclick="return navigateFromGaming(event, 'speed')">
+        <span class="nav-active-bar" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 15L16.5 9.5M4.93 19.07A10 10 0 1 1 19.07 19.07" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="12" cy="15" r="2" fill="currentColor" />
+        </svg>
+        <span>السرعة</span>
+      </a>
+
+      <a href="index-modern.html?tab=usage" class="nav-dock-item" data-nav="usage" id="nav-usage-btn" onclick="return navigateFromGaming(event, 'usage')">
+        <span class="nav-active-bar" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 20H20M6 17V12M10 17V9M14 17V13M18 17V7M5 9L10 5L14 8L19 3" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span>الاستهلاك</span>
+      </a>
+
+      <a href="stability.html" class="nav-dock-item" data-nav="stability" id="nav-stability-btn" onclick="return navigateFromGaming(event, 'stability')">
+        <span class="nav-active-bar" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M2 12H5.5L8.5 5L13.5 19L16.5 12H22" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span>الاستقرار</span>
+      </a>
+
+      <a href="gaming.html" class="nav-dock-item active" data-nav="gaming" id="nav-gaming-btn" aria-current="page"
+        onclick="event.preventDefault(); document.getElementById('gamingHudStage')?.scrollIntoView({ behavior: 'smooth', block: 'center' });">
+        <span class="nav-active-bar" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 11H10M8 9V13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="15" cy="10" r="1" fill="currentColor" />
+          <circle cx="17" cy="12" r="1" fill="currentColor" />
+          <path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span>اختبار الألعاب</span>
+      </a>
+
+      <a href="index-modern.html?tab=settings" class="nav-dock-item" data-nav="settings" id="nav-settings-btn" onclick="return navigateFromGaming(event, 'settings')">
+        <span class="nav-active-bar" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+            stroke="currentColor" stroke-width="1.8" />
+        </svg>
+        <span>الإعدادات</span>
+      </a>
+    </nav>
+  </div>
+
+  <script type="text/javascript">
+    var IS_FRONTEND_SUBDIR = window.location.pathname.indexOf("/frontend/") !== -1;
+    var ROOT_PREFIX = IS_FRONTEND_SUBDIR ? "../" : "";
+    var SPEEDTEST_SERVERS = "server-list.json";
+    var STABILITY_WORKER_PATH = ROOT_PREFIX + "stability_worker.js";
+    var HISTORY_STORAGE_KEY = "terrax_librespeed_history_v1";
+
+    var gamingState = {
+      state: 0, // 0=INITIALIZING, 1=READY, 2=RUNNING, 3=FINISHED
+      speedtest: null,
+      pingWorker: null,
+      pingPollTimer: null,
+      pingStats: null,
+      servers: [],
+      selectedServer: null,
+      dlSamples: [],
+      ulSamples: [],
+      waveformSamples: [],
+      lastSampleTimestamp: 0,
+      lastRenderTimestamp: 0,
+      dlDisplayMbps: 0,
+      ulDisplayMbps: 0,
+      lastDlTickTime: 0,
+      lastUlTickTime: 0,
+      currentTestBytes: 0,
+      testData: null,
+      userAborted: false,
+      historyRecordedForRun: false
+    };
+
+    function I(id) {
+      return document.getElementById(id);
+    }
+
+    function joinServerUrl(server, path) {
+      if (!server) return path;
+      if (!path) return server;
+      if (server.charAt(server.length - 1) === "/" || path.charAt(0) === "/") return server + path;
+      return server + "/" + path;
+    }
+
+    function sanitizeClientIp(ipText) {
+      if (!ipText || typeof ipText !== "string") return "مزود خدمة الإنترنت - اليمن";
+      var trimmed = ipText.trim();
+      var lower = trimmed.toLowerCase();
+      if (
+        trimmed.length === 0 ||
+        trimmed.length > 60 ||
+        lower.indexOf("<!doctype") !== -1 ||
+        lower.indexOf("<html") !== -1 ||
+        lower.indexOf("<head") !== -1 ||
+        lower.indexOf("<body") !== -1 ||
+        lower.indexOf("<title") !== -1 ||
+        lower.indexOf("page not found") !== -1 ||
+        /404\s*(not\s*found|error)/i.test(trimmed)
+      ) {
+        return "مزود خدمة الإنترنت - اليمن";
+      }
+      return trimmed;
+    }
+
+    /**
+     * Classify Ping according to the 5-tier suggested gaming threshold table:
+     * < 30 ms: ممتاز (Tier 1)
+     * 30 - 60 ms: جيد جدًا (Tier 2)
+     * 61 - 100 ms: جيد (Tier 3)
+     * 101 - 150 ms: مرتفع (Tier 4)
+     * > 150 ms: مرتفع جدًا (Tier 5)
+     */
+    function classifyGamingPing(pingMs) {
+      var p = Number(pingMs);
+      if (!Number.isFinite(p) || p <= 0) {
+        return { tier: 0, labelAr: "في انتظار القياس", gradeClass: "" };
+      }
+      if (p < 30) {
+        return { tier: 1, labelAr: "ممتاز", gradeClass: "great" };
+      }
+      if (p <= 60) {
+        return { tier: 2, labelAr: "جيد جدًا", gradeClass: "good" };
+      }
+      if (p <= 100) {
+        return { tier: 3, labelAr: "جيد", gradeClass: "good" };
+      }
+      if (p <= 150) {
+        return { tier: 4, labelAr: "مرتفع", gradeClass: "poor" };
+      }
+      return { tier: 5, labelAr: "مرتفع جدًا", gradeClass: "bad" };
+    }
+
+    /**
+     * Multi-Factor Gaming Experience Verdict:
+     * Never relies on Ping alone. Even if Ping is 35 ms ("جيد جدًا"),
+     * elevated Jitter or Packet Loss degrades the real gaming experience.
+     */
+    function evaluateMultiFactorGaming(pingMs, jitterMs, packetLossPct, totalSamples, isFinished) {
+      var p = Number(pingMs);
+      var j = Number(jitterMs) || 0;
+      var loss = Number(packetLossPct) || 0;
+      var samples = Number(totalSamples) || 0;
+
+      if (!Number.isFinite(p) || p <= 0 || samples <= 0) {
+        return {
+          hasData: false,
+          pingClass: { tier: 0, labelAr: "في انتظار القياس", gradeClass: "" },
+          headlineAr: "في انتظار القياس",
+          descAr: "لا يعتمد التقييم على البنج وحده؛ يتم فحص زمن الاستجابة مع التذبذب (Jitter) وفقدان الحزم لتحديد تجربة اللعب الفعلية.",
+          gradeClass: "",
+          scorePercent: null
+        };
+      }
+
+      var pingClass = classifyGamingPing(p);
+      var prefix = isFinished ? "النتيجة النهائية: " : "قراءة حية: ";
+
+      // Calculate multi-factor stability score (0..99)
+      var pingPenalty = Math.max(0, (p - 15) * 0.42);
+      var jitterPenalty = Math.max(0, j * 1.85);
+      var lossPenalty = Math.max(0, loss * 12.5);
+      var scorePercent = Math.round(Math.max(1, Math.min(99, 100 - pingPenalty - jitterPenalty - lossPenalty)));
+
+      // Case 1: Severe Packet Loss (>= 2%) or Severe Jitter (>= 22 ms) ruins gameplay even if Ping is low (e.g., 35 ms)
+      if (loss >= 2 || j >= 22) {
+        return {
+          hasData: true,
+          pingClass: pingClass,
+          headlineAr: prefix + "تجربة لعب غير مستقرة (رغم أن البنج " + pingClass.labelAr + ")",
+          descAr: "البنج الفعلي (" + p.toFixed(1) + " ms — " + pingClass.labelAr + ")، لكن التذبذب المرتفع (" + j.toFixed(1) + " ms) أو فقدان الطلبات (" + loss.toFixed(1) + "%) يسبب تقطيعاً وتأخر استجابة (Input Lag / Rubberbanding).",
+          gradeClass: "bad",
+          scorePercent: scorePercent
+        };
+      }
+
+      // Case 2: Moderate Packet Loss (> 0%) or Noticeable Jitter (>= 10 ms)
+      if (loss > 0 || j >= 10) {
+        return {
+          hasData: true,
+          pingClass: pingClass,
+          headlineAr: prefix + "بنج " + pingClass.labelAr + " مع تذبذب ملحوظ في الحزم",
+          descAr: "زمن الاستجابة (" + p.toFixed(1) + " ms — " + pingClass.labelAr + ")، إلا أن التذبذب (" + j.toFixed(1) + " ms) وفقدان (" + loss.toFixed(1) + "%) قد يؤثران على ثبات المواجهات السريعة.",
+          gradeClass: "poor",
+          scorePercent: scorePercent
+        };
+      }
+
+      // Case 3: Clean line (Loss = 0% and Jitter < 10 ms) -> Evaluated by Ping Tier + Jitter
+      if (pingClass.tier === 1) {
+        return {
+          hasData: true,
+          pingClass: pingClass,
+          headlineAr: prefix + "ممتاز للألعاب التنافسية والبطولات",
+          descAr: "بنج منخفض جداً (" + p.toFixed(1) + " ms — ممتاز) مع تذبذب منخفض (" + j.toFixed(1) + " ms) و0% فقدان حزم (" + samples + " عينة حقيقية).",
+          gradeClass: "great",
+          scorePercent: scorePercent
+        };
+      }
+      if (pingClass.tier === 2) {
+        return {
+          hasData: true,
+          pingClass: pingClass,
+          headlineAr: prefix + "جيد جدًا ومستقر للألعاب الجماعية",
+          descAr: "بنج (" + p.toFixed(1) + " ms — جيد جدًا) وتذبذب منخفض (" + j.toFixed(1) + " ms) بدون فقدان حزم؛ يمنحك استجابة سلسة وموثوقة.",
+          gradeClass: "good",
+          scorePercent: scorePercent
+        };
+      }
+      if (pingClass.tier === 3) {
+        return {
+          hasData: true,
+          pingClass: pingClass,
+          headlineAr: prefix + "جيد للألعاب القياسية (61–100 ms)",
+          descAr: "الاتصال مستقر (Jitter " + j.toFixed(1) + " ms • Loss 0%) لكن زمن الاستجابة (" + p.toFixed(1) + " ms) متوسط للألعاب التنافسية السريعة.",
+          gradeClass: "good",
+          scorePercent: scorePercent
+        };
+      }
+      if (pingClass.tier === 4) {
+        return {
+          hasData: true,
+          pingClass: pingClass,
+          headlineAr: prefix + "بنج مرتفع (101–150 ms) — تأخر استجابة ملحوظ",
+          descAr: "رغم عدم فقدان الحزم، ارتفاع البنج (" + p.toFixed(1) + " ms) يسبب تأخراً في تسجيل الطلقات والأوامر السريعة.",
+          gradeClass: "poor",
+          scorePercent: scorePercent
+        };
+      }
+      return {
+        hasData: true,
+        pingClass: pingClass,
+        headlineAr: prefix + "بنج مرتفع جدًا (> 150 ms) — غير مناسب للعب التنافسي",
+        descAr: "زمن الاستجابة (" + p.toFixed(1) + " ms) مرتفع جداً ويؤدي إلى تأخر واضح في المزامنة مع خادم اللعب.",
+        gradeClass: "bad",
+        scorePercent: scorePercent
+      };
+    }
+
+    async function fetchJsonWithFallback(relPath) {
+      try {
+        var r = await fetch(relPath);
+        if (r.ok) return await r.json();
+      } catch (e) {}
+      var r2 = await fetch(ROOT_PREFIX + relPath);
+      return await r2.json();
+    }
+
+    function stopPingProbeWorker() {
+      if (gamingState.pingPollTimer) {
+        clearInterval(gamingState.pingPollTimer);
+        gamingState.pingPollTimer = null;
+      }
+      if (gamingState.pingWorker) {
+        var w = gamingState.pingWorker;
+        gamingState.pingWorker = null;
+        try {
+          w.postMessage("abort");
+          w.terminate();
+        } catch (e) {}
+      }
+    }
+
+    function startPingProbeWorker() {
+      stopPingProbeWorker();
+      gamingState.pingStats = null;
+
+      var pingUrl = ROOT_PREFIX + "backend/empty.php";
+      if (gamingState.selectedServer) {
+        var resolved = joinServerUrl(gamingState.selectedServer.server, gamingState.selectedServer.pingURL);
+        if (resolved.indexOf("http") !== 0 && resolved.indexOf("/") !== 0) {
+          resolved = ROOT_PREFIX + resolved;
+        }
+        pingUrl = resolved;
+      }
+
+      try {
+        var worker = new Worker(STABILITY_WORKER_PATH + "?r=" + Math.random());
+        gamingState.pingWorker = worker;
+        worker.onmessage = function (e) {
+          if (gamingState.pingWorker !== worker) return;
+          try {
+            var data = JSON.parse(e.data);
+            gamingState.pingStats = data;
+            if (Array.isArray(data.pingData) && data.pingData.length > 0) {
+              for (var i = 0; i < data.pingData.length; i++) {
+                var pt = data.pingData[i];
+                gamingState.waveformSamples.push({
+                  ping: pt.lost ? 0 : Number(pt.ping) || 0,
+                  jitter: Number(pt.jitter) || 0,
+                  lost: !!pt.lost
+                });
+                if (gamingState.waveformSamples.length > 60) {
+                  gamingState.waveformSamples.shift();
+                }
+              }
+            }
+            renderGamingUI();
+          } catch (err) {}
+        };
+
+        gamingState.pingPollTimer = setInterval(function () {
+          if (gamingState.pingWorker) {
+            gamingState.pingWorker.postMessage("status");
+          }
+        }, 200);
+
+        worker.postMessage("start " + JSON.stringify({
+          duration: 30,
+          ping_interval: 180,
+          ping_timeout: 3000,
+          ping_allowPerformanceApi: true,
+          url_ping: pingUrl,
+          mpot: true
+        }));
+      } catch (e) {}
+    }
+
+    var gamingGaugeThrottler = null;
+    function scheduleGamingGaugeRender(forceImmediate) {
+      var math = window.TerraxTelemetryMath;
+      if (!gamingGaugeThrottler && math && typeof math.createRafGaugeThrottler === "function") {
+        gamingGaugeThrottler = math.createRafGaugeThrottler(function (dtSeconds) {
+          renderGamingUI(dtSeconds);
+          if (gamingState.state === 2 && gamingState.testData) {
+            var stage = Number(gamingState.testData.testState);
+            var targetDl = Number(gamingState.testData.dlStatus) || 0;
+            var targetUl = Number(gamingState.testData.ulStatus) || 0;
+            if (
+              (stage === 1 && Math.abs(targetDl - gamingState.dlDisplayMbps) > 0.05) ||
+              (stage === 3 && Math.abs(targetUl - gamingState.ulDisplayMbps) > 0.05)
+            ) {
+              return true;
+            }
+          }
+          return false;
+        }, 60);
+      }
+      if (gamingGaugeThrottler) {
+        if (forceImmediate) {
+          gamingGaugeThrottler.cancel();
+          renderGamingUI(1 / 60);
+        } else {
+          gamingGaugeThrottler.schedule(false);
+        }
+      } else {
+        renderGamingUI(1 / 60);
+      }
+    }
+
+    function initGamingSpeedtest() {
+      gamingState.speedtest = new Speedtest();
+      gamingState.speedtest.setParameter("count_ping", 12);
+
+      gamingState.speedtest.onupdate = function (data) {
+        var now = performance.now();
+        var dtSeconds = gamingState.lastSampleTimestamp > 0
+          ? Math.min(1, Math.max(0.02, (now - gamingState.lastSampleTimestamp) / 1000))
+          : 0.15;
+        gamingState.lastSampleTimestamp = now;
+
+        if (data && Number(data.testState) === 1) {
+          var dlVal = Number(data.dlStatus);
+          if (Number.isFinite(dlVal) && dlVal > 0) {
+            gamingState.dlSamples.push(dlVal);
+            gamingState.currentTestBytes += (dlVal * 1e6 * dtSeconds) / 8;
+          }
+        } else if (data && Number(data.testState) === 3) {
+          var ulVal = Number(data.ulStatus);
+          if (Number.isFinite(ulVal) && ulVal > 0) {
+            gamingState.ulSamples.push(ulVal);
+            gamingState.currentTestBytes += (ulVal * 1e6 * dtSeconds) / 8;
+          }
+        }
+
+        // Consume real unloaded ping samples emitted by speedtest_worker.js during testState === 2
+        if (data && Array.isArray(data.pingData) && data.pingData.length > 0) {
+          for (var pIdx = 0; pIdx < data.pingData.length; pIdx++) {
+            var pt = data.pingData[pIdx];
+            if (pt) {
+              gamingState.waveformSamples.push({
+                ping: pt.lost ? 0 : (Number(pt.ping) || 0),
+                jitter: Number(pt.jitter) || 0,
+                lost: !!pt.lost
+              });
+              if (gamingState.waveformSamples.length > 60) {
+                gamingState.waveformSamples.shift();
+              }
+            }
+          }
+          drawWaveform();
+        } else {
+          var pingNum = Number(data && data.pingStatus);
+          var jitterNum = Number(data && data.jitterStatus);
+          if (Number.isFinite(pingNum) && pingNum > 0 && gamingState.waveformSamples.length === 0) {
+            gamingState.waveformSamples.push({
+              ping: pingNum,
+              jitter: Number.isFinite(jitterNum) && jitterNum >= 0 ? jitterNum : 0,
+              lost: false
+            });
+          }
+        }
+
+        if (data && Number(data.totalPingSamples) > 0) {
+          var curP = Number(data.pingStatus) || 0;
+          gamingState.pingStats = {
+            currentPing: curP,
+            avgPing: Number(data.avgPing) || curP,
+            minPing: Number(data.minPing) || curP,
+            maxPing: Number(data.maxPing) || curP,
+            jitter: Number(data.jitterStatus) || 0,
+            packetLoss: Number(data.packetLoss) || 0,
+            totalSamples: Number(data.totalPingSamples) || 0
+          };
+        }
+
+        gamingState.testData = data;
+        scheduleGamingGaugeRender(false);
+      };
+
+      gamingState.speedtest.onend = function (aborted) {
+        stopPingProbeWorker();
+        gamingState.state = aborted ? 1 : 3;
+        if (!aborted && !gamingState.historyRecordedForRun && gamingState.testData) {
+          gamingState.historyRecordedForRun = true;
+          recordCompletedGamingRun(gamingState.testData);
+        }
+        if (window.TerraxSmartAdEngine) {
+          if (!aborted) {
+            window.TerraxSmartAdEngine.onTestComplete("gaming");
+          } else {
+            window.TerraxSmartAdEngine.setTestingState(false);
+          }
+        }
+        scheduleGamingGaugeRender(true);
+      };
+    }
+
+    async function loadGamingSettingsAndServers() {
+      try {
+        var settings = await fetchJsonWithFallback("settings.json");
+        if (settings && typeof settings === "object") {
+          for (var key in settings) {
+            gamingState.speedtest.setParameter(key, settings[key]);
+          }
+          if (!settings.count_ping || Number(settings.count_ping) < 12) {
+            gamingState.speedtest.setParameter("count_ping", 12);
+          }
+        }
+      } catch (e) {}
+
+      try {
+        if (!Array.isArray(SPEEDTEST_SERVERS) && typeof sessionStorage !== "undefined") {
+          try {
+            var cachedRaw = sessionStorage.getItem("terrax_verified_servers_cache_v1");
+            if (cachedRaw) {
+              var cachedObj = JSON.parse(cachedRaw);
+              if (cachedObj && Array.isArray(cachedObj.servers) && cachedObj.servers.length > 0 && (Date.now() - (cachedObj.ts || 0)) < 120000) {
+                gamingState.servers = cachedObj.servers;
+                gamingState.speedtest.addTestPoints(gamingState.servers);
+                var cachedYemen = gamingState.servers.find(function (s) { return s && s.name === "اليمن"; });
+                populateGamingServerSelect(gamingState.servers, cachedYemen || gamingState.servers[0]);
+                return;
+              }
+            }
+          } catch (cacheErr) {}
+        }
+        var servers = Array.isArray(SPEEDTEST_SERVERS)
+          ? SPEEDTEST_SERVERS
+          : await fetchJsonWithFallback(SPEEDTEST_SERVERS);
+        if (Array.isArray(servers) && servers.length > 0) {
+          gamingState.servers = servers;
+          gamingState.speedtest.addTestPoints(servers);
+          gamingState.speedtest.selectServer(function (bestServer) {
+            var alive = gamingState.servers.filter(function (s) {
+              return s.pingT !== -1 || (typeof s.server === "string" && s.server.indexOf("//") === 0);
+            });
+            if (alive.length > 0) gamingState.servers = alive;
+            gamingState.servers.sort(function (a, b) {
+              if (a && a.name === "اليمن") return -1;
+              if (b && b.name === "اليمن") return 1;
+              return 0;
+            });
+            var yemenServer = gamingState.servers.find(function (s) {
+              return s && s.name === "اليمن";
+            });
+            if (!Array.isArray(SPEEDTEST_SERVERS) && typeof sessionStorage !== "undefined") {
+              try {
+                sessionStorage.setItem("terrax_verified_servers_cache_v1", JSON.stringify({ ts: Date.now(), servers: gamingState.servers }));
+              } catch (saveErr) {}
+            }
+            populateGamingServerSelect(gamingState.servers, yemenServer || bestServer || gamingState.servers[0]);
+          });
+        }
+      } catch (e) {
+        gamingState.state = 1;
+        renderGamingUI();
+      }
+    }
+
+    function populateGamingServerSelect(servers, initialServer) {
+      var selectEl = I("gamingServerSelect");
+      if (!selectEl) return;
+      selectEl.innerHTML = "";
+
+      servers.forEach(function (srv, idx) {
+        var opt = document.createElement("option");
+        opt.value = String(idx);
+        opt.textContent = srv.name;
+        if (initialServer && srv.name === initialServer.name) {
+          opt.selected = true;
+        }
+        selectEl.appendChild(opt);
+      });
+
+      if (initialServer) {
+        selectGamingServer(initialServer);
+      } else if (servers.length > 0) {
+        selectGamingServer(servers[0]);
+      }
+
+      selectEl.onchange = function () {
+        var chosen = gamingState.servers[Number(selectEl.value)];
+        if (chosen && gamingState.state !== 2) {
+          selectGamingServer(chosen);
+        }
+      };
+    }
+
+    function selectGamingServer(server) {
+      if (gamingState.state === 2 || (gamingState.speedtest && gamingState.speedtest.getState() === 3)) {
+        return;
+      }
+      gamingState.selectedServer = server;
+      gamingState.speedtest.setSelectedServer(server);
+      gamingState.state = 1;
+      var sponsorEl = I("gamingSponsorName");
+      if (sponsorEl) {
+        sponsorEl.textContent = server.sponsorName || "Terrax Plus Fiber Core";
+      }
+      renderGamingUI();
+    }
+
+    function toggleGamingTest() {
+      if (gamingState.state === 0) return;
+      if (gamingState.state === 2 || (gamingState.speedtest && gamingState.speedtest.getState() === 3)) {
+        gamingState.userAborted = true;
+        if (window.TerraxSmartAdEngine) {
+          window.TerraxSmartAdEngine.setTestingState(false);
+        }
+        stopPingProbeWorker();
+        if (gamingState.speedtest && gamingState.speedtest.getState() === 3) {
+          gamingState.speedtest.abort();
+        } else {
+          gamingState.state = 1;
+          renderGamingUI();
+        }
+        return;
+      }
+
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        var headerStatus = I("gamingHeaderStatus");
+        if (headerStatus) headerStatus.textContent = "لا يوجد اتصال بالإنترنت حالياً";
+        return;
+      }
+
+      if (gamingState.speedtest && gamingState.speedtest.getState() === 3) {
+        return;
+      }
+
+      gamingState.dlSamples = [];
+      gamingState.ulSamples = [];
+      gamingState.waveformSamples = [];
+      gamingState.pingStats = null;
+      gamingState.lastSampleTimestamp = performance.now();
+      gamingState.lastRenderTimestamp = performance.now();
+      gamingState.dlDisplayMbps = 0;
+      gamingState.ulDisplayMbps = 0;
+      gamingState.currentTestBytes = 0;
+      gamingState.historyRecordedForRun = false;
+      gamingState.userAborted = false;
+      gamingState.testData = null;
+      gamingState.state = 2;
+      if (window.TerraxSmartAdEngine) {
+        window.TerraxSmartAdEngine.setTestingState(true);
+      }
+      // Do not run stability_worker.js concurrently during multi-stream Download/Upload saturation;
+      // speedtest_worker.js measures unloaded Ping, Jitter, Min, Avg, Max, and PacketLoss during phase P.
+      stopPingProbeWorker();
+      gamingState.speedtest.start();
+      renderGamingUI();
+    }
+
+    function getConsolidatedPingMetrics() {
+      var data = gamingState.testData;
+      var ps = gamingState.pingStats;
+      var speedtestPing = Number(data && data.pingStatus);
+      var speedtestJitter = Number(data && data.jitterStatus);
+      var speedtestMinPing = Number(data && data.minPing);
+      var speedtestAvgPing = Number(data && data.avgPing);
+      var speedtestMaxPing = Number(data && data.maxPing);
+      var speedtestLoss = Number(data && data.packetLoss);
+      var speedtestSamples = Number(data && data.totalPingSamples);
+
+      var hasSpeedtestPing = Number.isFinite(speedtestPing) && speedtestPing > 0;
+      var hasWorkerPing = ps && Number(ps.totalSamples) > 0 && Number(ps.avgPing) > 0;
+
+      var currentPing = hasSpeedtestPing
+        ? speedtestPing
+        : (hasWorkerPing ? Number(ps.currentPing || ps.avgPing) : 0);
+      var avgPing = (Number.isFinite(speedtestAvgPing) && speedtestAvgPing > 0)
+        ? speedtestAvgPing
+        : (hasWorkerPing ? Number(ps.avgPing) : currentPing);
+      var minPing = (Number.isFinite(speedtestMinPing) && speedtestMinPing > 0)
+        ? speedtestMinPing
+        : (hasWorkerPing && Number(ps.minPing) > 0 ? Number(ps.minPing) : currentPing);
+      var maxPing = (Number.isFinite(speedtestMaxPing) && speedtestMaxPing > 0)
+        ? speedtestMaxPing
+        : (hasWorkerPing && Number(ps.maxPing) > 0 ? Number(ps.maxPing) : currentPing);
+      var jitter = (Number.isFinite(speedtestJitter) && speedtestJitter >= 0 && hasSpeedtestPing)
+        ? speedtestJitter
+        : (hasWorkerPing ? (Number(ps.jitter) || 0) : 0);
+      var packetLoss = (Number.isFinite(speedtestLoss) && speedtestSamples > 0)
+        ? speedtestLoss
+        : (ps && Number(ps.totalSamples) > 0 ? (Number(ps.packetLoss) || 0) : 0);
+      var totalSamples = (Number.isFinite(speedtestSamples) && speedtestSamples > 0)
+        ? speedtestSamples
+        : (ps && Number(ps.totalSamples) > 0 ? Number(ps.totalSamples) : (currentPing > 0 ? 1 : 0));
+
+      return {
+        currentPing: currentPing,
+        avgPing: avgPing,
+        minPing: minPing,
+        maxPing: maxPing,
+        jitter: jitter,
+        packetLoss: packetLoss,
+        totalSamples: totalSamples
+      };
+    }
+
+    function recordCompletedGamingRun(data) {
+      try {
+        var pm = getConsolidatedPingMetrics();
+        var mfEval = evaluateMultiFactorGaming(pm.currentPing || pm.avgPing, pm.jitter, pm.packetLoss, pm.totalSamples, true);
+        var server = gamingState.speedtest.getSelectedServer();
+        var entry = {
+          timestamp: new Date().toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+          serverName: (server && server.name) ? server.name : "اليمن",
+          dlMbps: Number(data.dlStatus) || 0,
+          ulMbps: Number(data.ulStatus) || 0,
+          pingMs: Number((pm.currentPing || pm.avgPing || 0).toFixed(2)),
+          stabilityPercent: mfEval.scorePercent,
+          megabytesUsed: Math.max(0.5, Number((gamingState.currentTestBytes / (1024 * 1024)).toFixed(1)))
+        };
+        var raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+        var list = raw ? JSON.parse(raw) : [];
+        list.unshift(entry);
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list.slice(0, 25)));
+      } catch (e) {}
+    }
+
+    function highlightPingTierScale(activeTier) {
+      var pills = document.querySelectorAll("#pingTierScale .ping-tier-pill");
+      pills.forEach(function (pill) {
+        var t = Number(pill.getAttribute("data-tier"));
+        pill.classList.toggle("active-tier", activeTier > 0 && t === activeTier);
+      });
+    }
+
+    function renderGamingUI(throttledDt) {
+      var math = window.TerraxTelemetryMath;
+      var startBtn = I("gaming-start-btn");
+      var startLabel = I("gamingStartLabel");
+      var serverSelect = I("gamingServerSelect");
+      var headerStatus = I("gamingHeaderStatus");
+
+      if (startBtn && startLabel) {
+        startBtn.classList.toggle("disabled", gamingState.state === 0);
+        startBtn.classList.toggle("running", gamingState.state === 2);
+        if (gamingState.state === 0) {
+          startLabel.textContent = "جاري تهيئة الخادم...";
+        } else if (gamingState.state === 2) {
+          startLabel.textContent = "إيقاف فحص الألعاب";
+        } else if (gamingState.state === 3) {
+          startLabel.textContent = "إعادة فحص الألعاب";
+        } else {
+          startLabel.textContent = "بدء فحص الألعاب";
+        }
+      }
+
+      if (serverSelect) {
+        serverSelect.disabled = gamingState.state === 2 || gamingState.state === 0;
+      }
+
+      if (headerStatus) {
+        headerStatus.textContent = gamingState.state === 2
+          ? "جاري فحص الألعاب الحقيقي..."
+          : gamingState.state === 3
+            ? "اكتمل فحص الألعاب"
+            : "جاهز لفحص الألعاب";
+      }
+
+      var data = gamingState.testData;
+      var pm = getConsolidatedPingMetrics();
+      var pingEl = I("hudPingVal");
+      var jitterEl = I("hudJitterVal");
+      var stabEl = I("hudStabilityVal");
+      var dlEl = I("hudDownloadVal");
+      var dlUnitEl = I("hudDownloadUnit");
+      var ulEl = I("hudUploadVal");
+      var ulUnitEl = I("hudUploadUnit");
+      var minPingEl = I("hudMinPingVal");
+      var avgPingEl = I("hudAvgPingVal");
+      var maxPingEl = I("hudMaxPingVal");
+      var lossEl = I("hudPacketLossVal");
+      var dialArc = I("gamingDialArc");
+      var qualityBadge = I("hudQualityBadge");
+      var progressFill = I("gamingProgressFill");
+      var progressPhase = I("gamingProgressPhase");
+      var progressPct = I("gamingProgressPct");
+
+      if (!data && pm.totalSamples === 0) {
+        if (pingEl) pingEl.textContent = "00";
+        if (jitterEl) jitterEl.textContent = "00";
+        if (stabEl) stabEl.textContent = "--";
+        if (dlEl) dlEl.textContent = "00";
+        if (ulEl) ulEl.textContent = "00";
+        if (minPingEl) minPingEl.textContent = "-- ms";
+        if (avgPingEl) avgPingEl.textContent = "-- ms";
+        if (maxPingEl) maxPingEl.textContent = "-- ms";
+        if (lossEl) {
+          lossEl.textContent = "0.0%";
+          lossEl.classList.remove("loss-alert");
+        }
+        if (dialArc) dialArc.setAttribute("stroke-dasharray", "0 600");
+        if (qualityBadge) qualityBadge.textContent = "جاهز للقياس";
+        if (progressFill) progressFill.style.width = "0%";
+        if (progressPhase) progressPhase.textContent = "جاهز لبدء فحص الألعاب الشامل";
+        if (progressPct) progressPct.textContent = "0%";
+        highlightPingTierScale(0);
+        updateSmartVerdicts(null, null, 0);
+        updateGameRadarCards(0, 0, 0);
+        drawWaveform();
+        return;
+      }
+
+      var displayPing = pm.currentPing > 0 ? pm.currentPing : pm.avgPing;
+      if (pingEl) {
+        pingEl.textContent = displayPing > 0
+          ? (displayPing < 10 ? displayPing.toFixed(2) : displayPing.toFixed(1))
+          : "00";
+      }
+      if (jitterEl) {
+        jitterEl.textContent = displayPing > 0
+          ? (pm.jitter < 10 ? pm.jitter.toFixed(2) : pm.jitter.toFixed(1))
+          : "00";
+      }
+      if (minPingEl) {
+        minPingEl.textContent = pm.minPing > 0 ? pm.minPing.toFixed(1) + " ms" : "-- ms";
+      }
+      if (avgPingEl) {
+        avgPingEl.textContent = pm.avgPing > 0 ? pm.avgPing.toFixed(1) + " ms" : "-- ms";
+      }
+      if (maxPingEl) {
+        maxPingEl.textContent = pm.maxPing > 0 ? pm.maxPing.toFixed(1) + " ms" : "-- ms";
+      }
+      if (lossEl) {
+        lossEl.textContent = pm.packetLoss.toFixed(1) + "%";
+        lossEl.classList.toggle("loss-alert", pm.packetLoss > 0);
+      }
+
+      if (data && data.clientIp && I("gamingClientIp")) {
+        I("gamingClientIp").textContent = sanitizeClientIp(data.clientIp);
+      }
+
+      var isFinished = gamingState.state === 3;
+      var mfEval = evaluateMultiFactorGaming(displayPing, pm.jitter, pm.packetLoss, pm.totalSamples, isFinished);
+      highlightPingTierScale(mfEval.pingClass.tier);
+
+      if (math) {
+        var nowRender = performance.now();
+        var dtRender = (typeof throttledDt === "number" && throttledDt > 0)
+          ? throttledDt
+          : (gamingState.lastRenderTimestamp > 0
+            ? Math.min(0.05, Math.max(0.008, (nowRender - gamingState.lastRenderTimestamp) / 1000))
+            : 0.016);
+        gamingState.lastRenderTimestamp = nowRender;
+
+        var reducedMotion = typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var snapDl = reducedMotion || gamingState.state !== 2 || Number(data && data.testState) !== 1;
+        var snapUl = reducedMotion || gamingState.state !== 2 || Number(data && data.testState) !== 3;
+
+        gamingState.dlDisplayMbps = math.smoothNumericValue
+          ? math.smoothNumericValue(gamingState.dlDisplayMbps, data ? data.dlStatus : 0, dtRender, snapDl)
+          : (Number(data && data.dlStatus) || 0);
+        gamingState.ulDisplayMbps = math.smoothNumericValue
+          ? math.smoothNumericValue(gamingState.ulDisplayMbps, data ? data.ulStatus : 0, dtRender, snapUl)
+          : (Number(data && data.ulStatus) || 0);
+
+        var dlFmt = math.formatSpeedReading(snapDl ? (data ? data.dlStatus : 0) : gamingState.dlDisplayMbps, true);
+        var ulFmt = math.formatSpeedReading(snapUl ? (data ? data.ulStatus : 0) : gamingState.ulDisplayMbps, true);
+        if (dlEl) {
+          if (dlEl.textContent !== dlFmt.displayNumber) {
+            dlEl.textContent = dlFmt.displayNumber;
+            if (!reducedMotion && gamingState.state === 2 && Number(data && data.testState) === 1 && nowRender - gamingState.lastDlTickTime >= 180) {
+              gamingState.lastDlTickTime = nowRender;
+              dlEl.classList.remove("num-scaling");
+              void dlEl.offsetWidth;
+              dlEl.classList.add("num-scaling");
+            }
+          }
+        }
+        if (dlUnitEl) dlUnitEl.textContent = dlFmt.unitEn;
+        if (ulEl) {
+          if (ulEl.textContent !== ulFmt.displayNumber) {
+            ulEl.textContent = ulFmt.displayNumber;
+            if (!reducedMotion && gamingState.state === 2 && Number(data && data.testState) === 3 && nowRender - gamingState.lastUlTickTime >= 180) {
+              gamingState.lastUlTickTime = nowRender;
+              ulEl.classList.remove("num-scaling");
+              void ulEl.offsetWidth;
+              ulEl.classList.add("num-scaling");
+            }
+          }
+        }
+        if (ulUnitEl) ulUnitEl.textContent = ulFmt.unitEn;
+
+        var realMetrics = math.calculateRealMetrics(
+          gamingState.dlSamples,
+          gamingState.ulSamples,
+          displayPing,
+          pm.jitter
+        );
+
+        var combinedStability = mfEval.scorePercent !== null
+          ? mfEval.scorePercent
+          : realMetrics.stabilityPercent;
+
+        if (stabEl) {
+          stabEl.textContent = combinedStability !== null ? String(combinedStability) : "--";
+        }
+
+        if (qualityBadge) {
+          qualityBadge.textContent = mfEval.hasData
+            ? ("البنج: " + mfEval.pingClass.labelAr + (pm.packetLoss > 0 ? " • فقدان " + pm.packetLoss.toFixed(1) + "%" : ""))
+            : "جاري القياس...";
+        }
+
+        if (dialArc) {
+          var scorePct = combinedStability !== null ? combinedStability : 0;
+          var arcLen = Math.max(0, Math.min(448, (scorePct / 100) * 448));
+          dialArc.setAttribute("stroke-dasharray", arcLen.toFixed(1) + " 600");
+        }
+
+        updateSmartVerdicts(mfEval, realMetrics, Number(data && data.ulStatus) || 0);
+        updateGameRadarCards(displayPing, pm.jitter, pm.packetLoss);
+      }
+
+      // Progress calculation
+      var s = data ? Number(data.testState) : 0;
+      var dlP = Number(data && data.dlProgress) || 0;
+      var ulP = Number(data && data.ulProgress) || 0;
+      var pingP = Number(data && data.pingProgress) || 0;
+      var overall = 0;
+      var phaseAr = "جاري الفحص...";
+      if (s === 0) {
+        phaseAr = "جاري الاتصال بخادم القياس وإرسال نبضات البنج...";
+        overall = Math.max(0.05, pingP * 0.1);
+      } else if (s === 1) {
+        phaseAr = "جاري فحص سرعة التنزيل وثبات النبضات (" + pm.totalSamples + " نبضة)...";
+        overall = 0.1 + dlP * 0.42;
+      } else if (s === 2) {
+        phaseAr = "جاري قياس زمن الاستجابة (Ping) والتذبذب (Jitter)...";
+        overall = 0.52 + pingP * 0.08;
+      } else if (s === 3) {
+        phaseAr = "جاري فحص سرعة الرفع للبث المباشر (" + pm.totalSamples + " نبضة)...";
+        overall = 0.6 + ulP * 0.4;
+      } else if (s >= 4) {
+        phaseAr = "اكتمل فحص الألعاب بنجاح (" + pm.totalSamples + " عينة مقيسة)";
+        overall = 1;
+      }
+      var pct = gamingState.state === 3 ? 100 : Math.min(100, Math.max(0, Math.round(overall * 100)));
+      if (progressFill) progressFill.style.width = pct + "%";
+      if (progressPhase) progressPhase.textContent = phaseAr;
+      if (progressPct) progressPct.textContent = pct + "%";
+
+      drawWaveform();
+    }
+
+    function updateSmartVerdicts(mfEval, realMetrics, ulMbps) {
+      var compTitle = I("competitiveVerdictTitle");
+      var compDesc = I("competitiveVerdictDesc");
+      var streamTitle = I("streamingVerdictTitle");
+      var streamDesc = I("streamingVerdictDesc");
+      if (!compTitle || !compDesc || !streamTitle || !streamDesc) return;
+
+      if (!mfEval || !mfEval.hasData) {
+        compTitle.className = "verdict-headline";
+        compTitle.textContent = "في انتظار القياس";
+        compDesc.textContent = "لا يعتمد التقييم على البنج وحده؛ يتم فحص زمن الاستجابة مع التذبذب (Jitter) وفقدان الحزم لتحديد تجربة اللعب الفعلية.";
+        streamTitle.className = "verdict-headline";
+        streamTitle.textContent = "في انتظار القياس";
+        streamDesc.textContent = "يعتمد تقييم البث المباشر (4K / 1080p60) على سرعة الرفع الفعلية ونسبة ثبات الاتصال أثناء الاختبار.";
+        return;
+      }
+
+      compTitle.className = "verdict-headline " + mfEval.gradeClass;
+      compTitle.textContent = mfEval.headlineAr;
+      compDesc.textContent = mfEval.descAr;
+
+      var stabPct = (mfEval.scorePercent !== null)
+        ? mfEval.scorePercent
+        : ((realMetrics && realMetrics.stabilityPercent) ? realMetrics.stabilityPercent : 0);
+
+      if (ulMbps <= 0) {
+        streamTitle.className = "verdict-headline good";
+        streamTitle.textContent = "جاري قياس سرعة الرفع للبث...";
+        streamDesc.textContent = "يتم الآن اختبار ثبات الاتصال وسرعة الرفع لتحديد دقة البث المباشر القصوى.";
+      } else if (ulMbps >= 25 && stabPct >= 80) {
+        streamTitle.className = "verdict-headline great";
+        streamTitle.textContent = "ممتاز لبث الألعاب بدقة 4K60 / 1080p60";
+        streamDesc.textContent = "سرعة الرفع (" + ulMbps.toFixed(1) + " Mbps) والاستقرار (" + stabPct + "%) يدعمان البث المباشر بمعدل Bitrate مرتفع بدون تقطيع إطارات.";
+      } else if (ulMbps >= 10 && stabPct >= 65) {
+        streamTitle.className = "verdict-headline good";
+        streamTitle.textContent = "جاهز للبث المباشر بدقة 1080p / 720p60";
+        streamDesc.textContent = "سرعة الرفع (" + ulMbps.toFixed(1) + " Mbps) مناسبة للبث المستقر على منصات البث مع استقرار (" + stabPct + "%).";
+      } else {
+        streamTitle.className = "verdict-headline poor";
+        streamTitle.textContent = "محدود للبث عالي الدقة — يوصى بدقة 720p";
+        streamDesc.textContent = "سرعة الرفع الحالية (" + ulMbps.toFixed(1) + " Mbps) أو تذبذب الخط قد يسببان تقطيعاً أثناء البث المباشر بالتزامن مع اللعب.";
+      }
+    }
+
+    function updateGameRadarCards(pingMs, jitterMs, packetLossPct) {
+      var cards = document.querySelectorAll(".game-perf-card");
+      var hasPing = Number.isFinite(pingMs) && pingMs > 0;
+      var jit = Number.isFinite(jitterMs) && jitterMs >= 0 ? jitterMs : 0;
+      var loss = Number.isFinite(packetLossPct) && packetLossPct >= 0 ? packetLossPct : 0;
+
+      cards.forEach(function (card) {
+        var pingSpan = card.querySelector(".game-live-ping");
+        var stateSpan = card.querySelector(".game-fps-state");
+        var fillBar = card.querySelector(".game-bar-fill");
+        var ideal = Number(card.getAttribute("data-ideal-ping")) || 35;
+        var max = Number(card.getAttribute("data-max-ping")) || 85;
+
+        if (card.id === "gamingBoosterCard") {
+          if (!hasPing) {
+            if (pingSpan) pingSpan.textContent = "< 55";
+            if (stateSpan) {
+              stateSpan.className = "game-fps-state great";
+              stateSpan.textContent = "مسار مباشر";
+            }
+            if (fillBar) {
+              fillBar.style.width = "95%";
+              fillBar.style.background = "linear-gradient(90deg, #27ddf8, #78e7a0)";
+            }
+            return;
+          }
+
+          if (pingMs >= 55 || loss >= 1 || jit >= 15) {
+            if (pingSpan) pingSpan.textContent = Math.round(pingMs);
+            if (stateSpan) {
+              stateSpan.className = "game-fps-state bad";
+              stateSpan.textContent = "تحسين المسار ⚡";
+            }
+            if (fillBar) {
+              fillBar.style.width = "48%";
+              fillBar.style.background = "linear-gradient(90deg, #f59e0b, #ef4444)";
+            }
+          } else {
+            if (pingSpan) pingSpan.textContent = Math.round(pingMs);
+            if (stateSpan) {
+              stateSpan.className = "game-fps-state great";
+              stateSpan.textContent = "مسار مستقر ✓";
+            }
+            if (fillBar) {
+              fillBar.style.width = "95%";
+              fillBar.style.background = "linear-gradient(90deg, #27ddf8, #78e7a0)";
+            }
+          }
+          return;
+        }
+
+        if (!hasPing) {
+          if (pingSpan) pingSpan.textContent = "--";
+          if (stateSpan) {
+            stateSpan.className = "game-fps-state";
+            stateSpan.textContent = "في انتظار الفحص";
+          }
+          if (fillBar) fillBar.style.width = "0%";
+          return;
+        }
+
+        if (pingSpan) {
+          pingSpan.textContent = pingMs < 10 ? pingMs.toFixed(1) : Math.round(pingMs);
+        }
+
+        var pingTier = classifyGamingPing(pingMs);
+
+        // Multi-factor check per game card: high packet loss or high jitter overrides low ping
+        if (loss >= 2 || jit >= 22) {
+          stateSpan.className = "game-fps-state bad";
+          stateSpan.textContent = "تقطيع · تذبذب/فقدان";
+          fillBar.style.width = "28%";
+          fillBar.style.backgroundColor = "#FF647C";
+        } else if (loss > 0 || jit >= 10) {
+          stateSpan.className = "game-fps-state poor";
+          stateSpan.textContent = "بنج " + pingTier.labelAr + " · تذبذب";
+          fillBar.style.width = "54%";
+          fillBar.style.backgroundColor = "#F5C46B";
+        } else if (pingMs <= ideal && pingTier.tier <= 2) {
+          stateSpan.className = "game-fps-state great";
+          stateSpan.textContent = "استجابة فورية · " + pingTier.labelAr;
+          fillBar.style.width = "96%";
+          fillBar.style.backgroundColor = "#78E7A0";
+        } else if (pingMs <= max && pingTier.tier <= 3) {
+          stateSpan.className = "game-fps-state good";
+          stateSpan.textContent = "لعب مستقر · " + pingTier.labelAr;
+          fillBar.style.width = "76%";
+          fillBar.style.backgroundColor = "#27DDF8";
+        } else if (pingTier.tier === 4) {
+          stateSpan.className = "game-fps-state poor";
+          stateSpan.textContent = "بنج مرتفع (101–150ms)";
+          fillBar.style.width = "45%";
+          fillBar.style.backgroundColor = "#F5C46B";
+        } else {
+          stateSpan.className = "game-fps-state bad";
+          stateSpan.textContent = "بنج مرتفع جدًا (>150ms)";
+          fillBar.style.width = "22%";
+          fillBar.style.backgroundColor = "#FF647C";
+        }
+      });
+    }
+
+    function drawWaveform() {
+      var canvas = I("gamingWaveformCanvas");
+      var emptyHint = I("waveformEmptyHint");
+      if (!canvas) return;
+      var ctx = canvas.getContext("2d");
+      var dp = window.devicePixelRatio || 1;
+      var cw = canvas.clientWidth * dp;
+      var ch = canvas.clientHeight * dp;
+      if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width = cw;
+        canvas.height = ch;
+      }
+      ctx.clearRect(0, 0, cw, ch);
+
+      var samples = gamingState.waveformSamples;
+      if (emptyHint) {
+        emptyHint.classList.toggle("hidden", samples.length > 0);
+      }
+
+      // Draw subtle grid lines
+      ctx.strokeStyle = "rgba(39, 221, 248, 0.14)";
+      ctx.lineWidth = 1 * dp;
+      for (var g = 1; g <= 3; g++) {
+        var gy = (ch / 4) * g;
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        ctx.lineTo(cw, gy);
+        ctx.stroke();
+      }
+
+      if (samples.length === 0) return;
+
+      var maxPing = 40;
+      for (var i = 0; i < samples.length; i++) {
+        if (!samples[i].lost && samples[i].ping > maxPing) maxPing = samples[i].ping;
+      }
+      maxPing = Math.ceil(maxPing * 1.25);
+
+      var padX = 14 * dp;
+      var padY = 14 * dp;
+      var plotW = Math.max(10, cw - padX * 2);
+      var plotH = Math.max(10, ch - padY * 2);
+
+      // Draw Jitter curve (Purple) from real measured samples
+      ctx.save();
+      ctx.beginPath();
+      var startedJ = false;
+      for (var j = 0; j < samples.length; j++) {
+        if (samples[j].lost) {
+          startedJ = false;
+          continue;
+        }
+        var jx = padX + (samples.length === 1 ? plotW / 2 : (j / (samples.length - 1)) * plotW);
+        var jy = padY + plotH - (Math.min(maxPing, samples[j].jitter) / maxPing) * plotH;
+        if (!startedJ) {
+          ctx.moveTo(jx, jy);
+          startedJ = true;
+        } else {
+          ctx.lineTo(jx, jy);
+        }
+      }
+      ctx.strokeStyle = "#C477FF";
+      ctx.lineWidth = 2 * dp;
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw Ping curve (Cyan) from real measured samples + Packet Loss markers
+      ctx.save();
+      ctx.beginPath();
+      var startedP = false;
+      for (var k = 0; k < samples.length; k++) {
+        var px = padX + (samples.length === 1 ? plotW / 2 : (k / (samples.length - 1)) * plotW);
+        if (samples[k].lost) {
+          startedP = false;
+          ctx.save();
+          ctx.strokeStyle = "rgba(255, 100, 124, 0.75)";
+          ctx.lineWidth = 1.6 * dp;
+          ctx.beginPath();
+          ctx.moveTo(px, padY);
+          ctx.lineTo(px, padY + plotH);
+          ctx.stroke();
+          ctx.restore();
+          continue;
+        }
+        var py = padY + plotH - (Math.min(maxPing, samples[k].ping) / maxPing) * plotH;
+        if (!startedP) {
+          ctx.moveTo(px, py);
+          startedP = true;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.strokeStyle = "#27DDF8";
+      ctx.lineWidth = 2.6 * dp;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function hookUpGamingInteractions() {
+      var startBtn = I("gaming-start-btn");
+      if (startBtn) {
+        startBtn.addEventListener("click", toggleGamingTest);
+      }
+
+      // Category filter buttons
+      var filterBtns = document.querySelectorAll(".game-filter-btn");
+      var cards = document.querySelectorAll(".game-perf-card");
+      filterBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var cat = btn.getAttribute("data-category");
+          filterBtns.forEach(function (b) { b.classList.toggle("active", b === btn); });
+          cards.forEach(function (card) {
+            var match = cat === "all" || card.getAttribute("data-cat") === cat;
+            card.classList.toggle("hidden-card", !match);
+          });
+        });
+      });
+
+      // Game card selection focuses that game in the top bar
+      cards.forEach(function (card) {
+        card.addEventListener("click", function () {
+          cards.forEach(function (c) { c.classList.toggle("selected-game", c === card); });
+          var gName = card.getAttribute("data-game");
+          if (gName && I("focusedGameName")) {
+            I("focusedGameName").textContent = gName;
+          }
+        });
+      });
+
+      window.addEventListener("resize", drawWaveform);
+      window.addEventListener("pagehide", function () {
+        stopPingProbeWorker();
+        if (gamingState.state === 2 && gamingState.speedtest) {
+          try {
+            gamingState.speedtest.abort();
+          } catch (e) {}
+        }
+      });
+    }
+
+    var isNavigatingFromGaming = false;
+    function navigateFromGaming(e, target) {
+      if (e && e.preventDefault) e.preventDefault();
+      if (isNavigatingFromGaming) return false;
+      isNavigatingFromGaming = true;
+      if (e && e.currentTarget && e.currentTarget.parentElement) {
+        var navItems = e.currentTarget.parentElement.querySelectorAll(".nav-dock-item, .nav-item");
+        for (var i = 0; i < navItems.length; i++) {
+          navItems[i].classList.remove("active");
+        }
+        e.currentTarget.classList.add("active");
+      }
+      stopPingProbeWorker();
+      if (gamingState.state === 2 && gamingState.speedtest) {
+        try {
+          gamingState.userAborted = true;
+          gamingState.speedtest.abort();
+        } catch (err) {}
+      }
+      var speedPage = IS_FRONTEND_SUBDIR ? "index.html" : "index-modern.html";
+      var targetUrl = speedPage;
+      if (target === "speed") {
+        targetUrl = speedPage;
+      } else if (target === "usage") {
+        targetUrl = speedPage + "?tab=usage";
+      } else if (target === "settings") {
+        targetUrl = speedPage + "?tab=settings";
+      } else if (target === "stability") {
+        targetUrl = "stability.html";
+      }
+      window.location.assign(targetUrl);
+      return false;
+    }
+
+    function initGameQueryLivePanel() {
+      var checkBtn = I("gamequeryCheckBtn");
+      var protoSelect = I("gamequeryProtocolSelect");
+      var addrInput = I("gamequeryAddressInput");
+      var statusText = I("gamequeryStatusText");
+      if (!checkBtn || !protoSelect || !addrInput || !statusText) return;
+
+      checkBtn.addEventListener("click", function () {
+        var gameId = protoSelect.value || "counterstrike2";
+        var addr = (addrInput.value || "").trim();
+        if (!addr) {
+          statusText.textContent = "يرجى إدخال عنوان الخادم بصيغة IP:Port (مثال 185.25.180.1:27015).";
+          return;
+        }
+        statusText.textContent = "جاري الاستعلام الآمن عبر الخادم...";
+        fetch(ROOT_PREFIX + "backend/gamequery.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            servers: [{ game_id: gameId, servers: [addr] }]
+          })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data && Array.isArray(data.results) && data.results.length > 0) {
+              var srv = data.results[0];
+              statusText.textContent =
+                (srv.online ? "متصل (Online)" : "غير متصل") +
+                (srv.name ? " • " + srv.name : "") +
+                (srv.probeLatencyMs != null ? " • استجابة عقدة الفحص: " + srv.probeLatencyMs + "ms" : "");
+            } else if (data && data.messageAr) {
+              statusText.textContent = data.messageAr;
+            }
+          })
+          .catch(function () {
+            statusText.textContent = "تعذر الاتصال بنقطة استعلام الخادم المحلية.";
+          });
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", function () {
+      initGamingSpeedtest();
+      hookUpGamingInteractions();
+      initGameQueryLivePanel();
+      loadGamingSettingsAndServers();
+      drawWaveform();
+    });
+  </script>
+</body>
+
+</html>

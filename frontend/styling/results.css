@@ -1,0 +1,1354 @@
+/* 4K Cyber Glass Circular Gauges, Latency Telemetry Strip & Summary Stat Cards */
+
+:root {
+  --gauge-primary-size: 20rem;
+  --gauge-secondary-size: 16.6rem;
+}
+
+.gauge-layout {
+  width: 100%;
+  max-width: 78rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin: 0 auto;
+  position: relative;
+  contain: layout style;
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  animation: gaugeLayoutEntrance 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes gaugeLayoutEntrance {
+  0% {
+    opacity: 0.94;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.secondary-gauges-row {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4.2rem;
+  gap: 2.4rem;
+  margin-top: -7.6rem;
+  transition: margin-top 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              padding 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              gap 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Base Circular Cyber Gauge */
+div.gauge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 42%,
+    rgba(24, 58, 112, 0.46) 0%,
+    rgba(16, 40, 82, 0.54) 70%,
+    rgba(12, 32, 68, 0.62) 100%
+  );
+  box-shadow:
+    0 14px 36px rgba(8, 22, 48, 0.36),
+    inset 0 0 32px rgba(56, 189, 248, 0.22);
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.45s ease-in-out,
+              box-shadow 0.45s ease-in-out,
+              opacity 0.45s ease-in-out,
+              border-color 0.45s ease-in-out,
+              filter 0.45s ease-in-out;
+}
+
+div.gauge.download {
+  width: var(--gauge-primary-size);
+  height: var(--gauge-primary-size);
+  border: 1.5px solid rgba(56, 189, 248, 0.62);
+  box-shadow:
+    0 18px 46px rgba(8, 22, 48, 0.55),
+    0 0 38px rgba(56, 189, 248, 0.32),
+    inset 0 0 34px rgba(56, 189, 248, 0.22);
+  z-index: 2;
+  animation: downloadHaloBreathe 7s ease-in-out infinite alternate;
+}
+
+@keyframes downloadHaloBreathe {
+  0% {
+    box-shadow:
+      0 16px 42px rgba(8, 22, 48, 0.5),
+      0 0 30px rgba(56, 189, 248, 0.24),
+      inset 0 0 28px rgba(56, 189, 248, 0.16);
+  }
+  100% {
+    box-shadow:
+      0 18px 46px rgba(8, 22, 48, 0.55),
+      0 0 42px rgba(56, 189, 248, 0.36),
+      inset 0 0 36px rgba(56, 189, 248, 0.24);
+  }
+}
+
+div.gauge.upload {
+  width: var(--gauge-secondary-size);
+  height: var(--gauge-secondary-size);
+  border: 1.5px solid rgba(192, 132, 252, 0.48);
+  box-shadow:
+    0 14px 34px rgba(8, 22, 48, 0.48),
+    0 0 28px rgba(192, 132, 252, 0.24),
+    inset 0 0 26px rgba(192, 132, 252, 0.16);
+  animation: uploadHaloBreathe 9s ease-in-out infinite alternate 1.5s;
+}
+
+@keyframes uploadHaloBreathe {
+  0% {
+    box-shadow:
+      0 14px 34px rgba(8, 22, 48, 0.46),
+      0 0 24px rgba(192, 132, 252, 0.2),
+      inset 0 0 22px rgba(192, 132, 252, 0.14);
+  }
+  100% {
+    box-shadow:
+      0 14px 36px rgba(8, 22, 48, 0.52),
+      0 0 34px rgba(192, 132, 252, 0.32),
+      inset 0 0 30px rgba(192, 132, 252, 0.2);
+  }
+}
+
+div.gauge.stability {
+  width: var(--gauge-secondary-size);
+  height: var(--gauge-secondary-size);
+  border: 1.5px solid rgba(163, 230, 53, 0.46);
+  box-shadow:
+    0 14px 34px rgba(8, 22, 48, 0.48),
+    0 0 28px rgba(163, 230, 53, 0.2),
+    inset 0 0 26px rgba(245, 158, 11, 0.14);
+  animation: stabilityHaloBreathe 8s ease-in-out infinite alternate 2.8s;
+}
+
+@keyframes stabilityHaloBreathe {
+  0% {
+    box-shadow:
+      0 14px 34px rgba(8, 22, 48, 0.46),
+      0 0 22px rgba(163, 230, 53, 0.18),
+      inset 0 0 22px rgba(245, 158, 11, 0.12);
+  }
+  100% {
+    box-shadow:
+      0 14px 36px rgba(8, 22, 48, 0.52),
+      0 0 32px rgba(163, 230, 53, 0.28),
+      inset 0 0 30px rgba(245, 158, 11, 0.18);
+  }
+}
+
+div.gauge.enabled.download {
+  box-shadow:
+    0 18px 48px rgba(8, 22, 48, 0.55),
+    0 0 46px rgba(56, 189, 248, 0.42),
+    inset 0 0 36px rgba(56, 189, 248, 0.26);
+}
+
+/* Subtle completion pulse on results — zero scale shift to prevent layout/paint jitter */
+div.gauge.test-complete-focus {
+  animation: completeFocusPulse 1.4s ease-out;
+}
+
+@keyframes completeFocusPulse {
+  0% {
+    filter: brightness(1);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  40% {
+    filter: brightness(1.12);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    filter: brightness(1);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* ==========================================================================
+   Test Running Focus: Maximum Clarity & Brightness for ALL Gauges & Numbers
+   All three gauges (Download, Upload, Stability) stay 100% bright and crisp!
+   ========================================================================== */
+.terrax-cyber-shell.test-running-focus div.gauge.upload,
+.terrax-cyber-shell.test-running-focus div.gauge.stability {
+  opacity: 1 !important;
+  transform: translate3d(0, 0, 0) scale(1);
+  filter: none !important;
+}
+
+.terrax-cyber-shell.test-running-focus div.gauge.upload {
+  border-color: rgba(216, 180, 254, 0.78);
+  box-shadow:
+    0 16px 40px rgba(8, 22, 48, 0.5),
+    0 0 36px rgba(192, 132, 252, 0.38),
+    inset 0 0 28px rgba(192, 132, 252, 0.22);
+}
+
+.terrax-cyber-shell.test-running-focus div.gauge.stability {
+  border-color: rgba(190, 242, 100, 0.78);
+  box-shadow:
+    0 16px 40px rgba(8, 22, 48, 0.5),
+    0 0 36px rgba(163, 230, 53, 0.35),
+    inset 0 0 28px rgba(163, 230, 53, 0.2);
+}
+
+.terrax-cyber-shell.test-running-focus div.gauge.download {
+  opacity: 1 !important;
+  z-index: 25 !important;
+  transform: translate3d(0, 0, 0) scale(1);
+  border-color: rgba(103, 232, 249, 0.92);
+  box-shadow:
+    0 20px 52px rgba(8, 22, 48, 0.55),
+    0 0 50px rgba(56, 189, 248, 0.48),
+    inset 0 0 40px rgba(56, 189, 248, 0.26);
+  filter: none !important;
+}
+
+.terrax-cyber-shell.test-running-focus div.gauge .gauge-center-content h1 > span {
+  color: #ffffff !important;
+  filter: contrast(1.12) brightness(1.08);
+}
+
+/* Keep legacy .progress and .speed nodes non-intrusive while preserving CSS variable updates */
+div.gauge > .progress,
+div.gauge > .speed {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* SVG Ring Layer */
+.cyber-gauge-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  will-change: transform, filter;
+  transform: translateZ(0);
+}
+
+.gauge-outer-bezel {
+  fill: none;
+  stroke: rgba(125, 211, 252, 0.18);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bezelRotate 48s linear infinite;
+}
+
+@keyframes bezelRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.gauge-track-bg {
+  fill: none;
+  stroke: rgba(30, 41, 59, 0.85);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.gauge-active-arc {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+  will-change: transform, filter;
+  transition:
+    filter 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.28));
+}
+
+.gauge-active-arc.stab-arc {
+  filter: drop-shadow(0 0 4px rgba(163, 230, 53, 0.24));
+}
+
+.gauge-active-arc.ul-arc {
+  filter: drop-shadow(0 0 4px rgba(192, 132, 252, 0.24));
+}
+
+@keyframes gaugeArcPulseShadow {
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 5px rgba(56, 189, 248, 0.45))
+      drop-shadow(0 0 12px rgba(103, 232, 249, 0.22));
+    opacity: 0.94;
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(56, 189, 248, 0.88))
+      drop-shadow(0 0 22px rgba(103, 232, 249, 0.52));
+    opacity: 1;
+  }
+}
+
+@keyframes gaugeArcPulseShadowStab {
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 5px rgba(163, 230, 53, 0.42))
+      drop-shadow(0 0 12px rgba(34, 197, 94, 0.2));
+    opacity: 0.94;
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(163, 230, 53, 0.84))
+      drop-shadow(0 0 20px rgba(74, 222, 128, 0.48));
+    opacity: 1;
+  }
+}
+
+@keyframes gaugeArcPulseShadowUl {
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 5px rgba(192, 132, 252, 0.44))
+      drop-shadow(0 0 12px rgba(168, 85, 247, 0.22));
+    opacity: 0.94;
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(216, 180, 254, 0.86))
+      drop-shadow(0 0 20px rgba(168, 85, 247, 0.5));
+    opacity: 1;
+  }
+}
+
+.terrax-cyber-shell.test-running-focus .gauge-active-arc,
+.gauge.running .gauge-active-arc,
+.gauge-active-arc.running {
+  animation: gaugeArcPulseShadow 1.8s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+.terrax-cyber-shell.test-running-focus .gauge-active-arc.stab-arc,
+.gauge.running .gauge-active-arc.stab-arc,
+.gauge-active-arc.stab-arc.running {
+  animation-name: gaugeArcPulseShadowStab;
+}
+
+.terrax-cyber-shell.test-running-focus .gauge-active-arc.ul-arc,
+.gauge.running .gauge-active-arc.ul-arc,
+.gauge-active-arc.ul-arc.running {
+  animation-name: gaugeArcPulseShadowUl;
+}
+
+.gauge-scale-labels text {
+  fill: rgba(203, 213, 225, 0.85);
+  font-family: var(--font-num);
+  font-size: 8.5px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.gauge-scale-labels.small-scale text {
+  font-size: 7.5px;
+}
+
+.gauge-inner-border {
+  fill: rgba(14, 36, 74, 0.42);
+  stroke: rgba(56, 189, 248, 0.52);
+  stroke-width: 1.4;
+}
+
+.stab-inner-border {
+  stroke: rgba(163, 230, 53, 0.48);
+}
+
+.ul-inner-border {
+  stroke: rgba(192, 132, 252, 0.48);
+}
+
+.gauge-ticks-minor {
+  fill: none;
+  stroke: rgba(148, 163, 184, 0.25);
+  stroke-width: 4;
+}
+
+.gauge-ticks-major {
+  fill: none;
+  stroke: rgba(56, 189, 248, 0.65);
+  stroke-width: 6;
+}
+
+.stab-ticks {
+  stroke: rgba(163, 230, 53, 0.65);
+}
+
+.ul-ticks {
+  stroke: rgba(192, 132, 252, 0.65);
+}
+
+/* Gauge Inner Readout Content - Safe Inner Bounds to Prevent Text Clipping & Wrapping */
+.gauge-center-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 0.15rem;
+  width: 76%;
+  max-width: 76%;
+  box-sizing: border-box;
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.gauge-area-title,
+.gauge-area-reading,
+.gauge-area-unit,
+.gauge-area-status {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+.gauge-title-ar {
+  font-size: clamp(0.98rem, 2.5vw, 1.22rem);
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.1;
+  white-space: nowrap !important;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.secondary-content .gauge-title-ar {
+  font-size: clamp(0.90rem, 2.2vw, 1.08rem);
+  white-space: nowrap !important;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.gauge-title-en {
+  font-family: var(--font-num);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-top: 0.01rem;
+  margin-bottom: 0.03rem;
+  white-space: nowrap !important;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.1;
+}
+
+.gauge-center-content h1 {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  white-space: nowrap !important;
+  gap: 0.2rem;
+  margin: 0.01rem 0;
+  line-height: 1.02;
+  color: #f8fafc;
+  max-width: 100%;
+}
+
+.gauge-center-content h1 > span {
+  display: inline-block;
+  font-size: 3.15rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  transform-origin: center baseline;
+  will-change: transform, filter;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 180ms ease;
+  -webkit-font-smoothing: antialiased;
+  white-space: nowrap !important;
+  text-shadow:
+    0 0 12px rgba(103, 232, 249, 0.75),
+    0 2px 4px rgba(8, 22, 48, 0.75);
+}
+
+.secondary-content h1 > span {
+  display: inline-block;
+  font-size: 2.30rem;
+  font-weight: 900;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  transform-origin: center baseline;
+  will-change: transform, filter;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 180ms ease;
+  -webkit-font-smoothing: antialiased;
+  white-space: nowrap !important;
+}
+
+/* Smooth Micro-Kinetic Transition for real-time speed & upload numbers — zero vertical displacement */
+@keyframes numberTickScale {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.96;
+  }
+  45% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+    filter: brightness(1.1);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+.gauge-center-content h1 > span.num-scaling {
+  animation: numberTickScale 210ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.stability-readout > span {
+  text-shadow:
+    0 0 12px rgba(163, 230, 53, 0.75),
+    0 2px 4px rgba(8, 22, 48, 0.75) !important;
+}
+
+.upload-readout > span {
+  text-shadow:
+    0 0 12px rgba(232, 121, 249, 0.75),
+    0 2px 4px rgba(8, 22, 48, 0.75) !important;
+}
+
+.gauge-center-content h1 > small {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: var(--dl-neon-bright);
+  text-shadow: 0 0 14px rgba(103, 232, 249, 0.7);
+}
+
+.upload-readout > small {
+  color: var(--ul-neon-bright) !important;
+  text-shadow: 0 0 14px rgba(232, 121, 249, 0.7) !important;
+}
+
+.stability-readout > small {
+  color: var(--stab-neon-primary) !important;
+  font-size: 1.4rem !important;
+  text-shadow: 0 0 14px rgba(163, 230, 53, 0.7) !important;
+}
+
+.stability-wave-icon {
+  width: 4rem;
+  height: 1rem;
+  margin-top: 0.1rem;
+}
+
+.stability-wave-icon path {
+  stroke-dasharray: 72;
+  stroke-dashoffset: 0;
+  animation: stabilityWavePulse 5s ease-in-out infinite;
+}
+
+@keyframes stabilityWavePulse {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0.75;
+  }
+  50% {
+    stroke-dashoffset: 24;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.75;
+  }
+}
+
+.gauge-unit-ar {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-top: 0;
+  line-height: 1.08;
+  white-space: nowrap !important;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.stability-label {
+  margin-top: 0.08rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.08;
+  color: var(--stab-neon-primary);
+  white-space: nowrap !important;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.gauge-quality-status {
+  margin-top: 0.08rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  font-size: 1.0rem;
+  font-weight: 700;
+  line-height: 1.08;
+  color: var(--dl-neon-bright);
+  white-space: nowrap !important;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.gauge-quality-status span {
+  white-space: nowrap !important;
+  text-overflow: ellipsis;
+}
+
+.gauge-quality-status.upload-quality {
+  color: var(--ul-neon-bright);
+}
+
+.tray-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+  transition: transform var(--motion-fast), color var(--motion-fast);
+}
+
+/* Ping & Jitter Telemetry Bar — Fixed Reserved Height to Prevent Vertical Header/Shell Shift */
+.latency-telemetry-strip {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  min-height: 3.4rem;
+  width: 100%;
+  contain: layout style;
+}
+
+.ping,
+.jitter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1.38rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--ping-and-jitter-secondary-text-color);
+  background: linear-gradient(135deg, rgba(22, 52, 102, 0.42) 0%, rgba(15, 37, 76, 0.48) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.48);
+  padding: 0.45rem 1.4rem;
+  border-radius: 1rem;
+  box-shadow: 0 6px 18px rgba(8, 22, 48, 0.32), inset 0 1px 0 rgba(224, 242, 254, 0.32);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast), opacity var(--motion-fast);
+}
+
+.ping > .label,
+.jitter > .label {
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.ping > .value,
+.jitter > .value {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(103, 232, 249, 0.75), 0 1px 3px rgba(8, 22, 48, 0.75);
+}
+
+.ping.hidden,
+.jitter.hidden {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Summary Stat Cards Row (Max Speed & Average Speed) */
+.summary-cards-row {
+  width: 100%;
+  max-width: 78rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.4rem;
+  margin: 0 auto;
+}
+
+.cyber-stat-card {
+  position: relative;
+  overflow: hidden;
+  contain: layout style;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
+  padding: 0.75rem 1.8rem;
+  background:
+    repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.035) 0px, rgba(56, 189, 248, 0.035) 1px, transparent 1px, transparent 32px),
+    linear-gradient(
+      135deg,
+      rgba(22, 52, 102, 0.34) 0%,
+      rgba(15, 37, 76, 0.42) 100%
+    );
+  border: 1px solid rgba(56, 189, 248, 0.46);
+  border-radius: 1.6rem;
+  box-shadow:
+    0 10px 26px rgba(8, 22, 48, 0.3),
+    inset 0 1px 0 rgba(224, 242, 254, 0.32);
+  transition: transform var(--motion-fast), border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+/* Section 46 & 48: Card Glass Shimmer Sweep */
+.cyber-stat-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(251, 191, 36, 0.08) 50%,
+    transparent 100%
+  );
+  transform: translateX(-150%) skewX(-25deg);
+  pointer-events: none;
+  animation: cardLightShimmer 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes cardLightShimmer {
+  0%, 72% {
+    transform: translateX(-150%) skewX(-25deg);
+    opacity: 0;
+  }
+  80% {
+    opacity: 1;
+  }
+  92%, 100% {
+    transform: translateX(380%) skewX(-25deg);
+    opacity: 0;
+  }
+}
+
+.cyber-stat-card.test-complete-focus {
+  animation: statCardCompletePulse 1.4s ease-out;
+}
+
+@keyframes statCardCompletePulse {
+  0% {
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(186, 230, 253, 0.18);
+  }
+  40% {
+    box-shadow:
+      0 12px 34px rgba(251, 191, 36, 0.35),
+      0 0 22px rgba(251, 191, 36, 0.25),
+      inset 0 1px 0 rgba(251, 191, 36, 0.4);
+    border-color: rgba(251, 191, 36, 0.85);
+  }
+  100% {
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(186, 230, 253, 0.18);
+  }
+}
+
+.cyber-stat-card:hover {
+  border-color: rgba(251, 191, 36, 0.5);
+  transform: translateY(-1px);
+}
+
+.stat-card-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: right;
+}
+
+.stat-title-ar {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.stat-title-en {
+  font-family: var(--font-num);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin-bottom: 0.2rem;
+}
+
+.stat-value-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  contain: layout style;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-number {
+  display: inline-block;
+  font-size: 2.85rem;
+  font-weight: 900;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.65), 0 1px 3px rgba(8, 22, 48, 0.75);
+  transform-origin: left baseline;
+  will-change: transform, filter;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), text-shadow 180ms ease;
+}
+
+.stat-number.counting-up {
+  color: #fffbeb;
+  text-shadow:
+    0 0 18px rgba(232, 187, 103, 0.92),
+    0 0 28px rgba(83, 216, 255, 0.38),
+    0 1px 3px rgba(8, 22, 48, 0.8);
+  transform: scale(1.035);
+}
+
+.cyber-stat-card.counting-up {
+  border-color: rgba(232, 187, 103, 0.78);
+  box-shadow:
+    0 12px 30px rgba(232, 187, 103, 0.22),
+    inset 0 1px 0 rgba(232, 187, 103, 0.38);
+}
+
+.stat-unit {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--amber-accent);
+}
+
+.stat-card-icon {
+  width: 4.6rem;
+  height: 4.6rem;
+  border-radius: 1.3rem;
+  background: radial-gradient(
+    circle at 50% 35%,
+    rgba(251, 191, 36, 0.2),
+    rgba(15, 23, 42, 0.85)
+  );
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.18);
+}
+
+.stat-card-icon svg {
+  width: 2.6rem;
+  height: 2.6rem;
+}
+
+@media screen and (max-width: 768px) {
+  :root {
+    --gauge-primary-size: clamp(16.5rem, 48vw, 19.5rem);
+    --gauge-secondary-size: clamp(13.0rem, 38vw, 15.6rem);
+  }
+
+  .secondary-gauges-row {
+    margin-top: clamp(-3.8rem, -8vw, -2.8rem);
+    padding: 0 0.6rem;
+    justify-content: space-around;
+    gap: clamp(0.5rem, 2vw, 1.2rem);
+  }
+
+  .gauge-center-content {
+    width: 76%;
+    max-width: 76%;
+  }
+
+  .gauge-title-ar {
+    font-size: clamp(1.0rem, 2.8vw, 1.15rem);
+    white-space: nowrap !important;
+  }
+
+  .secondary-content .gauge-title-ar {
+    font-size: clamp(0.90rem, 2.5vw, 1.02rem);
+    white-space: nowrap !important;
+  }
+
+  .gauge-center-content h1 > span {
+    font-size: clamp(2.3rem, 6.8vw, 2.85rem);
+    white-space: nowrap !important;
+  }
+
+  .secondary-content h1 > span {
+    font-size: clamp(1.8rem, 5.2vw, 2.2rem);
+    white-space: nowrap !important;
+  }
+
+  .gauge-unit-ar {
+    font-size: clamp(0.78rem, 2.2vw, 0.88rem);
+    white-space: nowrap !important;
+  }
+
+  .secondary-content .gauge-unit-ar {
+    font-size: clamp(0.74rem, 2.1vw, 0.82rem);
+    white-space: nowrap !important;
+  }
+
+  .gauge-quality-status {
+    font-size: clamp(0.82rem, 2.4vw, 0.94rem);
+    white-space: nowrap !important;
+  }
+
+  .stability-label {
+    font-size: clamp(0.80rem, 2.3vw, 0.90rem);
+    white-space: nowrap !important;
+  }
+
+  .summary-cards-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .cyber-stat-card {
+    padding: 1rem 1.5rem;
+  }
+
+  .stat-number {
+    font-size: 2.2rem;
+  }
+
+  .ping,
+  .jitter {
+    font-size: 1.15rem;
+    padding: 0.35rem 0.9rem;
+  }
+
+  .terrax-cyber-shell.test-running-focus div.gauge.download {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Mobile Portrait Mode (<480px): Safe text margins, strict no-wrapping & no-overlap */
+@media screen and (max-width: 480px) and (orientation: portrait) {
+  :root {
+    --gauge-primary-size: clamp(16.0rem, 48vw, 17.8rem);
+    --gauge-secondary-size: clamp(12.8rem, 39vw, 14.2rem);
+  }
+
+  .secondary-gauges-row {
+    margin-top: -3.2rem;
+    padding: 0 0.2rem;
+    gap: 0.45rem;
+  }
+
+  .gauge-center-content {
+    width: 76%;
+    max-width: 76%;
+    padding: 0 0.1rem;
+  }
+
+  .gauge-title-ar {
+    font-size: 1.02rem;
+    white-space: nowrap !important;
+  }
+
+  .secondary-content .gauge-title-ar {
+    font-size: 0.90rem;
+    white-space: nowrap !important;
+  }
+
+  .gauge-title-en {
+    font-size: 0.58rem;
+    white-space: nowrap !important;
+  }
+
+  .secondary-content .gauge-title-en {
+    font-size: 0.52rem;
+    white-space: nowrap !important;
+  }
+
+  .gauge-center-content h1 > span {
+    font-size: 2.45rem;
+    white-space: nowrap !important;
+  }
+
+  .secondary-content h1 > span {
+    font-size: 1.80rem;
+    white-space: nowrap !important;
+  }
+
+  .secondary-content h1 > small {
+    font-size: 1.05rem !important;
+  }
+
+  .stability-readout > small {
+    font-size: 1.15rem !important;
+  }
+
+  .gauge-unit-ar {
+    font-size: 0.78rem;
+    white-space: nowrap !important;
+  }
+
+  .secondary-content .gauge-unit-ar {
+    font-size: 0.74rem;
+    white-space: nowrap !important;
+  }
+
+  .gauge-quality-status {
+    font-size: 0.82rem;
+    white-space: nowrap !important;
+  }
+
+  .secondary-content .gauge-quality-status {
+    font-size: 0.76rem;
+    white-space: nowrap !important;
+  }
+
+  .stability-label {
+    font-size: 0.78rem;
+    white-space: nowrap !important;
+  }
+
+  .stability-wave-icon {
+    width: 3.2rem;
+    height: 0.8rem;
+  }
+}
+
+/* Ultra-Compact Mobile Portrait (<360px): Extra safety bounds */
+@media screen and (max-width: 360px) and (orientation: portrait) {
+  :root {
+    --gauge-primary-size: 15.0rem;
+    --gauge-secondary-size: 12.0rem;
+  }
+
+  .secondary-gauges-row {
+    margin-top: -2.8rem;
+    gap: 0.35rem;
+  }
+
+  .gauge-center-content h1 > span {
+    font-size: 2.15rem;
+  }
+
+  .secondary-content h1 > span {
+    font-size: 1.60rem;
+  }
+
+  .gauge-title-ar {
+    font-size: 0.94rem;
+  }
+
+  .secondary-content .gauge-title-ar {
+    font-size: 0.82rem;
+  }
+
+  .gauge-unit-ar {
+    font-size: 0.72rem;
+  }
+
+  .secondary-content .gauge-unit-ar {
+    font-size: 0.68rem;
+  }
+
+  .gauge-quality-status {
+    font-size: 0.75rem;
+  }
+
+  .secondary-content .gauge-quality-status {
+    font-size: 0.70rem;
+  }
+
+  .stability-label {
+    font-size: 0.72rem;
+  }
+
+  .stability-wave-icon {
+    width: 2.6rem;
+    height: 0.7rem;
+  }
+}
+
+/* Mobile & Tablet Landscape Mode: Viewport-Height Proportional Scaling with Zero Wrapping */
+@media screen and (orientation: landscape) and (max-height: 640px) {
+  :root {
+    --gauge-primary-size: clamp(13.2rem, 36vh, 15.2rem);
+    --gauge-secondary-size: clamp(11.2rem, 31vh, 13.0rem);
+  }
+
+  .terrax-cyber-shell {
+    padding: 0.5rem 1.4rem;
+    gap: 0.45rem;
+  }
+
+  header.terrax-header {
+    padding: 0.4rem 1.2rem;
+  }
+
+  .header-section-title {
+    font-size: 1.4rem;
+  }
+
+  .brand-name-ar {
+    font-size: 1.6rem;
+  }
+
+  .gauge-layout {
+    gap: 0;
+  }
+
+  .secondary-gauges-row {
+    margin-top: clamp(-4.6rem, -11vh, -3.4rem);
+    padding: 0 clamp(0.8rem, 3vw, 2.5rem);
+    gap: clamp(1.2rem, 4vw, 3rem);
+    justify-content: space-around;
+  }
+
+  .gauge-center-content {
+    width: 76%;
+    max-width: 76%;
+    padding: 0 0.1rem;
+  }
+
+  .gauge-title-ar {
+    font-size: clamp(0.88rem, 2.4vh, 1.02rem);
+    line-height: 1.05;
+    white-space: nowrap !important;
+    text-overflow: ellipsis;
+  }
+
+  .secondary-content .gauge-title-ar {
+    font-size: clamp(0.78rem, 2.15vh, 0.90rem);
+    line-height: 1.05;
+    white-space: nowrap !important;
+    text-overflow: ellipsis;
+  }
+
+  .gauge-title-en {
+    font-size: clamp(0.50rem, 1.35vh, 0.58rem);
+    margin: 0;
+    line-height: 1;
+    white-space: nowrap !important;
+  }
+
+  .secondary-content .gauge-title-en {
+    font-size: clamp(0.44rem, 1.2vh, 0.52rem);
+    margin: 0;
+    line-height: 1;
+    white-space: nowrap !important;
+  }
+
+  .gauge-center-content h1 {
+    margin: 0;
+    line-height: 1;
+    white-space: nowrap !important;
+  }
+
+  .gauge-center-content h1 > span {
+    font-size: clamp(1.85rem, 5.1vh, 2.25rem);
+    white-space: nowrap !important;
+  }
+
+  .secondary-content h1 > span {
+    font-size: clamp(1.48rem, 4.0vh, 1.75rem);
+    white-space: nowrap !important;
+  }
+
+  .gauge-center-content h1 > small {
+    font-size: clamp(0.80rem, 2.1vh, 0.92rem);
+    white-space: nowrap !important;
+  }
+
+  .secondary-content h1 > small {
+    font-size: clamp(0.74rem, 1.95vh, 0.85rem) !important;
+    white-space: nowrap !important;
+  }
+
+  .stability-readout > small {
+    font-size: clamp(0.78rem, 2.0vh, 0.90rem) !important;
+    white-space: nowrap !important;
+  }
+
+  .gauge-unit-ar {
+    font-size: clamp(0.70rem, 1.9vh, 0.80rem);
+    line-height: 1;
+    white-space: nowrap !important;
+    text-overflow: ellipsis;
+  }
+
+  .secondary-content .gauge-unit-ar {
+    font-size: clamp(0.66rem, 1.8vh, 0.76rem);
+    line-height: 1;
+    white-space: nowrap !important;
+    text-overflow: ellipsis;
+  }
+
+  .gauge-quality-status {
+    font-size: clamp(0.74rem, 2.0vh, 0.84rem);
+    margin-top: 0.04rem;
+    line-height: 1;
+    white-space: nowrap !important;
+    text-overflow: ellipsis;
+  }
+
+  .secondary-content .gauge-quality-status {
+    font-size: clamp(0.68rem, 1.8vh, 0.78rem);
+    margin-top: 0.04rem;
+    line-height: 1;
+    white-space: nowrap !important;
+    text-overflow: ellipsis;
+  }
+
+  .stability-label {
+    font-size: clamp(0.68rem, 1.8vh, 0.78rem);
+    line-height: 1;
+    white-space: nowrap !important;
+    text-overflow: ellipsis;
+  }
+
+  .stability-wave-icon {
+    width: clamp(2.4rem, 6.2vh, 3.0rem);
+    height: clamp(0.60rem, 1.6vh, 0.75rem);
+    margin-top: 0.02rem;
+  }
+
+  .tray-icon {
+    width: clamp(1.0rem, 2.6vh, 1.15rem);
+    height: clamp(1.0rem, 2.6vh, 1.15rem);
+    flex-shrink: 0;
+  }
+
+  .latency-telemetry-strip {
+    gap: 0.6rem;
+    min-height: 1.6rem;
+  }
+
+  .ping,
+  .jitter {
+    font-size: 1.05rem;
+    padding: 0.25rem 0.8rem;
+  }
+
+  .connection-server-row {
+    gap: 0.8rem;
+  }
+
+  .connection-info-pill {
+    min-height: 3.8rem;
+    padding: 0.4rem 1rem;
+  }
+
+  .conn-value {
+    font-size: 1.3rem;
+  }
+
+  .cta-button-container button#start-button {
+    height: 4.2rem;
+    font-size: 1.55rem;
+  }
+
+  .terrax-bottom-nav {
+    padding: 0.35rem 0.6rem;
+  }
+
+  .terrax-bottom-nav .nav-dock-item {
+    min-height: 3.6rem;
+    font-size: 1.05rem;
+  }
+}
+
+/* Compact Mobile Landscape (<380px Height): Extreme space conservation */
+@media screen and (orientation: landscape) and (max-height: 380px) {
+  :root {
+    --gauge-primary-size: 13.0rem;
+    --gauge-secondary-size: 11.0rem;
+  }
+
+  .secondary-gauges-row {
+    margin-top: -3.8rem;
+  }
+
+  .gauge-center-content h1 > span {
+    font-size: 1.75rem;
+  }
+
+  .secondary-content h1 > span {
+    font-size: 1.40rem;
+  }
+
+  .gauge-title-ar {
+    font-size: 0.82rem;
+  }
+
+  .secondary-content .gauge-title-ar {
+    font-size: 0.74rem;
+  }
+
+  .gauge-unit-ar {
+    font-size: 0.66rem;
+  }
+
+  .secondary-content .gauge-unit-ar {
+    font-size: 0.62rem;
+  }
+
+  .stability-label {
+    font-size: 0.64rem;
+  }
+
+  .gauge-quality-status {
+    font-size: 0.66rem;
+  }
+
+  .secondary-content .gauge-quality-status {
+    font-size: 0.64rem;
+  }
+
+  .stability-wave-icon {
+    width: 2.2rem;
+    height: 0.55rem;
+  }
+
+  .cta-button-container button#start-button {
+    height: 3.8rem;
+    font-size: 1.4rem;
+  }
+}

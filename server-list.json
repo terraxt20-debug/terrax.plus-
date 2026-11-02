@@ -1,0 +1,66 @@
+[
+  {
+    "name": "اليمن",
+    "server": "",
+    "id": 1,
+    "dlURL": "backend/garbage.php",
+    "ulURL": "backend/empty.php",
+    "pingURL": "backend/empty.php",
+    "getIpURL": "backend/getIP.php",
+    "sponsorName": "Terrax Plus Fiber Core",
+    "sponsorURL": "https://librespeed.org"
+  },
+  {
+    "name": "المملكة العربية السعودية",
+    "server": "nodes/jeddah/",
+    "id": 2,
+    "dlURL": "garbage.php",
+    "ulURL": "empty.php",
+    "pingURL": "empty.php",
+    "getIpURL": "getIP.php",
+    "sponsorName": "Terrax Plus Red Sea IX",
+    "sponsorURL": "https://librespeed.org"
+  },
+  {
+    "name": "الإمارات العربية المتحدة",
+    "server": "nodes/dubai/",
+    "id": 3,
+    "dlURL": "garbage.php",
+    "ulURL": "empty.php",
+    "pingURL": "empty.php",
+    "getIpURL": "getIP.php"
+  },
+  {
+    "name": "قطر",
+    "server": "nodes/dammam/",
+    "id": 4,
+    "dlURL": "garbage.php",
+    "ulURL": "empty.php",
+    "pingURL": "empty.php",
+    "getIpURL": "getIP.php",
+    "sponsorName": "Terrax Plus Eastern Gateway",
+    "sponsorURL": "https://librespeed.org"
+  },
+  {
+    "name": "ألمانيا",
+    "server": "nodes/frankfurt/",
+    "id": 5,
+    "dlURL": "garbage.php",
+    "ulURL": "empty.php",
+    "pingURL": "empty.php",
+    "getIpURL": "getIP.php",
+    "sponsorName": "Terrax Plus Europe IX",
+    "sponsorURL": "https://librespeed.org"
+  },
+  {
+    "name": "المملكة المتحدة",
+    "server": "nodes/london/",
+    "id": 6,
+    "dlURL": "garbage.php",
+    "ulURL": "empty.php",
+    "pingURL": "empty.php",
+    "getIpURL": "getIP.php",
+    "sponsorName": "Terrax Plus London Node",
+    "sponsorURL": "https://librespeed.org"
+  }
+]

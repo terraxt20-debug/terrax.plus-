@@ -1,0 +1,6 @@
+{
+  "name": "Terrax Plus — LibreSpeed 4K",
+  "description": "منصة تيراكس بلاس (Terrax Plus) لاختبار سرعة الإنترنت واستقرار الاتصال بهوية بصرية 4K عربية زجاجية متطورة مبنية على محرك LibreSpeed.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

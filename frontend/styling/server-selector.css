@@ -1,0 +1,244 @@
+/* Cyber Glass Server Selector Dropdown inside .connection-server-row */
+
+.server-selector {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  display: none;
+}
+
+.server-selector.active,
+.server-selector.single-server {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.server-selector > .chosen {
+  position: relative;
+  overflow: hidden;
+  min-height: 5.2rem;
+  padding: 0.7rem 1.6rem 0.7rem 4.2rem;
+  border: 1px solid rgba(56, 189, 248, 0.46);
+  border-radius: 1.5rem;
+  background:
+    repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.035) 0px, rgba(56, 189, 248, 0.035) 1px, transparent 1px, transparent 32px),
+    linear-gradient(
+      135deg,
+      rgba(22, 52, 102, 0.34) 0%,
+      rgba(15, 37, 76, 0.42) 100%
+    );
+  box-shadow:
+    0 8px 22px rgba(8, 22, 48, 0.28),
+    inset 0 1px 0 rgba(224, 242, 254, 0.32);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.15rem;
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.server-selector > .chosen:hover {
+  border-color: var(--server-selector-hover-border-color);
+  transform: translate3d(0, -1px, 0);
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.4),
+    0 0 18px rgba(56, 189, 248, 0.24),
+    inset 0 1px 0 rgba(224, 242, 254, 0.4);
+}
+
+.server-selector:not(.single-server) > .chosen:active {
+  transform: scale(0.985) translate3d(0, 0.5px, 0);
+  transition-duration: 85ms;
+}
+
+.server-selector > .chosen:focus-visible {
+  outline: 2px solid var(--dl-neon-bright);
+  outline-offset: 2px;
+}
+
+.server-selector > .chosen > div.chevron {
+  position: absolute;
+  left: 1.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.6rem;
+  height: 2.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.server-selector > .chosen > div.chevron img {
+  width: 2.2rem;
+  height: 2.2rem;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.server-selector > .chosen > p {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--dl-neon-bright);
+  line-height: 1.3;
+}
+
+.server-selector > .chosen > h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--primary-text-color);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.server-selector > .chosen > h2 span {
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+/* Single server state */
+.server-selector.single-server > .chosen {
+  cursor: default;
+  padding-left: 2rem;
+}
+
+.server-selector.single-server > .chosen > div.chevron {
+  display: none;
+}
+
+/* Disabled while test is running */
+.server-selector.disabled {
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+/* Dropdown list (opens upwards into the spacious center stage so it is never clipped) */
+.server-selector > ul.servers {
+  position: absolute;
+  bottom: calc(100% + 0.8rem);
+  top: auto;
+  right: 0;
+  left: 0;
+  max-height: 26rem;
+  overflow-y: auto;
+  z-index: 50;
+  border: 1.5px solid rgba(56, 189, 248, 0.62);
+  border-radius: 1.6rem;
+  background:
+    repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.04) 0px, rgba(56, 189, 248, 0.04) 1px, transparent 1px, transparent 32px),
+    linear-gradient(165deg, rgba(14, 35, 72, 0.96) 0%, rgba(9, 24, 54, 0.98) 100%);
+  backdrop-filter: blur(14px) saturate(165%);
+  -webkit-backdrop-filter: blur(14px) saturate(165%);
+  box-shadow:
+    0 -16px 42px rgba(4, 12, 28, 0.72),
+    0 0 28px rgba(56, 189, 248, 0.28);
+  list-style: none;
+  transform: translate3d(0, 8px, 0) scale(0.975);
+  transform-origin: bottom center;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.server-selector > ul.servers.active {
+  transform: translate3d(0, 0, 0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.server-selector:has(> ul.servers.active) > .chosen > div.chevron img {
+  transform: rotate(180deg);
+}
+
+.server-selector > ul.servers > li a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem 2rem;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  text-decoration: none;
+  text-align: right;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--motion-fast),
+    color var(--motion-fast),
+    padding-right var(--motion-fast);
+}
+
+.server-selector > ul.servers > li a:active {
+  background-color: rgba(56, 189, 248, 0.28);
+}
+
+.server-selector > ul.servers > li:last-child a {
+  border-bottom: none;
+}
+
+.server-selector > ul.servers > li a span {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.server-selector > ul.servers > li a .server-name-text {
+  font-size: 1.48rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  unicode-bidi: plaintext;
+}
+
+.server-selector > ul.servers > li a .server-sponsor-tag {
+  font-size: 1.22rem;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.server-selector > ul.servers > li a .server-ping-tag {
+  font-family: var(--font-num);
+  font-size: 1.22rem;
+  font-weight: 800;
+  color: #67e8f9;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 0.22rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(14, 116, 144, 0.32);
+  border: 1px solid rgba(56, 189, 248, 0.42);
+}
+
+.server-selector > ul.servers > li a:hover {
+  background-color: var(--server-selector-hover-background-color);
+  color: var(--dl-neon-bright);
+}
+
+.server-selector > p.sponsor {
+  display: none !important;
+  margin: 0;
+  padding: 0;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.server-selector > p.sponsor a {
+  display: none !important;
+}

@@ -1,0 +1,390 @@
+/* Main "بدء اختبار جديد" Cyber Glass CTA Button & Secondary Action Buttons */
+
+.cta-button-container {
+  width: 100%;
+  max-width: 78rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  margin: 0.2rem auto 0;
+}
+
+.cta-button-row {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+}
+
+button#start-button,
+button#copy-link,
+button#close-privacy,
+button.small {
+  height: 5rem;
+  min-width: 28rem;
+  padding: 0 3.6rem;
+  border-radius: 1.6rem;
+  border: 1.5px solid rgba(103, 232, 249, 0.68);
+  font-family: var(--font-sans-ar);
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #f8fafc;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  white-space: nowrap;
+  box-shadow:
+    0 10px 30px rgba(6, 182, 212, 0.32),
+    0 0 22px rgba(56, 189, 248, 0.35),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  transform: scale(1) translate3d(0, 0, 0);
+  background: linear-gradient(
+    90deg,
+    rgba(8, 47, 73, 0.92) 0%,
+    rgba(2, 132, 199, 0.88) 50%,
+    rgba(8, 47, 73, 0.92) 100%
+  );
+  background-size: 200% 100%;
+  transition:
+    background-position var(--motion-normal),
+    transform var(--motion-fast),
+    box-shadow var(--motion-normal),
+    border-color var(--motion-fast);
+}
+
+/* Glassy Ripple Effect on Hover for #start-button */
+button#start-button {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 58rem;
+}
+
+button#start-button::before {
+  content: "";
+  position: absolute;
+  bottom: -50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(103, 232, 249, 0.35) 0%, rgba(56, 189, 248, 0.12) 50%, transparent 70%);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1), height 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+button#start-button:hover:not(.disabled)::before {
+  width: 32rem;
+  height: 32rem;
+  opacity: 1;
+}
+
+button#start-button > * {
+  position: relative;
+  z-index: 2;
+}
+
+button#start-button:hover:not(.disabled),
+button#copy-link:hover,
+button#close-privacy:hover {
+  background-position: 100% 0%;
+  border-color: #a5f3fc;
+  transform: scale(1.015) translate3d(0, 0, 0);
+  box-shadow:
+    0 14px 36px rgba(6, 182, 212, 0.42),
+    0 0 30px rgba(103, 232, 249, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.45);
+}
+
+button#start-button:focus-visible,
+button.small:focus-visible {
+  outline: 2px solid #a5f3fc;
+  outline-offset: 3px;
+}
+
+button#start-button.disabled {
+  cursor: default;
+  opacity: 0.7;
+  border-color: rgba(100, 116, 139, 0.4);
+  background: var(--button-disabled-background-color);
+  box-shadow: none;
+}
+
+button#start-button.disabled::after,
+button#start-button.disabled::before {
+  display: none;
+}
+
+/* Cyan Pulsing Glow when initializing or preparing */
+button#start-button.initializing {
+  border-color: rgba(56, 189, 248, 0.85);
+  animation: cyanInitializingPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes cyanInitializingPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 15px rgba(56, 189, 248, 0.3),
+      inset 0 0 10px rgba(103, 232, 249, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 32px rgba(56, 189, 248, 0.75),
+      0 0 45px rgba(6, 182, 212, 0.4),
+      inset 0 0 18px rgba(103, 232, 249, 0.5);
+    border-color: rgba(103, 232, 249, 1);
+  }
+}
+
+/* Subtle repeating pulsing glow when page finishes loading and test state is ready */
+button#start-button.ready:not(.disabled):not(.active):not(.initializing),
+button#start-button:not(.disabled):not(.active):not(.initializing) {
+  border-color: rgba(83, 216, 255, 0.78);
+}
+
+button#start-button:hover:not(.disabled):not(.active),
+button#start-button:focus-visible:not(.disabled):not(.active) {
+  animation-play-state: paused;
+}
+
+@keyframes startButtonReadyPulse {
+  0%, 100% {
+    border-color: rgba(103, 232, 249, 0.68);
+    box-shadow:
+      0 10px 30px rgba(6, 182, 212, 0.30),
+      0 0 20px rgba(56, 189, 248, 0.32),
+      0 0 0 0 rgba(56, 189, 248, 0),
+      inset 0 1px 1px rgba(255, 255, 255, 0.35);
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  50% {
+    border-color: rgba(165, 243, 252, 0.96);
+    box-shadow:
+      0 12px 36px rgba(6, 182, 212, 0.46),
+      0 0 32px rgba(56, 189, 248, 0.62),
+      0 0 18px 3px rgba(103, 232, 249, 0.24),
+      inset 0 1px 2px rgba(255, 255, 255, 0.5);
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+button#start-button.active {
+  border-color: rgba(244, 63, 94, 0.75);
+  background: linear-gradient(
+    90deg,
+    rgba(76, 5, 25, 0.9) 0%,
+    rgba(225, 29, 72, 0.85) 50%,
+    rgba(76, 5, 25, 0.9) 100%
+  );
+  box-shadow:
+    0 10px 28px rgba(225, 29, 72, 0.35),
+    0 0 22px rgba(244, 63, 94, 0.4);
+  animation: btnRunningPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes btnRunningPulse {
+  0%, 100% {
+    box-shadow:
+      0 10px 28px rgba(225, 29, 72, 0.35),
+      0 0 22px rgba(244, 63, 94, 0.35);
+    border-color: rgba(244, 63, 94, 0.75);
+  }
+  50% {
+    box-shadow:
+      0 12px 34px rgba(225, 29, 72, 0.55),
+      0 0 32px rgba(244, 63, 94, 0.6);
+    border-color: rgba(251, 113, 133, 0.95);
+  }
+}
+
+/* 4K Cyber-Glass Micro-Interactions on Measurement Buttons (Start / Share / Copy / Abort) */
+button#start-button:active:not(.disabled),
+button#copy-link:active,
+button#close-privacy:active,
+button.small:active,
+button#startBtn:active,
+button#resetBtn:active {
+  transform: scale(0.962) translate3d(0, 1px, 0) !important;
+  transition: transform 90ms cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  box-shadow:
+    0 4px 14px rgba(6, 182, 212, 0.5),
+    0 0 28px rgba(56, 189, 248, 0.7),
+    inset 0 0 18px rgba(255, 255, 255, 0.45) !important;
+}
+
+/* Glass Micro-Flash Ripple on Click */
+@keyframes btnGlassMicroFlash {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(103, 232, 249, 0.85),
+      0 0 45px rgba(56, 189, 248, 0.9),
+      inset 0 0 25px rgba(255, 255, 255, 0.7);
+    filter: brightness(1.22);
+  }
+  45% {
+    box-shadow:
+      0 0 0 16px rgba(56, 189, 248, 0),
+      0 0 32px rgba(56, 189, 248, 0.45),
+      inset 0 0 16px rgba(255, 255, 255, 0.3);
+    filter: brightness(1.08);
+  }
+  100% {
+    box-shadow:
+      0 10px 30px rgba(6, 182, 212, 0.32),
+      0 0 22px rgba(56, 189, 248, 0.35),
+      inset 0 1px 1px rgba(255, 255, 255, 0.35);
+    filter: brightness(1);
+  }
+}
+
+.btn-micro-flash {
+  animation: btnGlassMicroFlash 0.38s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-click-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(224, 242, 254, 0.8) 0%, rgba(56, 189, 248, 0.4) 40%, transparent 70%);
+  transform: translate(-50%, -50%) scale(0);
+  animation: rippleExpandBurst 0.45s ease-out forwards;
+  pointer-events: none;
+  z-index: 5;
+}
+
+@keyframes rippleExpandBurst {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3.5);
+    opacity: 0;
+  }
+}
+
+button.small {
+  height: 4.8rem;
+  min-width: 18rem;
+  padding: 0 2.4rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  border-radius: 1.4rem;
+}
+
+button.inverted {
+  background: rgba(15, 29, 58, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: var(--dl-neon-bright);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+button.inverted:hover {
+  background: rgba(14, 116, 144, 0.35);
+  color: #ffffff;
+}
+
+button.hidden {
+  display: none;
+}
+
+/* Real-time Test Timeline Progress Bar (4K Cyber Glass Aesthetic) */
+.test-timeline-progress {
+  width: 100%;
+  max-width: 58rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: -0.2rem auto 0.1rem;
+  opacity: 0;
+  pointer-events: none;
+  contain: layout style;
+  transition: opacity 0.4s ease;
+  transform: translate3d(0, 0, 0);
+}
+
+.test-timeline-progress.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+}
+
+.test-timeline-progress .progress-track {
+  width: 100%;
+  height: 0.35rem; /* شريط بصري رفيع وأنيق */
+  background: rgba(18, 44, 88, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(8, 22, 48, 0.55);
+}
+
+.test-timeline-progress .progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #06b6d4 0%,
+    #38bdf8 55%,
+    #67e8f9 100%
+  );
+  box-shadow:
+    0 0 14px rgba(56, 189, 248, 0.95),
+    0 0 4px #a5f3fc;
+  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.test-timeline-progress .progress-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: 100%;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ffffff, 0 0 16px rgba(103, 232, 249, 1);
+  opacity: 0.95;
+}
+
+.test-timeline-progress .progress-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.15rem;
+  font-weight: 600;
+  padding: 0 0.4rem;
+  color: #94a3b8;
+}
+
+.test-timeline-progress .progress-phase-text {
+  color: #e0f2fe;
+}
+
+.test-timeline-progress .progress-pct-text {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--dl-neon-bright);
+  font-weight: 750;
+}
+
+@media screen and (max-width: 768px) {
+  button#start-button {
+    height: 5.8rem;
+    min-width: 0;
+    font-size: 1.85rem;
+  }
+}

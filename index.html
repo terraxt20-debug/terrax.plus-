@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="images/icon-192.png">
+    <meta name="theme-color" content="#0c1f3f">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no" />
+    <meta charset="UTF-8" />
+    <meta name="description" content="منصة تيراكس بلاس (Terrax Plus) لاختبار سرعة الإنترنت واستقرار الاتصال بهوية بصرية 4K عربية زجاجية متطورة مبنية على محرك LibreSpeed." />
+    <meta property="og:title" content="Terrax Plus — LibreSpeed 4K" />
+    <meta property="og:description" content="منصة تيراكس بلاس (Terrax Plus) لاختبار سرعة الإنترنت واستقرار الاتصال بهوية بصرية 4K عربية زجاجية متطورة مبنية على محرك LibreSpeed." />
+    <script>
+      (function () {
+        function isTransitionAbort(err) {
+          if (!err) return false;
+          var msg = String((err && (err.message || err.toString())) || err || "");
+          var name = String((err && err.name) || "");
+          return (
+            msg.indexOf("Transition was skipped") !== -1 ||
+            msg.indexOf("Transition was aborted") !== -1 ||
+            msg.indexOf("Document hidden") !== -1 ||
+            msg.indexOf("Navigation aborted") !== -1 ||
+            ((name === "AbortError" || name === "InvalidStateError") &&
+              (msg.indexOf("Transition") !== -1 || msg.indexOf("navigation") !== -1 || msg.indexOf("Document") !== -1))
+          );
+        }
+        window.addEventListener("unhandledrejection", function (event) {
+          if (isTransitionAbort(event.reason)) {
+            if (typeof event.preventDefault === "function") event.preventDefault();
+            if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+        window.addEventListener("error", function (event) {
+          var err = event && (event.error || event.message);
+          if (isTransitionAbort(err) || isTransitionAbort(event && event.message)) {
+            if (typeof event.preventDefault === "function") event.preventDefault();
+            if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+        if (typeof document !== "undefined" && typeof document.startViewTransition === "function") {
+          var origVt = document.startViewTransition;
+          document.startViewTransition = function (cb) {
+            if (document.visibilityState === "hidden") {
+              if (typeof cb === "function") {
+                try { cb(); } catch (err) {}
+              }
+              return {
+                finished: Promise.resolve(),
+                ready: Promise.resolve(),
+                updateCallbackDone: Promise.resolve(),
+                skipTransition: function () {}
+              };
+            }
+            try {
+              var vt = origVt.call(document, cb);
+              if (vt) {
+                if (typeof vt.finished === "object" && vt.finished && typeof vt.finished.catch === "function") {
+                  vt.finished.catch(function () {});
+                }
+                if (typeof vt.ready === "object" && vt.ready && typeof vt.ready.catch === "function") {
+                  vt.ready.catch(function () {});
+                }
+              }
+              return vt;
+            } catch (e) {
+              if (typeof cb === "function") {
+                try { cb(); } catch (cbErr) {}
+              }
+              return {
+                finished: Promise.resolve(),
+                ready: Promise.resolve(),
+                updateCallbackDone: Promise.resolve(),
+                skipTransition: function () {}
+              };
+            }
+          };
+        }
+      })();
+    </script>
+    <script>window.yaContextCb=window.yaContextCb||[]</script>
+    <script src="https://yandex.ru/ads/system/context.js" async></script>
+    <script type="text/javascript" src="design-switch.js"></script>
+    <title>Terrax Plus — LibreSpeed 4K</title>
+</head>
+
+<body style="background:#0c1f3f;color:#f8fafc;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
+    <p>جاري التحويل إلى واجهة القياس...</p>
+</body>
+
+</html>

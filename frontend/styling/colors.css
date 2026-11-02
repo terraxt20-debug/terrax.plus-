@@ -1,0 +1,81 @@
+:root {
+  --gold-luxury-accent: #E8BB67;
+  /* Original LibreSpeed variable names mapped to Terrax Plus 4K Cyber Glass palette */
+  --theme-green: #53D8FF;
+  --theme-pink: #B98BFF;
+
+  --background-backup-color: #050D19;
+  --background-overlay-color: rgba(5, 13, 25, 0.45);
+
+  --primary-text-color: #D5E7F7;
+  --tagline-text-color: #53D8FF;
+  --secondary-text-color: #93A9C0;
+  --primary-text-disabled-color: #93A9C0;
+  --secondary-text-disabled-color: #334155;
+
+  --button-text-color: #050D19;
+  --button-gradient-1-color-1: #0B1D33;
+  --button-gradient-1-color-2: #378DFF;
+  --button-gradient-1-color-3: #53D8FF;
+  --button-shadow-color: rgba(83, 216, 255, 0.45);
+  --button-disabled-background-color: rgba(11, 29, 51, 0.85);
+
+  --server-selector-border-color: rgba(83, 216, 255, 0.45);
+  --server-selector-hover-border-color: rgba(83, 216, 255, 0.9);
+  --server-selector-background-color: rgba(11, 29, 51, 0.84);
+  --server-selector-hover-background-color: rgba(15, 38, 68, 0.82);
+
+  --gauge-background-color: rgba(11, 29, 51, 0.88);
+  --gauge-progress-color: rgba(83, 216, 255, 0.38);
+  --gauge-pointer-green: #D5E7F7;
+  --gauge-pointer-pink: #f5d0fe;
+
+  --ping-and-jitter-primary-text-color: #D5E7F7;
+  --ping-and-jitter-secondary-text-color: #93A9C0;
+
+  --popup-background-color: rgba(11, 29, 51, 0.96);
+  --popup-shadow-color: rgba(5, 13, 25, 0.72);
+
+  /* Terrax Plus 4K Cyber Glass Extended Tokens */
+  --font-sans-ar: "Cairo", "Inter", system-ui, -apple-system, sans-serif;
+  --font-num: "Inter", "Cairo", system-ui, -apple-system, sans-serif;
+
+  --cyber-bg-deep: #050D19;
+  --cyber-panel-bg: rgba(11, 29, 51, 0.78);
+  --cyber-panel-fallback: #0B1D33;
+  --cyber-card-bg: rgba(11, 29, 51, 0.84);
+  --cyber-card-border: rgba(83, 216, 255, 0.44);
+  --cyber-edge-highlight: rgba(213, 231, 247, 0.72);
+
+  /* Download Gauge (Electric Cyan / Blue) */
+  --dl-neon-primary: #378DFF;
+  --dl-neon-bright: #53D8FF;
+  --dl-neon-glow: rgba(83, 216, 255, 0.45);
+
+  /* Upload Gauge (Cyber Violet / Magenta) */
+  --ul-neon-primary: #B98BFF;
+  --ul-neon-bright: #B98BFF;
+  --ul-neon-glow: rgba(185, 139, 255, 0.42);
+
+  /* Stability Gauge (Lime Green to Amber Gold) */
+  --stab-neon-primary: #9BEA42;
+  --stab-neon-secondary: #E8BB67;
+  --stab-neon-glow: rgba(155, 234, 66, 0.38);
+
+  /* Gold / Amber Stat Accents */
+  --amber-accent: #E8BB67;
+  --amber-glow: rgba(232, 187, 103, 0.32);
+
+  /* 120Hz / 120FPS Cinema-Grade Motion & Optical Tokens */
+  --ease-4k-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-4k-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-4k-press: cubic-bezier(0.2, 0.85, 0.3, 1);
+  --motion-instant: 90ms cubic-bezier(0.2, 0.85, 0.3, 1);
+  --motion-fast: 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-normal: 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-page: 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  --glass-specular-top: rgba(213, 231, 247, 0.56);
+  --glass-specular-edge: rgba(83, 216, 255, 0.48);
+}
+
+
