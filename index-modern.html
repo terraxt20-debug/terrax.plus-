@@ -87,8 +87,7 @@
   <link rel="stylesheet" type="text/css" href="frontend/styling/index.css" />
   <link rel="prefetch" href="stability.html" />
   <link rel="prefetch" href="gaming.html" />
-  <script>window.yaContextCb=window.yaContextCb||[]</script>
-  <script src="https://yandex.ru/ads/system/context.js" async></script>
+
   <script type="text/javascript" src="speedtest.js" onerror="this.onerror=null;this.src='../speedtest.js';"></script>
   <script type="text/javascript">
     // Set this to a different URL to load the server list from another location.
@@ -97,10 +96,16 @@
   <script type="text/javascript" src="frontend/javascript/telemetry-math.js"></script>
   <script type="text/javascript" src="frontend/javascript/ad-slots.js"></script>
   <script type="text/javascript" src="frontend/javascript/index.js"></script>
+  <script async custom-element="amp-auto-ads"
+        src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+  </script>
   <title>LibreSpeed - Free and Open Source Speedtest</title>
 </head>
 
 <body>
+  <amp-auto-ads type="adsense"
+        data-ad-client="ca-pub-1225026489802055">
+  </amp-auto-ads>
   <!-- Layers 1-3: Outer Dark Canvas, Electronic Circuit Traces & Ambient Light Points -->
   <div class="cyber-backdrop" aria-hidden="true">
     <div class="cyber-grid-mesh"></div>
@@ -477,6 +482,33 @@
         </div>
       </div>
 
+      <!-- Smart Auto-Collapsing High-Yield Ad Slot (Post-Test Results) -->
+      <div class="terrax-smart-ad-slot terrax-smart-banner"
+           id="terrax-smart-ad-speed-results"
+           data-terrax-smart-ad="speed-results"
+           data-ad-status="unfilled"
+           data-ad-filled="false">
+        <div class="terrax-smart-ad-header" hidden aria-hidden="true" style="display:none;">
+          <span class="terrax-ad-badge"></span>
+          <span class="terrax-ad-status-pill"></span>
+        </div>
+        <div class="terrax-smart-ad-body">
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-client="ca-pub-1225026489802055"
+               data-ad-slot=""
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+          <div class="terrax-native-sponsor-card" hidden aria-hidden="true" style="display:none;">
+            <div class="sponsor-brand-row">
+              <span class="sponsor-icon-glow"></span>
+              <strong class="sponsor-title"></strong>
+            </div>
+            <p class="sponsor-desc"></p>
+          </div>
+        </div>
+      </div>
+
       <!-- Connection Info & Measurement Server Selector Row -->
       <div class="connection-server-row" data-layer="controls-surface">
         <div class="server-selector active">
@@ -489,6 +521,33 @@
           </div>
           <ul class="servers" role="listbox" aria-label="قائمة خوادم القياس"></ul>
           <p class="sponsor" id="sponsor" style="display: none;" aria-hidden="true"></p>
+          <!-- Smart Auto-Collapsing High-Yield Ad Slot (Servers Placement) -->
+          <div class="terrax-smart-ad-slot terrax-smart-banner terrax-adsense-container"
+               id="terrax-smart-ad-servers-main"
+               data-terrax-smart-ad="servers-main"
+               data-terrax-placement="servers"
+               data-ad-status="unfilled"
+               data-ad-filled="false">
+            <div class="terrax-smart-ad-header" hidden aria-hidden="true" style="display:none;">
+              <span class="terrax-ad-badge"></span>
+              <span class="terrax-ad-status-pill"></span>
+            </div>
+            <div class="terrax-smart-ad-body">
+              <ins class="adsbygoogle"
+                   style="display:block"
+                   data-ad-client="ca-pub-1225026489802055"
+                   data-ad-slot=""
+                   data-ad-format="auto"
+                   data-full-width-responsive="true"></ins>
+              <div class="terrax-native-sponsor-card" hidden aria-hidden="true" style="display:none;">
+                <div class="sponsor-brand-row">
+                  <span class="sponsor-icon-glow"></span>
+                  <strong class="sponsor-title"></strong>
+                </div>
+                <p class="sponsor-desc"></p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="connection-info-pill" id="connection-type-card" data-connection-state="idle" data-is-testing="false" data-connection-kind="unavailable">
@@ -506,31 +565,34 @@
         </div>
       </div>
 
-      <!-- Smart Hybrid Yandex RTB + Adsterra Smartlink Glassmorphic Card -->
-      <aside class="terrax-yan-card" data-terrax-yan-slot="speed-main" data-block-id="R-A-TERREX-SPEED-1" data-auto-ad="true" data-smartlink-url="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" aria-label="برعاية تقنية • Terrax Partner">
-        <div class="terrax-yan-header">
-          <div class="terrax-yan-brand">
-            <span class="terrax-yan-dot" aria-hidden="true"></span>
-            <span class="terrax-yan-title">برعاية تقنية • Terrax Partner</span>
-          </div>
-          <div class="terrax-yan-header-actions">
-            <span class="terrax-yan-status-indicator" aria-live="polite" style="font-size:0.92rem;font-weight:700;color:#38bdf8;opacity:0.9;">عرض تلقائي نشط</span>
-            <span class="terrax-yan-isolation-badge" hidden>🛡️ وضع العزل الشبكي نشط لضمان دقة الفحص</span>
-          </div>
+      <!-- Smart Auto-Collapsing High-Yield Ad Slot (Main Speed) -->
+      <div class="terrax-smart-ad-slot terrax-smart-banner"
+           id="terrax-smart-ad-speed-main"
+           data-terrax-smart-ad="speed-main"
+           data-ad-status="unfilled"
+           data-ad-filled="false">
+        <div class="terrax-smart-ad-header" hidden aria-hidden="true" style="display:none;">
+          <span class="terrax-ad-badge"></span>
+          <span class="terrax-ad-status-pill"></span>
         </div>
-        <div class="terrax-yan-body">
-          <div id="yandex_rtb_R-A-TERREX-SPEED-1" class="terrax-yan-rtb-mount"></div>
-          <a href="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" rel="noopener noreferrer sponsored" class="terrax-yan-sponsor-fallback" data-smartlink-fallback="true">
-            <div class="terrax-yan-fallback-content terrax-yan-sponsor-content">
-              <div class="terrax-yan-sponsor-headline">
-                <span class="terrax-yan-fallback-pill terrax-yan-sponsor-badge">إعلان مدعوم • AD</span>
-                <strong class="terrax-yan-fallback-title terrax-yan-sponsor-title">Terrax Cloud DNS &amp; Fiber Optimizer — استجابة أسرع للألعاب والبث 4K</strong>
-              </div>
-              <span class="terrax-yan-fallback-sub terrax-yan-sponsor-desc">توجيه ذكي للحزم عبر مسارات الألياف المباشرة لتقليل الـ Ping والـ Jitter واستقرار البث</span>
+        <div class="terrax-smart-ad-body">
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-client="ca-pub-1225026489802055"
+               data-ad-slot=""
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+          <div class="terrax-native-sponsor-card" hidden aria-hidden="true" style="display:none;">
+            <div class="sponsor-brand-row">
+              <span class="sponsor-icon-glow"></span>
+              <strong class="sponsor-title"></strong>
             </div>
-          </a>
+            <p class="sponsor-desc"></p>
+          </div>
         </div>
-      </aside>
+      </div>
+
+
 
       <p id="privacy-warning" class="hidden">
         بالنقر على زر البدء فإنك توافق على سياسة الخصوصية الخاصة بالخدمة<br />
@@ -655,6 +717,8 @@
 
       <p>لا يتم كشف أي بيانات شخصية لأي طرف ثالث.</p>
 
+
+
       <h2>حذف البيانات</h2>
       <p>
         لحذف سجل اختبار معين، يرجى تزويدنا بمعرّف الاختبار (Test ID) عبر البريد:
@@ -688,31 +752,67 @@
         <table class="cyber-history-table">
           <thead>
             <tr>
-              <th>التوقيت</th>
-              <th>الخادم</th>
-              <th>التنزيل</th>
-              <th>الرفع</th>
-              <th>الاستقرار</th>
-              <th>Ping</th>
+              <th data-sort-key="date" role="button" tabindex="0" aria-sort="descending" class="sortable-th is-sorted">
+                <span class="th-label">التاريخ</span>
+                <span class="sort-indicator" aria-hidden="true">↓</span>
+              </th>
+              <th data-sort-key="time" role="button" tabindex="0" aria-sort="none" class="sortable-th">
+                <span class="th-label">التوقيت</span>
+                <span class="sort-indicator" aria-hidden="true">↕</span>
+              </th>
+              <th data-sort-key="server" role="button" tabindex="0" aria-sort="none" class="sortable-th">
+                <span class="th-label">الخادم</span>
+                <span class="sort-indicator" aria-hidden="true">↕</span>
+              </th>
+              <th data-sort-key="dl" role="button" tabindex="0" aria-sort="none" class="sortable-th">
+                <span class="th-label">التنزيل</span>
+                <span class="sort-indicator" aria-hidden="true">↕</span>
+              </th>
+              <th data-sort-key="ul" role="button" tabindex="0" aria-sort="none" class="sortable-th">
+                <span class="th-label">الرفع</span>
+                <span class="sort-indicator" aria-hidden="true">↕</span>
+              </th>
+              <th data-sort-key="stability" role="button" tabindex="0" aria-sort="none" class="sortable-th">
+                <span class="th-label">الاستقرار</span>
+                <span class="sort-indicator" aria-hidden="true">↕</span>
+              </th>
+              <th data-sort-key="ping" role="button" tabindex="0" aria-sort="none" class="sortable-th">
+                <span class="th-label">Ping</span>
+                <span class="sort-indicator" aria-hidden="true">↕</span>
+              </th>
             </tr>
           </thead>
           <tbody id="test-history-tbody">
             <tr>
-              <td colspan="6" class="empty-history-cell">لا توجد اختبارات مسجلة بعد. ابدأ اختبار السرعة لتسجيل النتائج.</td>
+              <td colspan="7" class="empty-history-cell">لا توجد اختبارات مسجلة بعد. ابدأ اختبار السرعة لتسجيل النتائج.</td>
             </tr>
           </tbody>
         </table>
-      </div>
-
-      <!-- Usage Booster Banner Linked to Official Smartlink (Auto-Loaded Inline Ad Slot) -->
-      <div class="usage-booster-banner-wrap" data-terrax-yan-slot="usage-main" data-auto-ad="true" style="margin: 1.2rem 0;">
-        <a href="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" rel="noopener noreferrer sponsored" class="terrax-yan-sponsor-fallback usage-booster-banner" data-smartlink-fallback="true" style="display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 1.2rem; border-radius: 12px; background: linear-gradient(90deg, rgba(2, 132, 199, 0.22) 0%, rgba(14, 34, 72, 0.75) 100%); border: 1px solid rgba(56, 189, 248, 0.35); text-decoration: none; color: #fff;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <span class="terrax-yan-sponsor-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700;">إعلان تلقائي • AD</span>
-            <strong style="font-size: 0.95rem; color: #f0f9ff;">تحسين مسارات الألياف وDNS لتقليل استهلاك الحزم ومضاعفة الاستقرار</strong>
+      <!-- Smart Auto-Collapsing Booster Slot (Usage Dialog) -->
+      <div class="terrax-smart-ad-slot terrax-smart-banner usage-smart-ad-slot"
+           id="terrax-smart-ad-usage-main"
+           data-terrax-smart-ad="usage-main"
+           data-ad-status="unfilled"
+           data-ad-filled="false">
+        <div class="terrax-smart-ad-header" hidden aria-hidden="true" style="display:none;">
+          <span class="terrax-ad-badge"></span>
+          <span class="terrax-ad-status-pill"></span>
+        </div>
+        <div class="terrax-smart-ad-body">
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-client="ca-pub-1225026489802055"
+               data-ad-slot=""
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+          <div class="terrax-native-sponsor-card" hidden aria-hidden="true" style="display:none;">
+            <div class="sponsor-brand-row">
+              <span class="sponsor-icon-glow"></span>
+              <strong class="sponsor-title"></strong>
+            </div>
+            <p class="sponsor-desc"></p>
           </div>
-          <span class="terrax-yan-status-indicator" style="color: #38bdf8; font-weight: 700; font-size: 0.88rem; white-space: nowrap;">عرض تلقائي نشط</span>
-        </a>
+        </div>
       </div>
 
       <div class="modal-actions-row">
@@ -748,8 +848,10 @@
           <a href="stability.html" class="cyber-inline-link" id="setting-stability-link">الانتقال إلى صفحة الاستقرار &larr;</a>
         </div>
         <div class="setting-row">
-          <span id="setting-privacy-label">سياسة الخصوصية والبيانات</span>
-          <button type="button" class="small inverted" id="open-privacy-from-settings">عرض السياسة</button>
+          <span id="setting-privacy-label">سياسة الخصوصية وحماية البيانات</span>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="small inverted" id="open-privacy-from-settings">عرض السياسة</button>
+          </div>
         </div>
         <div class="setting-row support-setting-row">
           <div class="support-setting-info">

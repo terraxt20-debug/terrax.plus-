@@ -1,8 +1,19 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {ADS_CONFIG, ADSTERRA_SMARTLINK_URL} from '../config/adsConfig.ts';
+import {
+  ADSENSE_CONFIG,
+  ADS_CONFIG,
+  ADSTERRA_SMARTLINK_URL,
+  isValidAdSensePublisherId,
+  isValidAdSenseSlotId,
+  normalizeAdSenseClientId,
+} from '../config/adsConfig.ts';
 
 declare global {
   interface Window {
+    adsbygoogle?: Array<Record<string, unknown>> & {
+      requestNonPersonalizedAds?: number;
+      pauseAdRequests?: number;
+    };
     yaContextCb?: Array<() => void>;
     Ya?: {
       Context?: {
@@ -50,11 +61,32 @@ export const AUTO_AD_CREATIVES = [
 export interface HybridSmartAdCardProps {
   blockId?: string;
   slotKey?: string;
+  adsenseClientId?: string;
+  adsenseSlotId?: string;
+  adsenseFormat?: 'auto' | 'autorelaxed' | 'fluid';
   isTesting: boolean;
   refreshTrigger?: number;
   isStabilityTab?: boolean;
   smartlinkUrl?: string;
   lang?: 'ar' | 'en';
+}
+
+function ensureGoogleAdSenseScript(clientId: string) {
+  if (typeof document === 'undefined' || !isValidAdSensePublisherId(clientId)) return;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+  const normalized = normalizeAdSenseClientId(clientId);
+  const existing = document.querySelector(
+    'script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]'
+  );
+  if (existing || document.getElementById('terrax-adsense-sdk-runtime')) return;
+  const s = document.createElement('script');
+  s.id = 'terrax-adsense-sdk-runtime';
+  s.async = true;
+  s.crossOrigin = 'anonymous';
+  s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
+    normalized
+  )}`;
+  (document.head || document.documentElement).appendChild(s);
 }
 
 function ensureYandexContextScript() {
@@ -72,6 +104,9 @@ function ensureYandexContextScript() {
 export const HybridSmartAdCard: React.FC<HybridSmartAdCardProps> = ({
   blockId = ADS_CONFIG.YANDEX_BLOCKS.SPEED_TAB,
   slotKey = 'speed-main',
+  adsenseClientId = ADSENSE_CONFIG.PUBLISHER_ID,
+  adsenseSlotId,
+  adsenseFormat = 'auto',
   isTesting,
   refreshTrigger = 0,
   isStabilityTab = false,
@@ -79,27 +114,59 @@ export const HybridSmartAdCard: React.FC<HybridSmartAdCardProps> = ({
   lang = 'ar',
 }) => {
   const [internalRefreshTick, setInternalRefreshTick] = useState<number>(0);
-  const [adMode, setAdMode] = useState<'rtb-loading' | 'rtb-active' | 'smartlink-fallback'>(
-    'rtb-loading'
-  );
+  const [adMode, setAdMode] = useState<
+    'rtb-loading' | 'rtb-active' | 'adsense-active' | 'smartlink-fallback'
+  >('rtb-loading');
   const [adStatus, setAdStatus] = useState<'loading' | 'ready' | 'offline'>('loading');
   const isTestingRef = useRef<boolean>(isTesting);
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const adsenseInsRef = useRef<HTMLModElement | null>(null);
+
+  const resolvedSlotId =
+    adsenseSlotId ||
+    (ADSENSE_CONFIG.SLOTS as Record<string, string>)[slotKey] ||
+    '';
+  const hasValidAdSenseUnit =
+    isValidAdSensePublisherId(adsenseClientId) && isValidAdSenseSlotId(resolvedSlotId);
 
   useEffect(() => {
     isTestingRef.current = isTesting;
   }, [isTesting]);
 
-  // Automatic ad rotation every 30s when idle (strictly paused during active tests)
+  // Official Google AdSense unit initialization (Protected by Smart Ad Lock & Duplicate Push Guard)
   useEffect(() => {
-    if (isTesting) return;
+    if (isTesting || !hasValidAdSenseUnit || typeof window === 'undefined') return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    const insEl = adsenseInsRef.current;
+    if (!insEl) return;
+    if (
+      insEl.getAttribute('data-terrax-pushed') === 'true' ||
+      insEl.getAttribute('data-adsbygoogle-status')
+    ) {
+      return;
+    }
+    ensureGoogleAdSenseScript(adsenseClientId);
+    try {
+      window.adsbygoogle = window.adsbygoogle || [];
+      insEl.setAttribute('data-terrax-pushed', 'true');
+      window.adsbygoogle.push({});
+      setAdMode('adsense-active');
+      setAdStatus('ready');
+    } catch {
+      // Fallback gracefully if blocked
+    }
+  }, [adsenseClientId, resolvedSlotId, hasValidAdSenseUnit, isTesting]);
+
+  // Automatic ad rotation every 30s when idle (strictly paused during active tests and when AdSense unit is active)
+  useEffect(() => {
+    if (isTesting || hasValidAdSenseUnit) return;
     const autoRotateTimer = window.setInterval(() => {
       if (!isTestingRef.current) {
         setInternalRefreshTick((prev) => prev + 1);
       }
     }, AUTO_AD_ROTATION_INTERVAL_MS);
     return () => window.clearInterval(autoRotateTimer);
-  }, [isTesting]);
+  }, [isTesting, hasValidAdSenseUnit]);
 
   // Smart 30s & 60s refresh timer when viewing the Stability Test tab
   useEffect(() => {
@@ -228,10 +295,7 @@ export const HybridSmartAdCard: React.FC<HybridSmartAdCardProps> = ({
     };
   }, [blockId, slotKey, isTesting, refreshTrigger, internalRefreshTick]);
 
-  const isEnglish = lang === 'en';
   const showSmartlinkCard = adMode !== 'rtb-active';
-  const currentCreative =
-    AUTO_AD_CREATIVES[(refreshTrigger + internalRefreshTick) % AUTO_AD_CREATIVES.length];
 
   return (
     <aside
@@ -243,50 +307,35 @@ export const HybridSmartAdCard: React.FC<HybridSmartAdCardProps> = ({
       data-ad-state={adStatus}
       data-auto-ad="true"
       data-smartlink-url={smartlinkUrl}
-      aria-label="برعاية تقنية • Terrax Partner"
     >
-      <div className="terrax-yan-header">
+      <div className="terrax-yan-header" hidden aria-hidden="true" style={{ display: 'none' }}>
         <div className="terrax-yan-brand">
           <span className="terrax-yan-dot" aria-hidden="true" />
-          <span className="terrax-yan-partner-label terrax-yan-title">
-            برعاية تقنية • Terrax Partner
-          </span>
+          <span className="terrax-yan-partner-label terrax-yan-title" />
         </div>
-
         <div className="terrax-yan-header-actions">
-          {!isTesting && (
-            <span
-              className="terrax-yan-status-indicator"
-              aria-live="polite"
-              style={{
-                fontSize: '0.92rem',
-                fontWeight: 700,
-                color: adStatus === 'offline' ? '#94a3b8' : '#38bdf8',
-                opacity: 0.9,
-              }}
-            >
-              {adStatus === 'loading'
-                ? isEnglish
-                  ? 'Auto-loading ad...'
-                  : 'جاري التحميل التلقائي...'
-                : adStatus === 'offline'
-                  ? isEnglish
-                    ? 'Ad paused (Offline)'
-                    : 'الإعلان متوقف مؤقتاً (غير متصل)'
-                  : isEnglish
-                    ? 'Auto Ad Active • تفعيل تلقائي'
-                    : 'عرض تلقائي نشط'}
-            </span>
-          )}
-          {isTesting && (
-            <div className="terrax-yan-isolation-badge" role="status">
-              🛡️ وضع العزل الشبكي نشط لضمان دقة الفحص
-            </div>
-          )}
+          <span className="terrax-yan-status-indicator" hidden aria-hidden="true" />
+          <div className="terrax-yan-isolation-badge" hidden aria-hidden="true" />
         </div>
       </div>
 
       <div className="terrax-yan-body">
+        {hasValidAdSenseUnit && (
+          <div
+            className="terrax-adsense-mount"
+            style={{width: '100%', minHeight: '90px', display: 'block', overflow: 'hidden'}}
+          >
+            <ins
+              ref={adsenseInsRef}
+              className="adsbygoogle"
+              style={{display: 'block'}}
+              data-ad-client={normalizeAdSenseClientId(adsenseClientId)}
+              data-ad-slot={resolvedSlotId}
+              data-ad-format={adsenseFormat}
+              data-full-width-responsive={adsenseFormat !== 'autorelaxed' ? 'true' : undefined}
+            />
+          </div>
+        )}
         <div
           className="terrax-yan-rtb-mount"
           ref={mountRef}
@@ -323,23 +372,20 @@ export const HybridSmartAdCard: React.FC<HybridSmartAdCardProps> = ({
             rel="noopener noreferrer sponsored"
             className="terrax-yan-sponsor-fallback"
             data-smartlink-fallback="true"
+            hidden
+            aria-hidden="true"
+            style={{ display: 'none' }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
             }}
           >
-            <div className="terrax-yan-fallback-content terrax-yan-sponsor-content">
+            <div className="terrax-yan-fallback-content terrax-yan-sponsor-content" hidden style={{ display: 'none' }}>
               <div className="terrax-yan-sponsor-headline">
-                <span className="terrax-yan-fallback-pill terrax-yan-sponsor-badge">
-                  {isEnglish ? currentCreative.badgeEn : currentCreative.badgeAr}
-                </span>
-                <strong className="terrax-yan-fallback-title terrax-yan-sponsor-title">
-                  {isEnglish ? currentCreative.titleEn : currentCreative.titleAr}
-                </strong>
+                <span className="terrax-yan-fallback-pill terrax-yan-sponsor-badge" />
+                <strong className="terrax-yan-fallback-title terrax-yan-sponsor-title" />
               </div>
-              <span className="terrax-yan-fallback-sub terrax-yan-sponsor-desc">
-                {isEnglish ? currentCreative.subEn : currentCreative.subAr}
-              </span>
+              <span className="terrax-yan-fallback-sub terrax-yan-sponsor-desc" />
             </div>
           </a>
         )}

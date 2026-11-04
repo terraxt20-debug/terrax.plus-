@@ -1,0 +1,5 @@
+# ==============================================================================
+# Terrax Plus (تيراكس بلاس) — Official IAB Authorized Digital Sellers (ads.txt)
+# Specification: IAB Tech Lab ads.txt v1.1 (https://iabtechlab.com/ads-txt/)
+# ==============================================================================
+google.com, pub-1225026489802055, DIRECT, f08c47fec0942fa0

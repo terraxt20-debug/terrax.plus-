@@ -25,12 +25,13 @@ button#copy-link,
 button#close-privacy,
 button.small {
   height: 5rem;
-  min-width: 28rem;
-  padding: 0 3.6rem;
+  min-width: min(28rem, 100%);
+  max-width: 100%;
+  padding: 0 clamp(1.4rem, 3.5vw, 3.6rem);
   border-radius: 1.6rem;
   border: 1.5px solid rgba(103, 232, 249, 0.68);
   font-family: var(--font-sans-ar);
-  font-size: 1.85rem;
+  font-size: clamp(1.45rem, 1.85vw, 1.85rem);
   font-weight: 800;
   letter-spacing: 0;
   color: #f8fafc;
@@ -41,6 +42,8 @@ button.small {
   user-select: none;
   -webkit-user-select: none;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   box-shadow:
     0 10px 30px rgba(6, 182, 212, 0.32),
     0 0 22px rgba(56, 189, 248, 0.35),
@@ -275,8 +278,9 @@ button#resetBtn:active {
 
 button.small {
   height: 4.8rem;
-  min-width: 18rem;
-  padding: 0 2.4rem;
+  min-width: min(18rem, 100%);
+  max-width: 100%;
+  padding: 0 clamp(1.2rem, 2.5vw, 2.4rem);
   font-size: 1.5rem;
   font-weight: 700;
   border-radius: 1.4rem;

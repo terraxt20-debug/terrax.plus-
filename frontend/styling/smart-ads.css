@@ -1,0 +1,113 @@
+/**
+ * Terrax Plus (تيراكس بلاس) — Smart Auto-Collapsing High-Yield Monetization System
+ * Guarantees:
+ * 1. Zero Blank Space: Container stays completely collapsed (display:none, height:0)
+ *    whenever no ad is loaded, unfilled, or blocked.
+ * 2. Auto-Reveal: Smoothly displays ONLY when an ad is confirmed filled/rendered.
+ * 3. Non-Intrusive & Zero-CLS: Never shifts user controls during tests;
+ *    enters Smart Ad Lock (pauses requests & network traffic) while testing.
+ * 4. High-Yield Placements: Strategic post-test and companion units for max RPM.
+ * 5. Automatic Display: Mounts and updates automatically without user clicks.
+ */
+
+.terrax-smart-ad-slot,
+.terrax-smart-banner {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  border: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              max-height 0.4s ease;
+}
+
+/* Appears ONLY when ad is genuinely filled */
+.terrax-smart-ad-slot[data-ad-filled="true"],
+.terrax-smart-ad-slot[data-ad-status="filled"],
+.terrax-smart-banner[data-ad-filled="true"],
+.terrax-smart-banner[data-ad-status="filled"] {
+  display: flex !important;
+  flex-direction: column !important;
+  height: auto !important;
+  min-height: 85px !important;
+  max-height: 400px !important;
+  margin: 1rem auto !important;
+  padding: 0.85rem 1.25rem !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  border-radius: 1rem !important;
+  background: rgba(11, 27, 50, 0.75) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.28) !important;
+  box-shadow: 0 10px 28px rgba(2, 8, 23, 0.42), 0 0 18px rgba(56, 189, 248, 0.12) !important;
+  width: 100% !important;
+  max-width: 72.8rem !important;
+  box-sizing: border-box !important;
+}
+
+/* Explicitly collapse if AdSense marks it unfilled */
+ins.adsbygoogle[data-ad-status="unfilled"],
+.terrax-smart-ad-slot[data-ad-status="unfilled"],
+.terrax-smart-banner[data-ad-status="unfilled"] {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Smart Ad Lock during testing */
+.terrax-smart-ad-slot.smart-ad-locked,
+.terrax-smart-banner.smart-ad-locked {
+  pointer-events: none;
+  filter: grayscale(0.2) opacity(0.85);
+}
+
+.terrax-smart-ad-header,
+.terrax-adsense-header,
+.terrax-yan-header,
+.terrax-ad-badge,
+.terrax-ad-status-pill,
+.terrax-yan-status-indicator,
+.terrax-yan-partner-label,
+.terrax-yan-title,
+.terrax-yan-isolation-badge,
+.terrax-native-sponsor-card,
+.terrax-yan-sponsor-fallback,
+.sponsor-brand-row,
+.sponsor-icon-glow,
+.sponsor-title,
+.sponsor-desc {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+@media screen and (max-width: 680px) {
+  .terrax-smart-ad-slot[data-ad-filled="true"],
+  .terrax-smart-banner[data-ad-filled="true"] {
+    margin: 0.75rem auto !important;
+    padding: 0.65rem 0.9rem !important;
+  }
+  .sponsor-title {
+    font-size: 0.96rem;
+  }
+  .sponsor-desc {
+    font-size: 0.85rem;
+  }
+}

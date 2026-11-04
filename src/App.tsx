@@ -178,6 +178,64 @@ interface TelemetryMathApi {
       isPending: boolean;
     };
   };
+  createTestHistoryEntry?: (rawRun: Record<string, unknown>, nowInput?: Date | number) => NormalizedHistoryEntry;
+  normalizeTestHistoryList?: (rawList: unknown, fallbackNowMs?: number) => NormalizedHistoryEntry[];
+  appendTestHistoryEntry?: (
+    existingList: unknown,
+    rawRun: Record<string, unknown>,
+    maxEntries?: number,
+    nowInput?: Date | number
+  ) => NormalizedHistoryEntry[];
+  sortTestHistoryList?: (
+    list: NormalizedHistoryEntry[],
+    sortKey?: HistorySortKey,
+    sortDir?: 'asc' | 'desc'
+  ) => NormalizedHistoryEntry[];
+  computeIntegerCountUpFrame?: (
+    targetCount: number | string | null | undefined,
+    progress01: number
+  ) => {
+    displayValue: string;
+    currentCount: number;
+    targetCount: number;
+    progress: number;
+    isComplete: boolean;
+  };
+  animateCompletedTestsCountUp?: (options: {
+    targetCount: number;
+    durationMs?: number;
+    reducedMotion?: boolean;
+    onFrame?: (frame: {
+      displayValue: string;
+      currentCount: number;
+      targetCount: number;
+      progress: number;
+      isComplete: boolean;
+    }) => void;
+    onComplete?: () => void;
+  }) => () => void;
+}
+
+export type HistorySortKey = 'date' | 'time' | 'server' | 'dl' | 'ul' | 'stability' | 'ping';
+
+export interface NormalizedHistoryEntry {
+  runId: string;
+  epochMs: number;
+  isoDate: string;
+  date: string;
+  dateAr: string;
+  dateEn: string;
+  timestamp: string;
+  timeAr: string;
+  timeEn: string;
+  time24: string;
+  serverName: string;
+  dlMbps: number;
+  ulMbps: number;
+  pingMs: number;
+  jitterMs: number;
+  stabilityPercent: number | null;
+  megabytesUsed: number;
 }
 
 declare global {
@@ -196,6 +254,7 @@ export const FINISHED = 3;
 export const YANDEX_SILENT_REFRESH_INTERVAL_MS = 30000;
 
 const LANGUAGE_STORAGE_KEY = 'terrax_ui_lang_v1';
+const HISTORY_STORAGE_KEY = 'terrax_librespeed_history_v1';
 
 /**
  * Convert a real LibreSpeed measurement in Mbps to a 4K gauge rotation angle (0..180 deg)
@@ -397,9 +456,21 @@ export default function App() {
   const [serverDropdownOpen, setServerDropdownOpen] = useState<boolean>(false);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [usageOpen, setUsageOpen] = useState<boolean>(false);
-  const [testHistory, setTestHistory] = useState<
-    Array<{time: string; server: string; dl: string; ul: string; stability: string; ping: string}>
-  >([]);
+  const [testHistory, setTestHistory] = useState<NormalizedHistoryEntry[]>(() => {
+    try {
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const math = typeof window !== 'undefined' ? window.TerraxTelemetryMath : undefined;
+      if (math?.normalizeTestHistoryList) {
+        return math.normalizeTestHistoryList(parsed);
+      }
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [historySortKey, setHistorySortKey] = useState<HistorySortKey>('date');
+  const [historySortDir, setHistorySortDir] = useState<'asc' | 'desc'>('desc');
   const [activeTab, setActiveTab] = useState<'speed' | 'usage' | 'stability' | 'gaming' | 'settings'>('speed');
   const [adRefreshTrigger, setAdRefreshTrigger] = useState<number>(0);
   const [testData, setTestData] = useState<LibreSpeedUpdateData | null>(null);
@@ -416,6 +487,12 @@ export default function App() {
   const speedtestRef = useRef<SpeedtestInstance | null>(null);
   const dlSamplesRef = useRef<number[]>([]);
   const ulSamplesRef = useRef<number[]>([]);
+  const lastSampleTsRef = useRef<number>(0);
+  const currentTestBytesRef = useRef<number>(0);
+  const currentRunIdRef = useRef<string | null>(null);
+  const historyRecordedForRunRef = useRef<boolean>(false);
+  const selectedServerRef = useRef<SpeedtestServer | null>(null);
+  const langRef = useRef<'ar' | 'en'>(lang);
   const latestDataRef = useRef<LibreSpeedUpdateData | null>(null);
   const dlDisplayRef = useRef<number>(0);
   const ulDisplayRef = useRef<number>(0);
@@ -432,6 +509,71 @@ export default function App() {
   useEffect(() => {
     autoGbpsRef.current = autoGbps;
   }, [autoGbps]);
+
+  useEffect(() => {
+    selectedServerRef.current = selectedServer;
+  }, [selectedServer]);
+
+  useEffect(() => {
+    langRef.current = lang;
+  }, [lang]);
+
+  const handleHistorySort = useCallback((sortKey: HistorySortKey) => {
+    setHistorySortKey((prevKey) => {
+      if (prevKey === sortKey) {
+        setHistorySortDir((prevDir) => (prevDir === 'desc' ? 'asc' : 'desc'));
+        return prevKey;
+      }
+      setHistorySortDir(sortKey === 'server' || sortKey === 'ping' ? 'asc' : 'desc');
+      return sortKey;
+    });
+  }, []);
+
+  const [usageTestsCountUp, setUsageTestsCountUp] = useState<{
+    displayValue: string;
+    active: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!usageOpen) {
+      setUsageTestsCountUp(null);
+      return;
+    }
+    const targetCount = testHistory.length;
+    const math = typeof window !== 'undefined' ? window.TerraxTelemetryMath : undefined;
+    const reducedMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!math?.animateCompletedTestsCountUp || reducedMotion || targetCount <= 0) {
+      setUsageTestsCountUp({displayValue: String(targetCount), active: false});
+      return;
+    }
+
+    setUsageTestsCountUp({displayValue: '0', active: true});
+    const cancel = math.animateCompletedTestsCountUp({
+      targetCount,
+      durationMs: 650,
+      reducedMotion,
+      onFrame: ({displayValue, isComplete}) => {
+        setUsageTestsCountUp({
+          displayValue,
+          active: !isComplete,
+        });
+      },
+      onComplete: () => {
+        setUsageTestsCountUp({
+          displayValue: String(targetCount),
+          active: false,
+        });
+      },
+    });
+
+    return () => {
+      cancel();
+    };
+  }, [usageOpen, testHistory.length]);
 
   const computeConnectionInfo = useCallback(
     (activeLang: 'ar' | 'en'): RealConnectionInfo => {
@@ -570,16 +712,25 @@ export default function App() {
 
       st.onupdate = (data: LibreSpeedUpdateData) => {
         if (!mounted) return;
+        const now = performance.now();
+        const dtSeconds =
+          lastSampleTsRef.current > 0
+            ? Math.min(1, Math.max(0.02, (now - lastSampleTsRef.current) / 1000))
+            : 0.15;
+        lastSampleTsRef.current = now;
+
         const stage = Number(data.testState);
         if (stage === 1) {
           const dlVal = Number(data.dlStatus);
           if (Number.isFinite(dlVal) && dlVal > 0) {
             dlSamplesRef.current.push(dlVal);
+            currentTestBytesRef.current += (dlVal * 1e6 * dtSeconds) / 8;
           }
         } else if (stage === 3) {
           const ulVal = Number(data.ulStatus);
           if (Number.isFinite(ulVal) && ulVal > 0) {
             ulSamplesRef.current.push(ulVal);
+            currentTestBytesRef.current += (ulVal * 1e6 * dtSeconds) / 8;
           }
         }
         latestDataRef.current = data;
@@ -607,6 +758,43 @@ export default function App() {
               latestDataRef.current.pingStatus,
               latestDataRef.current.jitterStatus
             );
+
+            if (!historyRecordedForRunRef.current) {
+              historyRecordedForRunRef.current = true;
+              const nowDate = new Date();
+              const runId =
+                currentRunIdRef.current ||
+                `run_${nowDate.getTime()}_${Math.random().toString(36).slice(2, 8)}`;
+              currentRunIdRef.current = runId;
+              const rawRun = {
+                runId,
+                epochMs: nowDate.getTime(),
+                serverName:
+                  selectedServerRef.current?.name ||
+                  (langRef.current === 'en' ? 'Yemen' : 'اليمن'),
+                dlMbps: Number(latestDataRef.current.dlStatus) || 0,
+                ulMbps: Number(latestDataRef.current.ulStatus) || 0,
+                pingMs: Number(latestDataRef.current.pingStatus) || 0,
+                jitterMs: Number(latestDataRef.current.jitterStatus) || 0,
+                stabilityPercent: finalMetrics.stabilityPercent,
+                megabytesUsed: Math.max(
+                  0.5,
+                  Number((currentTestBytesRef.current / (1024 * 1024)).toFixed(1))
+                ),
+              };
+              setTestHistory((prevHistory) => {
+                const updated = math.appendTestHistoryEntry
+                  ? math.appendTestHistoryEntry(prevHistory, rawRun, 25, nowDate)
+                  : prevHistory;
+                try {
+                  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+                } catch {
+                  // Ignore storage restrictions
+                }
+                return updated;
+              });
+            }
+
             const reducedMotion =
               typeof window.matchMedia === 'function' &&
               window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -888,6 +1076,10 @@ export default function App() {
       setStatCountUp(null);
       dlSamplesRef.current = [];
       ulSamplesRef.current = [];
+      lastSampleTsRef.current = performance.now();
+      currentTestBytesRef.current = 0;
+      currentRunIdRef.current = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      historyRecordedForRunRef.current = false;
       dlDisplayRef.current = 0;
       ulDisplayRef.current = 0;
       latestDataRef.current = null;
@@ -995,6 +1187,10 @@ export default function App() {
 
   return (
     <div className="terrax-cyber-shell" data-layer="main-frame">
+      {React.createElement('amp-auto-ads', {
+        type: 'adsense',
+        'data-ad-client': 'ca-pub-1225026489802055',
+      })}
       <div className="panel-ambient-backlight" aria-hidden="true" />
 
       <header className="terrax-header" data-layer="header-surface">
@@ -1365,6 +1561,38 @@ export default function App() {
           </div>
         </div>
 
+        {/* Smart Auto-Collapsing High-Yield Ad Slot (Post-Test Results) */}
+        <div
+          className="terrax-smart-ad-slot terrax-smart-banner"
+          id="terrax-smart-ad-speed-results"
+          data-terrax-smart-ad="speed-results"
+          data-ad-status="unfilled"
+          data-ad-filled={uiState === FINISHED ? 'true' : 'false'}
+          role="complementary"
+        >
+          <div className="terrax-smart-ad-header" hidden aria-hidden="true" style={{ display: 'none' }}>
+            <span className="terrax-ad-badge" />
+            <span className="terrax-ad-status-pill" />
+          </div>
+          <div className="terrax-smart-ad-body">
+            <ins
+              className="adsbygoogle"
+              style={{ display: 'block' }}
+              data-ad-client="ca-pub-1225026489802055"
+              data-ad-slot=""
+              data-ad-format="auto"
+              data-full-width-responsive="true"
+            />
+            <div className="terrax-native-sponsor-card" hidden aria-hidden="true" style={{ display: 'none' }}>
+              <div className="sponsor-brand-row">
+                <span className="sponsor-icon-glow" />
+                <strong className="sponsor-title" />
+              </div>
+              <p className="sponsor-desc" />
+            </div>
+          </div>
+        </div>
+
         {/* Server Selector & Connection Row */}
         <div className="connection-server-row" data-layer="controls-surface">
           <div
@@ -1408,6 +1636,30 @@ export default function App() {
                 </li>
               ))}
             </ul>
+            {/* Smart Auto-Collapsing High-Yield Ad Slot (Servers Placement) */}
+            <div
+              className="terrax-smart-ad-slot terrax-smart-banner terrax-adsense-container"
+              id="terrax-smart-ad-servers-main"
+              data-terrax-smart-ad="servers-main"
+              data-terrax-placement="servers"
+              data-ad-status="unfilled"
+              data-ad-filled="false"
+            >
+              <div className="terrax-smart-ad-header" hidden aria-hidden="true" style={{ display: 'none' }}>
+                <span className="terrax-ad-badge" />
+                <span className="terrax-ad-status-pill" />
+              </div>
+              <div className="terrax-smart-ad-body">
+                <ins
+                  className="adsbygoogle"
+                  style={{ display: 'block' }}
+                  data-ad-client="ca-pub-1225026489802055"
+                  data-ad-slot=""
+                  data-ad-format="auto"
+                  data-full-width-responsive="true"
+                />
+              </div>
+            </div>
           </div>
 
           <div
@@ -1454,17 +1706,37 @@ export default function App() {
           </div>
         </div>
 
-        {/* Smart Hybrid Yandex RTB + Adsterra Smartlink Ad Card with Network Isolation Lock */}
-        {/* <YandexSmartAd component alias */}
-        <HybridSmartAdCard
-          blockId={ADS_CONFIG.YANDEX_BLOCKS.SPEED_TAB}
-          slotKey="speed-main"
-          isTesting={uiState === RUNNING}
-          refreshTrigger={adRefreshTrigger}
-          isStabilityTab={activeTab === 'stability'}
-          smartlinkUrl={ADS_CONFIG.ADSTERRA_SMARTLINK}
-          lang={lang}
-        />
+        {/* Smart Auto-Collapsing High-Yield Ad Slot (Main Speed) */}
+        <div
+          className="terrax-smart-ad-slot terrax-smart-banner"
+          id="terrax-smart-ad-speed-main"
+          data-terrax-smart-ad="speed-main"
+          data-ad-status="unfilled"
+          data-ad-filled="false"
+        >
+          <div className="terrax-smart-ad-header" hidden aria-hidden="true" style={{ display: 'none' }}>
+            <span className="terrax-ad-badge" />
+            <span className="terrax-ad-status-pill" />
+          </div>
+          <div className="terrax-smart-ad-body">
+            <ins
+              className="adsbygoogle"
+              style={{ display: 'block' }}
+              data-ad-client="ca-pub-1225026489802055"
+              data-ad-slot=""
+              data-ad-format="auto"
+              data-full-width-responsive="true"
+            />
+            <div className="terrax-native-sponsor-card" hidden aria-hidden="true" style={{ display: 'none' }}>
+              <div className="sponsor-brand-row">
+                <span className="sponsor-icon-glow" />
+                <strong className="sponsor-title" />
+              </div>
+              <p className="sponsor-desc" />
+            </div>
+          </div>
+        </div>
+
 
         {/* Primary Action Button */}
         <div className="cta-button-container" data-layer="primary-controls">
@@ -1654,15 +1926,29 @@ export default function App() {
                 {isEnglish ? 'Total Data Used' : 'إجمالي البيانات المستهلكة'}
               </span>
               <strong className="usage-val" id="total-data-used" dir="ltr">
-                0.0 MB
+                {(() => {
+                  const totalMB = testHistory.reduce(
+                    (sum, item) => sum + (Number(item.megabytesUsed) || 0),
+                    0
+                  );
+                  return totalMB >= 1024
+                    ? `${(totalMB / 1024).toFixed(2)} GB`
+                    : `${totalMB.toFixed(1)} MB`;
+                })()}
               </strong>
             </div>
-            <div className="usage-stat-box">
+            <div className={`usage-stat-box${usageTestsCountUp?.active ? ' counting-up' : ''}`}>
               <span className="usage-label">
                 {isEnglish ? 'Completed Tests' : 'عدد الاختبارات المكتملة'}
               </span>
-              <strong className="usage-val" id="total-tests-count" dir="ltr">
-                {testHistory.length}
+              <strong
+                className={`usage-val${usageTestsCountUp?.active ? ' counting-up' : ''}`}
+                id="total-tests-count"
+                dir="ltr"
+                data-target-count={testHistory.length}
+                data-counting-up={usageTestsCountUp?.active ? 'true' : 'false'}
+              >
+                {usageTestsCountUp ? usageTestsCountUp.displayValue : testHistory.length}
               </strong>
             </div>
           </div>
@@ -1671,100 +1957,135 @@ export default function App() {
             <table className="cyber-history-table">
               <thead>
                 <tr>
-                  <th>{isEnglish ? 'Time' : 'التوقيت'}</th>
-                  <th>{isEnglish ? 'Server' : 'الخادم'}</th>
-                  <th>{isEnglish ? 'Download' : 'التنزيل'}</th>
-                  <th>{isEnglish ? 'Upload' : 'الرفع'}</th>
-                  <th>{isEnglish ? 'Stability' : 'الاستقرار'}</th>
-                  <th>Ping</th>
+                  {(
+                    [
+                      {key: 'date' as HistorySortKey, label: isEnglish ? 'Date' : 'التاريخ'},
+                      {key: 'time' as HistorySortKey, label: isEnglish ? 'Time' : 'التوقيت'},
+                      {key: 'server' as HistorySortKey, label: isEnglish ? 'Server' : 'الخادم'},
+                      {key: 'dl' as HistorySortKey, label: isEnglish ? 'Download' : 'التنزيل'},
+                      {key: 'ul' as HistorySortKey, label: isEnglish ? 'Upload' : 'الرفع'},
+                      {key: 'stability' as HistorySortKey, label: isEnglish ? 'Stability' : 'الاستقرار'},
+                      {key: 'ping' as HistorySortKey, label: 'Ping'},
+                    ]
+                  ).map((col) => {
+                    const isSorted = historySortKey === col.key;
+                    const ariaSort = isSorted
+                      ? historySortDir === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none';
+                    const indicator = isSorted
+                      ? historySortDir === 'asc'
+                        ? '↑'
+                        : '↓'
+                      : '↕';
+                    return (
+                      <th
+                        key={col.key}
+                        data-sort-key={col.key}
+                        role="button"
+                        tabIndex={0}
+                        aria-sort={ariaSort}
+                        className={`sortable-th${isSorted ? ' is-sorted' : ''}`}
+                        onClick={() => handleHistorySort(col.key)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleHistorySort(col.key);
+                          }
+                        }}
+                      >
+                        <span className="th-label">{col.label}</span>
+                        <span className="sort-indicator" aria-hidden="true">
+                          {indicator}
+                        </span>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody id="test-history-tbody">
                 {testHistory.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="empty-history-cell">
+                    <td colSpan={7} className="empty-history-cell">
                       {isEnglish
                         ? 'No tests recorded yet. Start a speed test to record results.'
                         : 'لا توجد اختبارات مسجلة بعد. ابدأ اختبار السرعة لتسجيل النتائج.'}
                     </td>
                   </tr>
                 ) : (
-                  testHistory.map((item, idx) => (
-                    <tr key={idx}>
-                      <td>{item.time}</td>
-                      <td>{item.server}</td>
-                      <td>{item.dl}</td>
-                      <td>{item.ul}</td>
-                      <td>{item.stability}</td>
-                      <td>{item.ping}</td>
-                    </tr>
-                  ))
+                  (() => {
+                    const math =
+                      typeof window !== 'undefined' ? window.TerraxTelemetryMath : undefined;
+                    const sorted = math?.sortTestHistoryList
+                      ? math.sortTestHistoryList(testHistory, historySortKey, historySortDir)
+                      : testHistory;
+                    return sorted.map((item, idx) => {
+                      const dateText = isEnglish
+                        ? item.dateEn || item.isoDate || item.date || '--'
+                        : item.dateAr || item.isoDate || item.date || '--';
+                      const timeText = isEnglish
+                        ? item.timeEn || item.timestamp || '--'
+                        : item.timeAr || item.timestamp || '--';
+                      const stabText =
+                        item.stabilityPercent !== null && item.stabilityPercent !== undefined
+                          ? `${item.stabilityPercent}%`
+                          : '--';
+                      return (
+                        <tr
+                          key={item.runId || `${item.epochMs}_${idx}`}
+                          data-run-id={item.runId || ''}
+                          data-epoch-ms={item.epochMs || 0}
+                        >
+                          <td className="history-date-cell" dir="ltr">
+                            {dateText}
+                          </td>
+                          <td className="history-time-cell" dir="ltr">
+                            {timeText}
+                          </td>
+                          <td>{item.serverName}</td>
+                          <td dir="ltr">{Number(item.dlMbps).toFixed(1)} Mbps</td>
+                          <td dir="ltr">{Number(item.ulMbps).toFixed(1)} Mbps</td>
+                          <td dir="ltr">{stabText}</td>
+                          <td dir="ltr">{Number(item.pingMs).toFixed(1)} ms</td>
+                        </tr>
+                      );
+                    });
+                  })()
                 )}
               </tbody>
             </table>
           </div>
 
-          {/* Usage Booster Banner Linked to Official Smartlink (Auto-Loaded Inline Ad Slot) */}
+          {/* Smart Auto-Collapsing Booster Slot (Usage Dialog) */}
           <div
-            className="usage-booster-banner-wrap"
-            data-terrax-yan-slot="usage-main"
-            data-auto-ad="true"
-            style={{margin: '1.2rem 0'}}
+            className="terrax-smart-ad-slot terrax-smart-banner usage-smart-ad-slot"
+            id="terrax-smart-ad-usage-main"
+            data-terrax-smart-ad="usage-main"
+            data-ad-status="unfilled"
+            data-ad-filled="false"
           >
-            <a
-              href="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5"
-              rel="noopener noreferrer sponsored"
-              className="terrax-yan-sponsor-fallback usage-booster-banner"
-              data-smartlink-fallback="true"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.8rem 1.2rem',
-                borderRadius: '12px',
-                background:
-                  'linear-gradient(90deg, rgba(2, 132, 199, 0.22) 0%, rgba(14, 34, 72, 0.75) 100%)',
-                border: '1px solid rgba(56, 189, 248, 0.35)',
-                textDecoration: 'none',
-                color: '#fff',
-              }}
-            >
-              <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
-                <span
-                  className="terrax-yan-sponsor-badge"
-                  style={{
-                    background: 'rgba(56, 189, 248, 0.2)',
-                    color: '#38bdf8',
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  {isEnglish ? 'Auto Ad • AD' : 'إعلان تلقائي • AD'}
-                </span>
-                <strong style={{fontSize: '0.95rem', color: '#f0f9ff'}}>
-                  {isEnglish
-                    ? 'Optimize DNS & Fiber Backbones for Zero Packet Loss'
-                    : 'تحسين مسارات الألياف وDNS لتقليل استهلاك الحزم ومضاعفة الاستقرار'}
-                </strong>
+            <div className="terrax-smart-ad-header" hidden aria-hidden="true" style={{ display: 'none' }}>
+              <span className="terrax-ad-badge" />
+              <span className="terrax-ad-status-pill" />
+            </div>
+            <div className="terrax-smart-ad-body">
+              <ins
+                className="adsbygoogle"
+                style={{ display: 'block' }}
+                data-ad-client="ca-pub-1225026489802055"
+                data-ad-slot=""
+                data-ad-format="auto"
+                data-full-width-responsive="true"
+              />
+              <div className="terrax-native-sponsor-card" hidden aria-hidden="true" style={{ display: 'none' }}>
+                <div className="sponsor-brand-row">
+                  <span className="sponsor-icon-glow" />
+                  <strong className="sponsor-title" />
+                </div>
+                <p className="sponsor-desc" />
               </div>
-              <span
-                className="terrax-yan-status-indicator"
-                style={{
-                  color: '#38bdf8',
-                  fontWeight: 700,
-                  fontSize: '0.88rem',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {isEnglish ? 'Auto Ad Active' : 'عرض تلقائي نشط'}
-              </span>
-            </a>
+            </div>
           </div>
 
           <div className="modal-actions-row">
@@ -1777,7 +2098,14 @@ export default function App() {
               type="button"
               className="small inverted"
               id="clear-history-btn"
-              onClick={() => setTestHistory([])}
+              onClick={() => {
+                try {
+                  localStorage.removeItem(HISTORY_STORAGE_KEY);
+                } catch {
+                  // Ignore storage restrictions
+                }
+                setTestHistory([]);
+              }}
             >
               {isEnglish ? 'Clear Local History' : 'مسح السجل المحلي'}
             </button>

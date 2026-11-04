@@ -130,6 +130,7 @@ const UI_TRANSLATIONS = {
     usageModalSubtitle: "يتم حساب البيانات المستهلكة وسجل السرعات من الاختبارات الحقيقية فقط.",
     usageTotalDataLabel: "إجمالي البيانات المستهلكة",
     usageTotalTestsLabel: "عدد الاختبارات المكتملة",
+    thDate: "التاريخ",
     thTime: "التوقيت",
     thServer: "الخادم",
     thDownload: "التنزيل",
@@ -202,6 +203,7 @@ const UI_TRANSLATIONS = {
     usageModalSubtitle: "Consumed data and speed logs are calculated strictly from real completed tests.",
     usageTotalDataLabel: "Total Data Consumed",
     usageTotalTestsLabel: "Completed Tests",
+    thDate: "Date",
     thTime: "Time",
     thServer: "Server",
     thDownload: "Download",
@@ -251,7 +253,10 @@ const testState = {
   ulSamples: [],
   lastSampleTimestamp: 0,
   currentTestBytes: 0,
+  currentRunId: null,
   historyRecordedForRun: false,
+  historySortKey: "date",
+  historySortDir: "desc",
   prevDlNumber: "",
   prevUlNumber: "",
   prevStabNumber: "",
@@ -264,6 +269,9 @@ const testState = {
   _statCountUpCancel: null,
   _statCardsRafController: null,
   _statCardDomCache: null,
+  _usageCountUpActive: false,
+  _usageCountUpCancel: null,
+  _usageCountUpTarget: 0,
   _lastConnLabel: "",
   _lastConnState: "",
   _lastConnTitle: "",
@@ -596,9 +604,26 @@ function applyLanguage(lang, { persist = true } = {}) {
   if (usageLabels[1]) usageLabels[1].textContent = dict.usageTotalTestsLabel;
 
   const usageHeaders = document.querySelectorAll("#usage-dialog .cyber-history-table thead th");
-  const thKeys = ["thTime", "thServer", "thDownload", "thUpload", "thStability", "thPing"];
-  thKeys.forEach((key, idx) => {
-    if (usageHeaders[idx]) usageHeaders[idx].textContent = dict[key];
+  const headerKeyMap = {
+    date: "thDate",
+    time: "thTime",
+    server: "thServer",
+    dl: "thDownload",
+    ul: "thUpload",
+    stability: "thStability",
+    ping: "thPing",
+  };
+  const fallbackThKeys = ["thDate", "thTime", "thServer", "thDownload", "thUpload", "thStability", "thPing"];
+  usageHeaders.forEach((th, idx) => {
+    const sortKey = th.getAttribute("data-sort-key");
+    const dictKey = (sortKey && headerKeyMap[sortKey]) || fallbackThKeys[idx];
+    if (!dictKey || !dict[dictKey]) return;
+    const labelSpan = th.querySelector(".th-label");
+    if (labelSpan) {
+      labelSpan.textContent = dict[dictKey];
+    } else {
+      th.textContent = dict[dictKey];
+    }
   });
   setText("#usage-dialog .cyber-link-btn", dict.openStabilityFromUsage);
   setText("#clear-history-btn", dict.clearHistoryBtn);
@@ -641,7 +666,11 @@ function initLanguagePreference() {
 }
 
 // Bootstrap the application when the DOM is ready
-window.addEventListener("DOMContentLoaded", async () => {
+async function bootstrapTerraxApp() {
+  if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+    window.history.scrollRestoration = "manual";
+  }
+  globalThis.TerraxScrollNavigator?.init?.();
   initLanguagePreference();
   hookUpButtons();
   renderUsageHistoryUI();
@@ -652,7 +681,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   createSpeedtest();
   applySettingsJSON();
   applyServerListJSON();
-});
+}
+
+if (document.readyState === "loading") {
+  window.addEventListener("DOMContentLoaded", bootstrapTerraxApp);
+} else {
+  bootstrapTerraxApp();
+}
 
 /**
  * Ensure the LibreSpeed engine (Speedtest) is loaded before initializing
@@ -783,14 +818,27 @@ function attachButtonMicroInteractions() {
 }
 
 /**
- * Smooth 4K cross-page navigation helper with zero artificial delay
+ * Smooth 4K cross-page navigation helper with zero artificial delay and BFCache resilience
  */
 let isNavigatingToPage = false;
 function smoothNavigateToPage(targetUrl) {
-  if (isNavigatingToPage) return;
+  if (isNavigatingToPage || !targetUrl) return;
   isNavigatingToPage = true;
+  if (document.body) {
+    document.body.classList.add("terrax-page-leaving");
+  }
   window.location.assign(targetUrl);
+  setTimeout(() => {
+    isNavigatingToPage = false;
+    document.body?.classList.remove("terrax-page-leaving");
+  }, 2500);
 }
+
+// BFCache and pageshow resilience to prevent page freeze or leaving opacity deadlock
+window.addEventListener("pageshow", () => {
+  isNavigatingToPage = false;
+  document.body?.classList.remove("terrax-page-leaving");
+});
 
 /**
  * Monitor network connectivity and NetworkInformation API changes
@@ -970,20 +1018,25 @@ function createSpeedtest() {
           message: dict.toastCompleteMsg,
         });
 
-        // State-Driven Smart Ad Refresh on Test Complete (unlocks Network Isolation & refreshes Yandex RTB)
+        // State-Driven Smart Ad Refresh on Test Complete (unlocks Network Isolation & refreshes Yandex RTB / AdSense)
         globalThis.TerraxSmartAdEngine?.onTestComplete("speed");
       }
     } else if (aborted) {
       cancelStatCardsCountUp();
-      globalThis.TerraxSmartAdEngine?.setTestingState(false);
-      // If the test was not aborted manually by user click or if offline, alert disconnection
+      // If the test was not aborted manually by user click or if offline, preserve ERROR state and alert disconnection
       if (!testState.userAborted || !navigator.onLine) {
+        globalThis.TerraxSmartAdEngine?.onTestError?.({
+          reason: !navigator.onLine ? "offline" : "connection_abort",
+          timestamp: Date.now(),
+        });
         const dict = UI_TRANSLATIONS[testState.lang] || UI_TRANSLATIONS.ar;
         showTerraxToast({
           type: "error",
           title: dict.toastAbortTitle,
           message: dict.toastAbortMsg,
         });
+      } else {
+        globalThis.TerraxSmartAdEngine?.setTestingState(false);
       }
     } else {
       cancelStatCardsCountUp();
@@ -1076,6 +1129,28 @@ function hookUpButtons() {
     });
   }
 
+  // Interactive sorting on Test History table column headers
+  const sortableHeaders = document.querySelectorAll(
+    "#usage-dialog .cyber-history-table thead th[data-sort-key]"
+  );
+  sortableHeaders.forEach((th) => {
+    if (th.dataset.sortHooked === "1") return;
+    th.dataset.sortHooked = "1";
+    const triggerSort = () => {
+      const sortKey = th.getAttribute("data-sort-key");
+      if (sortKey) {
+        setHistorySort(sortKey);
+      }
+    };
+    th.addEventListener("click", triggerSort);
+    th.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        triggerSort();
+      }
+    });
+  });
+
   // Bottom 5-Tab Cyber Glass Navigation Dock
   const navItems = document.querySelectorAll(".nav-dock-item");
   const setActiveNav = (activeId) => {
@@ -1107,6 +1182,9 @@ function hookUpButtons() {
   // Sync bottom nav active state whenever any dialog closes or backdrop is clicked
   document.querySelectorAll("dialog").forEach((modal) => {
     modal.addEventListener("close", () => {
+      if (modal.id === "usage-dialog") {
+        cancelUsageTestsCountUp(true);
+      }
       restoreSpeedNavIfIdle();
     });
     modal.addEventListener("click", (e) => {
@@ -1115,6 +1193,33 @@ function hookUpButtons() {
       }
     });
   });
+
+  // Automatically trigger 'Completed Tests' count-up animation whenever #usage-dialog opens
+  const usageDialogEl = document.querySelector("#usage-dialog");
+  if (
+    usageDialogEl &&
+    usageDialogEl.dataset.countUpObserved !== "1" &&
+    typeof MutationObserver === "function"
+  ) {
+    usageDialogEl.dataset.countUpObserved = "1";
+    let wasOpen = Boolean(usageDialogEl.open || usageDialogEl.hasAttribute("open"));
+    const dialogObserver = new MutationObserver(() => {
+      const isOpen = Boolean(usageDialogEl.open || usageDialogEl.hasAttribute("open"));
+      if (isOpen && !wasOpen) {
+        wasOpen = true;
+        if (!testState._usageCountUpActive) {
+          renderUsageHistoryUI({ animateCount: true });
+        }
+      } else if (!isOpen && wasOpen) {
+        wasOpen = false;
+        cancelUsageTestsCountUp(true);
+      }
+    });
+    dialogObserver.observe(usageDialogEl, {
+      attributes: true,
+      attributeFilter: ["open"],
+    });
+  }
 
   const navSpeedBtn = document.querySelector("#nav-speed-btn");
   if (navSpeedBtn) {
@@ -1138,8 +1243,8 @@ function hookUpButtons() {
         ?.classList.remove("active");
       setActiveNav("nav-usage-btn");
       globalThis.TerraxSmartAdEngine?.onTabChange("usage");
-      renderUsageHistoryUI();
       document.querySelector("#usage-dialog")?.showModal();
+      renderUsageHistoryUI({ animateCount: true });
     });
   }
 
@@ -1211,8 +1316,8 @@ function hookUpButtons() {
     const requestedTab = params.get("tab");
     if (requestedTab === "usage") {
       setActiveNav("nav-usage-btn");
-      renderUsageHistoryUI();
       document.querySelector("#usage-dialog")?.showModal();
+      renderUsageHistoryUI({ animateCount: true });
     } else if (requestedTab === "settings") {
       setActiveNav("nav-settings-btn");
       document.querySelector("#settings-dialog")?.showModal();
@@ -1250,6 +1355,7 @@ function startButtonClickHandler() {
       testState.ulSamples = [];
       testState.lastSampleTimestamp = performance.now();
       testState.currentTestBytes = 0;
+      testState.currentRunId = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       testState.historyRecordedForRun = false;
       testState.prevDlNumber = "";
       testState.prevUlNumber = "";
@@ -1709,12 +1815,42 @@ function detectConnectionType() {
 }
 
 /**
- * Record a completed real speedtest run to localStorage for the Usage & History dialog
+ * Set or toggle the active sorting column and direction for the Test History table
+ * @param {string} sortKey
+ * @param {string} [explicitDir]
+ */
+function setHistorySort(sortKey, explicitDir) {
+  const validKeys = ["date", "time", "server", "dl", "ul", "stability", "ping"];
+  const normalizedKey =
+    typeof sortKey === "string" && validKeys.includes(sortKey.trim().toLowerCase())
+      ? sortKey.trim().toLowerCase()
+      : "date";
+
+  if (explicitDir === "asc" || explicitDir === "desc") {
+    testState.historySortKey = normalizedKey;
+    testState.historySortDir = explicitDir;
+  } else if (testState.historySortKey === normalizedKey) {
+    testState.historySortDir = testState.historySortDir === "desc" ? "asc" : "desc";
+  } else {
+    testState.historySortKey = normalizedKey;
+    // Default ascending for Server name and Ping (lower latency first), descending for Date/Time/Speeds/Stability
+    testState.historySortDir =
+      normalizedKey === "server" || normalizedKey === "ping" ? "asc" : "desc";
+  }
+
+  renderUsageHistoryUI();
+}
+globalThis.setTerraxHistorySort = setHistorySort;
+
+/**
+ * Record a completed real speedtest run to localStorage for the Usage & History dialog.
+ * Guarantees accuracy across test restarts via unique runId and pure normalization.
  */
 function recordCompletedTestRun(data) {
+  if (!data || typeof data !== "object") return;
   try {
     const math = globalThis.TerraxTelemetryMath;
-    const metrics = math
+    const metrics = math?.calculateRealMetrics
       ? math.calculateRealMetrics(
           testState.dlSamples,
           testState.ulSamples,
@@ -1724,17 +1860,20 @@ function recordCompletedTestRun(data) {
       : { stabilityPercent: null };
 
     const server = getSafeSelectedServer();
-    const locale = testState.lang === "en" ? "en-US" : "ar-SA";
-    const entry = {
-      timestamp: new Date().toLocaleTimeString(locale, {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }),
+    const nowDate = new Date();
+    const runId =
+      testState.currentRunId ||
+      `run_${nowDate.getTime()}_${Math.random().toString(36).slice(2, 8)}`;
+    testState.currentRunId = runId;
+
+    const rawRun = {
+      runId,
+      epochMs: nowDate.getTime(),
       serverName: server?.name || (testState.lang === "en" ? "Yemen" : "اليمن"),
       dlMbps: Number(data.dlStatus) || 0,
       ulMbps: Number(data.ulStatus) || 0,
       pingMs: Number(data.pingStatus) || 0,
+      jitterMs: Number(data.jitterStatus) || 0,
       stabilityPercent: metrics.stabilityPercent,
       megabytesUsed: Math.max(
         0.5,
@@ -1743,36 +1882,156 @@ function recordCompletedTestRun(data) {
     };
 
     const existingRaw = localStorage.getItem(HISTORY_STORAGE_KEY);
-    const list = existingRaw ? JSON.parse(existingRaw) : [];
-    list.unshift(entry);
-    localStorage.setItem(
-      HISTORY_STORAGE_KEY,
-      JSON.stringify(list.slice(0, 25))
-    );
+    let existingList = [];
+    try {
+      existingList = existingRaw ? JSON.parse(existingRaw) : [];
+    } catch (parseErr) {
+      existingList = [];
+    }
+
+    const updatedList =
+      math && typeof math.appendTestHistoryEntry === "function"
+        ? math.appendTestHistoryEntry(existingList, rawRun, 25, nowDate)
+        : [
+            math && typeof math.createTestHistoryEntry === "function"
+              ? math.createTestHistoryEntry(rawRun, nowDate)
+              : {
+                  ...rawRun,
+                  isoDate: nowDate.toISOString().slice(0, 10),
+                  dateAr: nowDate.toISOString().slice(0, 10).replace(/-/g, "/"),
+                  dateEn: nowDate.toISOString().slice(0, 10),
+                  timestamp: nowDate.toLocaleTimeString(
+                    testState.lang === "en" ? "en-US" : "ar-SA",
+                    { hour: "2-digit", minute: "2-digit", second: "2-digit" }
+                  ),
+                },
+            ...(Array.isArray(existingList) ? existingList : []),
+          ].slice(0, 25);
+
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedList));
     renderUsageHistoryUI();
   } catch (e) {
     // Ignore storage errors in private browsing
   }
 }
+globalThis.recordCompletedTestRun = recordCompletedTestRun;
 
 /**
- * Render the Usage & Real Test History modal content
+ * Cancel any active count-up animation on the 'Completed Tests' counter (#total-tests-count)
+ * @param {boolean} [snapToTarget=false]
  */
-function renderUsageHistoryUI() {
+function cancelUsageTestsCountUp(snapToTarget = false) {
+  if (typeof testState._usageCountUpCancel === "function") {
+    try {
+      testState._usageCountUpCancel();
+    } catch (e) {}
+  }
+  testState._usageCountUpCancel = null;
+  testState._usageCountUpActive = false;
+
+  const totalCountEl = document.querySelector("#total-tests-count");
+  const statBoxEl = totalCountEl?.closest(".usage-stat-box");
+  totalCountEl?.classList.remove("counting-up");
+  statBoxEl?.classList.remove("counting-up");
+  if (totalCountEl) {
+    totalCountEl.dataset.countingUp = "false";
+    if (snapToTarget) {
+      totalCountEl.textContent = String(testState._usageCountUpTarget || 0);
+    }
+  }
+}
+globalThis.cancelUsageTestsCountUp = cancelUsageTestsCountUp;
+
+/**
+ * Trigger a smooth requestAnimationFrame count-up animation for the 'Completed Tests'
+ * number (#total-tests-count) in the Usage dialog when the dialog opens.
+ * @param {number} targetCount
+ * @param {number} [durationMs=650]
+ */
+function startUsageTestsCountUp(targetCount, durationMs = 650) {
+  cancelUsageTestsCountUp(false);
+
+  const totalCountEl = document.querySelector("#total-tests-count");
+  if (!totalCountEl) return;
+  const statBoxEl = totalCountEl.closest(".usage-stat-box");
+
+  const safeTarget = Math.max(0, Math.floor(Number(targetCount) || 0));
+  testState._usageCountUpTarget = safeTarget;
+  totalCountEl.dataset.targetCount = String(safeTarget);
+
+  const math = globalThis.TerraxTelemetryMath;
+  const reducedMotion =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (
+    !math ||
+    typeof math.animateCompletedTestsCountUp !== "function" ||
+    reducedMotion ||
+    safeTarget <= 0
+  ) {
+    totalCountEl.textContent = String(safeTarget);
+    totalCountEl.dataset.countingUp = "false";
+    return;
+  }
+
+  testState._usageCountUpActive = true;
+  totalCountEl.classList.add("counting-up");
+  statBoxEl?.classList.add("counting-up");
+  totalCountEl.dataset.countingUp = "true";
+
+  testState._usageCountUpCancel = math.animateCompletedTestsCountUp({
+    targetCount: safeTarget,
+    durationMs,
+    reducedMotion,
+    onFrame: ({ displayValue }) => {
+      if (totalCountEl.textContent !== displayValue) {
+        totalCountEl.textContent = displayValue;
+      }
+    },
+    onComplete: () => {
+      testState._usageCountUpActive = false;
+      testState._usageCountUpCancel = null;
+      totalCountEl.textContent = String(safeTarget);
+      totalCountEl.classList.remove("counting-up");
+      statBoxEl?.classList.remove("counting-up");
+      totalCountEl.dataset.countingUp = "false";
+    },
+  });
+}
+globalThis.startUsageTestsCountUp = startUsageTestsCountUp;
+
+/**
+ * Render the Usage & Real Test History modal content with Date column, column sorting,
+ * and optional Completed Tests count-up animation on dialog open.
+ * @param {Object} [options]
+ * @param {boolean} [options.animateCount=false]
+ */
+function renderUsageHistoryUI(options) {
+  const opts = options && typeof options === "object" ? options : {};
   const totalDataEl = document.querySelector("#total-data-used");
   const totalCountEl = document.querySelector("#total-tests-count");
   const tbody = document.querySelector("#test-history-tbody");
   if (!tbody || !totalDataEl || !totalCountEl) return;
 
-  let list = [];
+  const math = globalThis.TerraxTelemetryMath;
+  let rawList = [];
   try {
     const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-    list = raw ? JSON.parse(raw) : [];
+    rawList = raw ? JSON.parse(raw) : [];
   } catch (e) {
-    list = [];
+    rawList = [];
   }
 
-  const totalMB = list.reduce(
+  const normalizedList =
+    math && typeof math.normalizeTestHistoryList === "function"
+      ? math.normalizeTestHistoryList(rawList)
+      : Array.isArray(rawList)
+        ? rawList
+        : [];
+
+  const totalMB = normalizedList.reduce(
     (sum, item) => sum + (Number(item.megabytesUsed) || 0),
     0
   );
@@ -1780,29 +2039,85 @@ function renderUsageHistoryUI() {
     totalMB >= 1024
       ? `${(totalMB / 1024).toFixed(2)} GB`
       : `${totalMB.toFixed(1)} MB`;
-  totalCountEl.textContent = String(list.length);
+
+  const targetCount = normalizedList.length;
+  totalCountEl.dataset.targetCount = String(targetCount);
+  if (opts.animateCount) {
+    startUsageTestsCountUp(targetCount);
+  } else if (
+    !testState._usageCountUpActive ||
+    testState._usageCountUpTarget !== targetCount
+  ) {
+    if (testState._usageCountUpActive) {
+      cancelUsageTestsCountUp(false);
+    }
+    testState._usageCountUpTarget = targetCount;
+    totalCountEl.textContent = String(targetCount);
+  }
+
+  // Sync sortable table header indicators and ARIA attributes
+  const activeSortKey = testState.historySortKey || "date";
+  const activeSortDir = testState.historySortDir === "asc" ? "asc" : "desc";
+  const headers = document.querySelectorAll(
+    "#usage-dialog .cyber-history-table thead th[data-sort-key]"
+  );
+  headers.forEach((th) => {
+    const key = th.getAttribute("data-sort-key");
+    const isSorted = key === activeSortKey;
+    th.classList.toggle("is-sorted", isSorted);
+    th.setAttribute(
+      "aria-sort",
+      isSorted ? (activeSortDir === "asc" ? "ascending" : "descending") : "none"
+    );
+    const indicator = th.querySelector(".sort-indicator");
+    if (indicator) {
+      indicator.textContent = isSorted
+        ? activeSortDir === "asc"
+          ? "↑"
+          : "↓"
+        : "↕";
+    }
+  });
 
   const dict = UI_TRANSLATIONS[testState.lang] || UI_TRANSLATIONS.ar;
-  if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty-history-cell">${dict.emptyHistory}</td></tr>`;
+  if (normalizedList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-history-cell">${dict.emptyHistory}</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = list
-    .map(
-      (item) => `
-      <tr>
-        <td dir="ltr">${item.timestamp}</td>
+  const sortedList =
+    math && typeof math.sortTestHistoryList === "function"
+      ? math.sortTestHistoryList(normalizedList, activeSortKey, activeSortDir)
+      : normalizedList;
+
+  const isEn = testState.lang === "en";
+  tbody.innerHTML = sortedList
+    .map((item) => {
+      const dateText = isEn
+        ? item.dateEn || item.isoDate || item.date || "--"
+        : item.dateAr || item.isoDate || item.date || "--";
+      const timeText = isEn
+        ? item.timeEn || item.timestamp || "--"
+        : item.timeAr || item.timestamp || "--";
+      const stabText =
+        item.stabilityPercent !== null && item.stabilityPercent !== undefined
+          ? `${item.stabilityPercent}%`
+          : "--";
+      return `
+      <tr data-run-id="${item.runId || ""}" data-epoch-ms="${item.epochMs || 0}">
+        <td class="history-date-cell" dir="ltr">${dateText}</td>
+        <td class="history-time-cell" dir="ltr">${timeText}</td>
         <td>${item.serverName}</td>
         <td dir="ltr">${Number(item.dlMbps).toFixed(1)} Mbps</td>
         <td dir="ltr">${Number(item.ulMbps).toFixed(1)} Mbps</td>
-        <td dir="ltr">${item.stabilityPercent !== null && item.stabilityPercent !== undefined ? item.stabilityPercent + "%" : "--"}</td>
+        <td dir="ltr">${stabText}</td>
         <td dir="ltr">${Number(item.pingMs).toFixed(1)} ms</td>
       </tr>
-    `
-    )
+    `;
+    })
     .join("");
 }
+globalThis.renderUsageHistoryUI = renderUsageHistoryUI;
 
 /**
  * Start the requestAnimationFrame UI rendering loop

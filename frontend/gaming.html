@@ -89,11 +89,13 @@
   <link rel="stylesheet" type="text/css" href="styling/button.css" onerror="this.onerror=null;this.href='frontend/styling/button.css';" />
   <link rel="prefetch" href="index.html" />
   <link rel="prefetch" href="stability.html" />
-  <script>window.yaContextCb=window.yaContextCb||[]</script>
-  <script src="https://yandex.ru/ads/system/context.js" async></script>
+
   <script type="text/javascript" src="../speedtest.js" onerror="this.onerror=null;this.src='speedtest.js';"></script>
   <script type="text/javascript" src="javascript/telemetry-math.js" onerror="this.onerror=null;this.src='frontend/javascript/telemetry-math.js';"></script>
   <script type="text/javascript" src="javascript/ad-slots.js" onerror="this.onerror=null;this.src='frontend/javascript/ad-slots.js';"></script>
+  <script async custom-element="amp-auto-ads"
+        src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+  </script>
   <title>Terrax Plus — اختبار سرعة الإنترنت للألعاب | Gaming Speed Test 4K</title>
   <style>
     :root {
@@ -145,6 +147,10 @@
 
     html {
       font-size: 62.5%;
+      min-height: 100%;
+      min-height: 100dvh;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
       background-color: var(--bg-primary);
       color: var(--text-primary);
       color-scheme: dark;
@@ -164,7 +170,7 @@
       min-height: 100vh;
       min-height: 100dvh;
       width: 100%;
-      max-width: 100vw;
+      max-width: 100%;
       font-family: var(--font-ar);
       font-size: 1.45rem;
       line-height: 1.55;
@@ -177,11 +183,10 @@
         url("images/background.jpeg");
       background-size: cover;
       background-position: center;
-      background-attachment: fixed;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: safe center;
       padding:
         max(0.85rem, env(safe-area-inset-top, 0px))
         clamp(0.75rem, 2.2vw, 1.8rem)
@@ -205,6 +210,9 @@
       pointer-events: none;
       z-index: 0;
       overflow: hidden;
+      contain: strict;
+      transform: translate3d(0, 0, 0);
+      backface-visibility: hidden;
     }
 
     .gaming-grid-bg {
@@ -262,6 +270,7 @@
       width: 100%;
       max-width: 112rem;
       min-width: 0;
+      margin: auto;
       background: linear-gradient(
         165deg,
         rgba(22, 50, 96, 0.28) 0%,
@@ -282,7 +291,7 @@
       gap: clamp(0.85rem, 1.2vw, 1.1rem);
       animation: gamingShellEntrance 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
       will-change: transform, opacity;
-      overflow: hidden;
+      overflow: clip;
     }
 
     @keyframes gamingShellEntrance {
@@ -1815,11 +1824,18 @@
 
     /* 6. Ultra-Small Viewport Safeguard (<= 350px) */
     @media screen and (max-width: 350px) {
-      .games-cards-grid {
+      .games-cards-grid,
+      .hud-telemetry-grid,
+      .hud-submetrics-strip {
         grid-template-columns: 1fr;
       }
       .ping-scale-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .gaming-core-dial {
+        width: min(15.5rem, 100%);
+        height: auto;
+        aspect-ratio: 1 / 1;
       }
     }
 
@@ -1834,10 +1850,68 @@
         scroll-behavior: auto !important;
       }
     }
+
+    /* Smart Auto-Collapsing High-Yield Monetization Slot */
+    .terrax-smart-ad-slot,
+    .terrax-smart-banner {
+      display: none !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      opacity: 0 !important;
+      border: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      transition: opacity 0.35s ease, max-height 0.4s ease;
+    }
+    .terrax-smart-ad-slot[data-ad-filled="true"],
+    .terrax-smart-banner[data-ad-filled="true"] {
+      display: flex !important;
+      flex-direction: column !important;
+      height: auto !important;
+      min-height: 85px !important;
+      max-height: 400px !important;
+      margin: 0.85rem auto !important;
+      padding: 0.85rem 1.25rem !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      border-radius: 1.15rem !important;
+      background: rgba(12, 28, 60, 0.65) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      border: 1px solid rgba(39, 221, 248, 0.35) !important;
+      box-shadow: 0 10px 28px rgba(2, 8, 23, 0.42), 0 0 18px rgba(39, 221, 248, 0.12) !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    .terrax-smart-ad-slot.smart-ad-locked {
+      pointer-events: none;
+      filter: grayscale(0.2) opacity(0.85);
+    }
+    .terrax-smart-ad-header,
+    .terrax-ad-badge,
+    .terrax-ad-status-pill,
+    .terrax-native-sponsor-card,
+    .sponsor-brand-row,
+    .sponsor-icon-glow,
+    .sponsor-title,
+    .sponsor-desc {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+      overflow: hidden !important;
+    }
   </style>
 </head>
 
 <body>
+  <amp-auto-ads type="adsense"
+        data-ad-client="ca-pub-1225026489802055">
+  </amp-auto-ads>
   <!-- Ambient 4K Cyber Backdrop -->
   <div class="gaming-backdrop" aria-hidden="true">
     <div class="gaming-grid-bg"></div>
@@ -1895,11 +1969,9 @@
         </select>
       </div>
 
-      <div class="server-meta-inline">
-        <a href="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" target="_blank" rel="noopener noreferrer sponsored" class="gaming-sponsor-tag-link" id="gamingSponsorTag" title="فتح عروض وتحديثات الراعي التقني" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; transition: color 0.2s ease;">
-          <span>الراعي التقني: <strong id="gamingSponsorName" style="color: #27ddf8; text-decoration: underline; text-decoration-color: rgba(39, 221, 248, 0.45); text-underline-offset: 3px;">Terrax Plus Fiber Core</strong></span>
-          <span style="font-size: 0.75rem; background: rgba(39, 221, 248, 0.18); border: 1px solid rgba(39, 221, 248, 0.4); color: #27ddf8; padding: 0.05rem 0.4rem; border-radius: 4px; font-weight: 800;">PRO</span>
-        </a>
+        <div class="gaming-server-tag-box" id="gamingSponsorTag" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+          <span>الخادم: <strong id="gamingSponsorName" style="color: #27ddf8;">Terrax Plus Fiber Core</strong></span>
+        </div>
         <span class="meta-sep" aria-hidden="true">·</span>
         <span>الشبكة: <strong id="gamingClientIp">ألياف بصرية / اتصال مباشر</strong></span>
         <span class="meta-sep" aria-hidden="true">·</span>
@@ -2213,30 +2285,29 @@
           <div class="game-bar-track"><div class="game-bar-fill"></div></div>
         </button>
 
-        <!-- 6. Terrax Gaming Radar Booster Card (Slot 6 alongside Fortnite) -->
-        <a href="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" rel="noopener noreferrer sponsored" class="game-perf-card gaming-booster-card" id="gamingBoosterCard" data-game="Terrax Pro Gaming Booster" data-cat="fps br sports all" data-auto-ad="true" data-ideal-ping="20" data-max-ping="55" aria-label="Terrax Pro Gaming Booster — مسرع مسارات الألعاب التنافسية">
+        <!-- 6. Counter-Strike 2 -->
+        <button type="button" class="game-perf-card" id="gamingBoosterCard" data-game="Counter-Strike 2" data-cat="fps all" data-ideal-ping="25" data-max-ping="65">
           <div class="game-card-top">
             <div>
               <div class="game-name booster-title-row" dir="ltr">
-                <span>Game Turbo</span>
-                <span class="booster-pill-pro">PRO</span>
+                <span>Counter-Strike 2</span>
               </div>
-              <div class="game-genre">تسريع المسارات · Terrax Booster</div>
+              <div class="game-genre">تصويب تكتيكي · Valve Sub-Tick</div>
             </div>
             <div class="game-icon-box" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
-                <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="rgba(39, 221, 248, 0.18)" />
+                <path d="M12 2L3 7V12C3 17.5 7 21.5 12 22C17 21.5 21 17.5 21 12V7L12 2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
               </svg>
             </div>
           </div>
           <div class="game-metrics-row">
-            <div class="game-ping-readout" dir="ltr"><span class="game-live-ping" id="boosterLivePing">&lt; 55</span><small>ms</small></div>
-            <span class="game-fps-state great" id="boosterFpsState">مسار مباشر &lt; 55ms</span>
+            <div class="game-ping-readout" dir="ltr"><span class="game-live-ping" id="boosterLivePing">--</span><small>ms</small></div>
+            <span class="game-fps-state" id="boosterFpsState">في انتظار الفحص</span>
           </div>
           <div class="game-bar-track">
-            <div class="game-bar-fill" id="boosterBarFill" style="width: 95%; background: linear-gradient(90deg, #27ddf8, #78e7a0);"></div>
+            <div class="game-bar-fill" id="boosterBarFill"></div>
           </div>
-        </a>
+        </button>
       </div>
 
       <!-- GameQuery.dev Server-Side Live Server Status Adapter Panel -->
@@ -2245,45 +2316,47 @@
           <strong style="font-size:1.05rem;color:#e0f2fe;">فحص حالة خوادم الألعاب المخصصة (GameQuery.dev Proxy)</strong>
           <span id="gamequeryStatusText" style="font-size:0.95rem;color:#94a3b8;">استعلام آمن عبر الخادم (backend/gamequery.php) بدون كشف أي مفاتيح API في المتصفح.</span>
         </div>
-        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.45rem;">
-          <select id="gamequeryProtocolSelect" aria-label="بروتوكول اللعبة" style="padding:0.38rem 0.65rem;border-radius:0.65rem;background:rgba(15,35,72,0.85);border:1px solid rgba(39,221,248,0.38);color:#f8fafc;font-family:var(--font-ar);font-size:0.95rem;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.45rem;max-width:100%;min-width:0;">
+          <select id="gamequeryProtocolSelect" aria-label="بروتوكول اللعبة" style="padding:0.38rem 0.65rem;border-radius:0.65rem;background:rgba(15,35,72,0.85);border:1px solid rgba(39,221,248,0.38);color:#f8fafc;font-family:var(--font-ar);font-size:0.95rem;max-width:100%;min-width:0;">
             <option value="counterstrike2">Counter-Strike 2 (A2S)</option>
             <option value="rust">Rust (A2S)</option>
             <option value="minecraft">Minecraft (Java)</option>
             <option value="fivem">FiveM / GTA RP</option>
             <option value="arkse">ARK: Survival Evolved</option>
           </select>
-          <input id="gamequeryAddressInput" type="text" dir="ltr" placeholder="185.25.180.1:27015" aria-label="عنوان خادم اللعبة IP:Port" style="padding:0.38rem 0.65rem;border-radius:0.65rem;background:rgba(15,35,72,0.85);border:1px solid rgba(39,221,248,0.38);color:#f8fafc;font-family:var(--font-num);font-size:0.95rem;width:11.5rem;" />
+          <input id="gamequeryAddressInput" type="text" dir="ltr" placeholder="185.25.180.1:27015" aria-label="عنوان خادم اللعبة IP:Port" style="padding:0.38rem 0.65rem;border-radius:0.65rem;background:rgba(15,35,72,0.85);border:1px solid rgba(39,221,248,0.38);color:#f8fafc;font-family:var(--font-num);font-size:0.95rem;width:11.5rem;max-width:100%;min-width:0;flex:1 1 9rem;" />
           <button type="button" id="gamequeryCheckBtn" style="padding:0.38rem 0.85rem;border-radius:0.65rem;background:rgba(39,221,248,0.16);border:1px solid rgba(39,221,248,0.48);color:#67e8f9;font-family:var(--font-ar);font-size:0.95rem;font-weight:700;cursor:pointer;">فحص الخادم</button>
         </div>
       </div>
     </section>
 
-    <!-- Smart Hybrid Yandex RTB + Adsterra Smartlink Glassmorphic Card -->
-    <aside class="terrax-yan-card" data-terrax-yan-slot="gaming-main" data-block-id="R-A-TERREX-GAME-1" data-auto-ad="true" data-smartlink-url="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" aria-label="برعاية تقنية • Terrax Partner">
-      <div class="terrax-yan-header">
-        <div class="terrax-yan-brand">
-          <span class="terrax-yan-dot" aria-hidden="true"></span>
-          <span class="terrax-yan-title">برعاية تقنية • Terrax Partner</span>
-        </div>
-        <div class="terrax-yan-header-actions">
-          <span class="terrax-yan-status-indicator" aria-live="polite" style="font-size:0.92rem;font-weight:700;color:#38bdf8;opacity:0.9;">عرض تلقائي نشط</span>
-          <span class="terrax-yan-isolation-badge" hidden>🛡️ وضع العزل الشبكي نشط لضمان دقة الفحص</span>
-        </div>
+    <!-- Smart Auto-Collapsing High-Yield Gaming Ad Slot -->
+    <div class="terrax-smart-ad-slot terrax-smart-banner gaming-smart-ad-slot"
+         id="terrax-smart-ad-gaming-main"
+         data-terrax-smart-ad="gaming-main"
+         data-ad-status="unfilled"
+         data-ad-filled="false"
+         role="complementary">
+      <div class="terrax-smart-ad-header" hidden aria-hidden="true" style="display:none;">
+        <span class="terrax-ad-badge"></span>
+        <span class="terrax-ad-status-pill"></span>
       </div>
-      <div class="terrax-yan-body">
-        <div id="yandex_rtb_R-A-TERREX-GAME-1" class="terrax-yan-rtb-mount"></div>
-        <a href="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" rel="noopener noreferrer sponsored" class="terrax-yan-sponsor-fallback" data-smartlink-fallback="true">
-          <div class="terrax-yan-fallback-content terrax-yan-sponsor-content">
-            <div class="terrax-yan-sponsor-headline">
-              <span class="terrax-yan-fallback-pill terrax-yan-sponsor-badge">إعلان مدعوم • AD</span>
-              <strong class="terrax-yan-fallback-title terrax-yan-sponsor-title">Terrax Cloud DNS &amp; Fiber Optimizer — استجابة أسرع للألعاب والبث 4K</strong>
-            </div>
-            <span class="terrax-yan-fallback-sub terrax-yan-sponsor-desc">توجيه ذكي للحزم عبر مسارات الألياف المباشرة لتقليل الـ Ping والـ Jitter واستقرار البث</span>
+      <div class="terrax-smart-ad-body">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-1225026489802055"
+             data-ad-slot=""
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <div class="terrax-native-sponsor-card" hidden aria-hidden="true" style="display:none;">
+          <div class="sponsor-brand-row">
+            <span class="sponsor-icon-glow"></span>
+            <strong class="sponsor-title"></strong>
           </div>
-        </a>
+          <p class="sponsor-desc"></p>
+        </div>
       </div>
-    </aside>
+    </div>
 
     <!-- Bottom 5-Tab Cyber Glass Navigation Bar (RTL Order: السرعة -> الاستهلاك -> الاستقرار -> اختبار الألعاب -> الإعدادات) -->
     <nav class="terrax-bottom-nav" aria-label="التنقل الرئيسي" data-layer="bottom-navigation">

@@ -2,7 +2,11 @@
 
 main.terrax-inner-stage {
   text-align: center;
-  padding: 0.85rem 1.6rem 0.95rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+  padding: clamp(0.75rem, 1.3vw, 0.95rem) clamp(0.75rem, 1.8vw, 1.6rem);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -51,9 +55,10 @@ main > p.tagline.sr-only-heading,
   z-index: 40;
   width: 100%;
   max-width: 78rem;
+  min-width: 0;
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 1.4rem;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: clamp(0.85rem, 1.5vw, 1.4rem);
   align-items: stretch;
   margin: 0 auto;
   contain: layout style;
@@ -62,13 +67,15 @@ main > p.tagline.sr-only-heading,
 .connection-info-pill {
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
   contain: layout style paint;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 1.2rem;
-  padding: 0.7rem 1.6rem;
+  padding: 0.7rem clamp(1rem, 1.6vw, 1.6rem);
   background:
     repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.035) 0px, rgba(56, 189, 248, 0.035) 1px, transparent 1px, transparent 32px),
     linear-gradient(

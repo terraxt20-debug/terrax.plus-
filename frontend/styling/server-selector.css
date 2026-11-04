@@ -3,6 +3,8 @@
 .server-selector {
   position: relative;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
   display: none;
 }
@@ -17,8 +19,10 @@
 .server-selector > .chosen {
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
   min-height: 5.2rem;
-  padding: 0.7rem 1.6rem 0.7rem 4.2rem;
+  padding: 0.7rem clamp(1rem, 1.6vw, 1.6rem) 0.7rem 4.2rem;
   border: 1px solid rgba(56, 189, 248, 0.46);
   border-radius: 1.5rem;
   background:

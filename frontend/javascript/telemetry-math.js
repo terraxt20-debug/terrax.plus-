@@ -1238,6 +1238,586 @@
     };
   }
 
+  /**
+   * Format a Date object or epoch timestamp into consistent YYYY-MM-DD, Arabic date,
+   * and localized time strings with tabular numerals.
+   *
+   * @param {Date|number|string} [dateInput]
+   * @param {number} [fallbackEpochMs]
+   */
+  function formatHistoryDateParts(dateInput, fallbackEpochMs) {
+    let d = null;
+    if (dateInput instanceof Date && Number.isFinite(dateInput.getTime())) {
+      d = dateInput;
+    } else if (typeof dateInput === "number" && Number.isFinite(dateInput) && dateInput > 0) {
+      d = new Date(dateInput);
+    } else if (typeof dateInput === "string" && dateInput.trim().length > 0) {
+      const parsed = Date.parse(dateInput.trim());
+      if (Number.isFinite(parsed) && parsed > 0) {
+        d = new Date(parsed);
+      }
+    }
+
+    if (!d || !Number.isFinite(d.getTime())) {
+      const fb =
+        typeof fallbackEpochMs === "number" && Number.isFinite(fallbackEpochMs) && fallbackEpochMs > 0
+          ? fallbackEpochMs
+          : Date.now();
+      d = new Date(fb);
+    }
+
+    const epochMs = d.getTime();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const isoDate = `${year}-${month}-${day}`;
+    const dateAr = `${year}/${month}/${day}`;
+    const dateEn = isoDate;
+
+    const hours24 = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const seconds = String(d.getSeconds()).padStart(2, "0");
+    const time24 = `${hours24}:${minutes}:${seconds}`;
+
+    let timeAr = time24;
+    let timeEn = time24;
+    try {
+      timeAr = d.toLocaleTimeString("ar-SA", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch (e) {
+      timeAr = time24;
+    }
+    try {
+      timeEn = d.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+    } catch (e) {
+      timeEn = time24;
+    }
+
+    return {
+      epochMs,
+      isoDate,
+      dateAr,
+      dateEn,
+      timeAr,
+      timeEn,
+      time24,
+    };
+  }
+
+  /**
+   * Create a normalized, immutable test history entry with a clear Date field,
+   * localized time strings, unique runId, and sanitized numeric telemetry values.
+   *
+   * @param {Object} rawRun
+   * @param {Date|number} [nowInput]
+   */
+  function createTestHistoryEntry(rawRun, nowInput) {
+    const src = rawRun && typeof rawRun === "object" ? rawRun : {};
+    const explicitEpoch =
+      typeof src.epochMs === "number" && Number.isFinite(src.epochMs) && src.epochMs > 0
+        ? src.epochMs
+        : null;
+    const dateSource =
+      explicitEpoch !== null
+        ? explicitEpoch
+        : src.isoDate || src.date || nowInput || Date.now();
+
+    const parts = formatHistoryDateParts(
+      dateSource,
+      typeof nowInput === "number" && Number.isFinite(nowInput)
+        ? nowInput
+        : Date.now()
+    );
+
+    const isoDate =
+      typeof src.isoDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(src.isoDate.trim())
+        ? src.isoDate.trim()
+        : typeof src.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(src.date.trim())
+          ? src.date.trim()
+          : parts.isoDate;
+
+    const dateAr =
+      typeof src.dateAr === "string" && src.dateAr.trim().length > 0
+        ? src.dateAr.trim()
+        : isoDate.replace(/-/g, "/");
+    const dateEn =
+      typeof src.dateEn === "string" && src.dateEn.trim().length > 0
+        ? src.dateEn.trim()
+        : isoDate;
+
+    const timeAr =
+      typeof src.timeAr === "string" && src.timeAr.trim().length > 0
+        ? src.timeAr.trim()
+        : typeof src.timestamp === "string" && src.timestamp.trim().length > 0
+          ? src.timestamp.trim()
+          : parts.timeAr;
+
+    const timeEn =
+      typeof src.timeEn === "string" && src.timeEn.trim().length > 0
+        ? src.timeEn.trim()
+        : typeof src.timestamp === "string" &&
+            /^\d{1,2}:\d{2}(:\d{2})?/.test(src.timestamp.trim())
+          ? src.timestamp.trim()
+          : parts.timeEn;
+
+    const serverName =
+      typeof src.serverName === "string" && src.serverName.trim().length > 0
+        ? src.serverName.trim()
+        : typeof src.server === "string" && src.server.trim().length > 0
+          ? src.server.trim()
+          : "Terrax Core";
+
+    const toNonNegativeNumber = function (val, decimals) {
+      const n = Number(val);
+      if (!Number.isFinite(n) || n < 0) return 0;
+      if (typeof decimals === "number" && decimals >= 0) {
+        return Number(n.toFixed(decimals));
+      }
+      return n;
+    };
+
+    const dlMbps = toNonNegativeNumber(src.dlMbps ?? src.dl, 2);
+    const ulMbps = toNonNegativeNumber(src.ulMbps ?? src.ul, 2);
+    const pingMs = toNonNegativeNumber(src.pingMs ?? src.ping, 2);
+    const jitterMs = toNonNegativeNumber(src.jitterMs ?? src.jitter, 2);
+    const megabytesUsed = toNonNegativeNumber(src.megabytesUsed ?? src.mbUsed, 2);
+
+    let stabilityPercent = null;
+    if (
+      src.stabilityPercent !== null &&
+      src.stabilityPercent !== undefined &&
+      src.stabilityPercent !== "" &&
+      src.stabilityPercent !== "--"
+    ) {
+      const rawStab =
+        typeof src.stabilityPercent === "string"
+          ? Number(src.stabilityPercent.replace("%", "").trim())
+          : Number(src.stabilityPercent);
+      if (Number.isFinite(rawStab) && rawStab >= 0) {
+        stabilityPercent = Math.max(0, Math.min(100, Math.round(rawStab)));
+      }
+    }
+
+    const runId =
+      typeof src.runId === "string" && src.runId.trim().length > 0
+        ? src.runId.trim()
+        : `run_${parts.epochMs}_${Math.round(dlMbps * 100)}_${Math.round(ulMbps * 100)}`;
+
+    return {
+      runId,
+      epochMs: parts.epochMs,
+      isoDate,
+      date: isoDate,
+      dateAr,
+      dateEn,
+      timestamp: timeAr,
+      timeAr,
+      timeEn,
+      time24: parts.time24,
+      serverName,
+      dlMbps,
+      ulMbps,
+      pingMs,
+      jitterMs,
+      stabilityPercent,
+      megabytesUsed,
+    };
+  }
+
+  /**
+   * Safely normalize an array of stored history entries (including legacy entries without
+   * `date` or `epochMs`), deduplicating by `runId` so test restarts never duplicate or corrupt rows.
+   *
+   * @param {Array} rawList
+   * @param {number} [fallbackNowMs]
+   */
+  function normalizeTestHistoryList(rawList, fallbackNowMs) {
+    if (!Array.isArray(rawList)) return [];
+    const baseNow =
+      typeof fallbackNowMs === "number" && Number.isFinite(fallbackNowMs) && fallbackNowMs > 0
+        ? fallbackNowMs
+        : Date.now();
+
+    const seenRunIds = new Map();
+    const normalized = [];
+
+    for (let i = 0; i < rawList.length; i++) {
+      const item = rawList[i];
+      if (!item || typeof item !== "object") continue;
+
+      // Preserve chronological order for legacy entries lacking epochMs
+      const fallbackItemEpoch =
+        typeof item.epochMs === "number" && Number.isFinite(item.epochMs) && item.epochMs > 0
+          ? item.epochMs
+          : baseNow - i * 1000;
+
+      const entry = createTestHistoryEntry(item, fallbackItemEpoch);
+      if (seenRunIds.has(entry.runId)) {
+        const existingIdx = seenRunIds.get(entry.runId);
+        normalized[existingIdx] = entry;
+      } else {
+        seenRunIds.set(entry.runId, normalized.length);
+        normalized.push(entry);
+      }
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Immutably record a completed test run into the history list.
+   * Ensures accuracy across test restarts:
+   * - Never mutates or overwrites previous test runs with different runIds.
+   * - Deduplicates if the same runId is committed more than once.
+   * - Enforces maxEntries cap (default 25) while keeping the most recent runs.
+   *
+   * @param {Array} existingList
+   * @param {Object} rawRun
+   * @param {number} [maxEntries=25]
+   * @param {Date|number} [nowInput]
+   */
+  function appendTestHistoryEntry(existingList, rawRun, maxEntries, nowInput) {
+    const cap =
+      typeof maxEntries === "number" && Number.isFinite(maxEntries) && maxEntries > 0
+        ? Math.floor(maxEntries)
+        : 25;
+    const normalizedExisting = normalizeTestHistoryList(existingList);
+    if (!rawRun || typeof rawRun !== "object") {
+      return normalizedExisting.slice(0, cap);
+    }
+
+    const newEntry = createTestHistoryEntry(rawRun, nowInput);
+    const existingIndex = normalizedExisting.findIndex(function (item) {
+      return item.runId === newEntry.runId;
+    });
+
+    let nextList;
+    if (existingIndex !== -1) {
+      nextList = normalizedExisting.slice();
+      nextList[existingIndex] = newEntry;
+    } else {
+      nextList = [newEntry].concat(normalizedExisting);
+    }
+
+    return nextList.slice(0, cap);
+  }
+
+  /**
+   * Sort a normalized test history list by any supported column key and direction.
+   * Supported sortKey values: 'date' | 'time' | 'server' | 'dl' | 'ul' | 'stability' | 'ping'
+   * Supported sortDir values: 'asc' | 'desc'
+   *
+   * @param {Array} list
+   * @param {string} [sortKey='date']
+   * @param {string} [sortDir='desc']
+   */
+  function sortTestHistoryList(list, sortKey, sortDir) {
+    const normalized = normalizeTestHistoryList(list);
+    if (normalized.length <= 1) return normalized;
+
+    const key =
+      typeof sortKey === "string" &&
+      ["date", "time", "server", "dl", "ul", "stability", "ping"].includes(
+        sortKey.trim().toLowerCase()
+      )
+        ? sortKey.trim().toLowerCase()
+        : "date";
+
+    const dir =
+      typeof sortDir === "string" && sortDir.trim().toLowerCase() === "asc"
+        ? "asc"
+        : "desc";
+    const dirMultiplier = dir === "asc" ? 1 : -1;
+
+    return normalized.slice().sort(function (a, b) {
+      if (key === "date") {
+        if (a.isoDate !== b.isoDate) {
+          return a.isoDate.localeCompare(b.isoDate) * dirMultiplier;
+        }
+        return (a.epochMs - b.epochMs) * dirMultiplier;
+      }
+
+      if (key === "time") {
+        if (a.epochMs !== b.epochMs) {
+          return (a.epochMs - b.epochMs) * dirMultiplier;
+        }
+        return (a.time24 || "").localeCompare(b.time24 || "") * dirMultiplier;
+      }
+
+      if (key === "server") {
+        const cmp = (a.serverName || "").localeCompare(b.serverName || "", undefined, {
+          sensitivity: "base",
+          numeric: true,
+        });
+        if (cmp !== 0) return cmp * dirMultiplier;
+        return b.epochMs - a.epochMs;
+      }
+
+      if (key === "dl") {
+        const diff = (Number(a.dlMbps) || 0) - (Number(b.dlMbps) || 0);
+        if (diff !== 0) return diff * dirMultiplier;
+        return b.epochMs - a.epochMs;
+      }
+
+      if (key === "ul") {
+        const diff = (Number(a.ulMbps) || 0) - (Number(b.ulMbps) || 0);
+        if (diff !== 0) return diff * dirMultiplier;
+        return b.epochMs - a.epochMs;
+      }
+
+      if (key === "stability") {
+        const aHas =
+          a.stabilityPercent !== null &&
+          a.stabilityPercent !== undefined &&
+          Number.isFinite(Number(a.stabilityPercent));
+        const bHas =
+          b.stabilityPercent !== null &&
+          b.stabilityPercent !== undefined &&
+          Number.isFinite(Number(b.stabilityPercent));
+        // Always place missing/unavailable stability entries at the bottom
+        if (!aHas && !bHas) return b.epochMs - a.epochMs;
+        if (!aHas) return 1;
+        if (!bHas) return -1;
+        const diff = Number(a.stabilityPercent) - Number(b.stabilityPercent);
+        if (diff !== 0) return diff * dirMultiplier;
+        return b.epochMs - a.epochMs;
+      }
+
+      if (key === "ping") {
+        const aPing = Number(a.pingMs);
+        const bPing = Number(b.pingMs);
+        const aValid = Number.isFinite(aPing) && aPing > 0;
+        const bValid = Number.isFinite(bPing) && bPing > 0;
+        if (!aValid && !bValid) return b.epochMs - a.epochMs;
+        if (!aValid) return 1;
+        if (!bValid) return -1;
+        const diff = aPing - bPing;
+        if (diff !== 0) return diff * dirMultiplier;
+        return b.epochMs - a.epochMs;
+      }
+
+      return (a.epochMs - b.epochMs) * dirMultiplier;
+    });
+  }
+
+  /**
+   * Pure cubic ease-out integer count-up frame calculator for the 'Completed Tests'
+   * counter (#total-tests-count) inside the Usage & Test History dialog.
+   *
+   * @param {number|string|null|undefined} targetCount - Total completed tests count
+   * @param {number} progress01 - Normalized progress in [0, 1]
+   */
+  function computeIntegerCountUpFrame(targetCount, progress01) {
+    const rawTarget = Math.floor(Number(targetCount));
+    const target = Number.isFinite(rawTarget) && rawTarget > 0 ? rawTarget : 0;
+
+    if (target <= 0) {
+      return {
+        displayValue: "0",
+        currentCount: 0,
+        targetCount: 0,
+        progress: 1,
+        isComplete: true,
+      };
+    }
+
+    const t = Number.isFinite(Number(progress01))
+      ? Math.max(0, Math.min(1, Number(progress01)))
+      : 1;
+
+    if (t >= 1) {
+      return {
+        displayValue: String(target),
+        currentCount: target,
+        targetCount: target,
+        progress: 1,
+        isComplete: true,
+      };
+    }
+
+    // Cubic ease-out: responsive initial count-up that settles smoothly into final integer
+    const eased = 1 - Math.pow(1 - t, 3);
+    const currentCount = Math.min(target, Math.max(0, Math.round(target * eased)));
+
+    return {
+      displayValue: String(currentCount),
+      currentCount,
+      targetCount: target,
+      progress: t,
+      isComplete: false,
+    };
+  }
+
+  /**
+   * Run a requestAnimationFrame count-up animation for the 'Completed Tests' counter
+   * (#total-tests-count) when the Usage dialog opens.
+   * Dirty-checks integer frames so DOM writes only occur when the displayed integer changes.
+   *
+   * @param {Object} options
+   * @param {number} options.targetCount
+   * @param {number} [options.durationMs=650]
+   * @param {boolean} [options.reducedMotion=false]
+   * @param {(frame: {displayValue: string, currentCount: number, targetCount: number, progress: number, isComplete: boolean}) => void} [options.onFrame]
+   * @param {() => void} [options.onComplete]
+   */
+  function animateCompletedTestsCountUp(options) {
+    const opts = options || {};
+    const rawTarget = Math.floor(Number(opts.targetCount));
+    const targetCount = Number.isFinite(rawTarget) && rawTarget > 0 ? rawTarget : 0;
+    const durationMs =
+      Number.isFinite(Number(opts.durationMs)) && Number(opts.durationMs) > 0
+        ? Number(opts.durationMs)
+        : 650;
+    const reducedMotion = Boolean(opts.reducedMotion);
+    const onFrame = typeof opts.onFrame === "function" ? opts.onFrame : null;
+    const onComplete = typeof opts.onComplete === "function" ? opts.onComplete : null;
+
+    if (reducedMotion || targetCount <= 0) {
+      const finalFrame = computeIntegerCountUpFrame(targetCount, 1);
+      if (onFrame) {
+        onFrame(finalFrame);
+      }
+      if (onComplete) {
+        onComplete();
+      }
+      return function noopCancel() {};
+    }
+
+    const nowFn =
+      typeof performance !== "undefined" && typeof performance.now === "function"
+        ? function () {
+            return performance.now();
+          }
+        : function () {
+            return Date.now();
+          };
+
+    const rafFn =
+      typeof requestAnimationFrame === "function"
+        ? requestAnimationFrame
+        : function (cb) {
+            return setTimeout(function () {
+              cb(nowFn());
+            }, 16);
+          };
+
+    const cafFn =
+      typeof cancelAnimationFrame === "function"
+        ? cancelAnimationFrame
+        : clearTimeout;
+
+    let rafId = 0;
+    let cancelled = false;
+    let startTimeMs = 0;
+    let lastEmittedDisplay = "";
+
+    function step(timestamp) {
+      if (cancelled) return;
+      const now =
+        typeof timestamp === "number" && timestamp > 0 ? timestamp : nowFn();
+      if (startTimeMs === 0) {
+        startTimeMs = now;
+      }
+      const elapsed = Math.max(0, now - startTimeMs);
+      const progress = Math.min(1, elapsed / durationMs);
+      const frame = computeIntegerCountUpFrame(targetCount, progress);
+
+      if (onFrame && (frame.displayValue !== lastEmittedDisplay || frame.isComplete)) {
+        lastEmittedDisplay = frame.displayValue;
+        onFrame(frame);
+      }
+
+      if (!frame.isComplete && !cancelled) {
+        rafId = rafFn(step);
+      } else if (frame.isComplete && !cancelled) {
+        rafId = 0;
+        if (onComplete) {
+          onComplete();
+        }
+      }
+    }
+
+    // Emit initial 0 frame immediately on dialog open
+    const initFrame = computeIntegerCountUpFrame(targetCount, 0);
+    lastEmittedDisplay = initFrame.displayValue;
+    if (onFrame) {
+      onFrame(initFrame);
+    }
+    rafId = rafFn(step);
+
+    return function cancelTestsCountUp() {
+      cancelled = true;
+      if (rafId !== 0) {
+        cafFn(rafId);
+        rafId = 0;
+      }
+    };
+  }
+
+  /**
+   * Pure calculation of scroll progress percentage (0 - 100) with boundary clamping and rubber-band protection
+   * @param {number} scrollTop
+   * @param {number} scrollHeight
+   * @param {number} clientHeight
+   * @returns {number} Integer percentage 0 to 100
+   */
+  function calculateScrollPercentage(scrollTop, scrollHeight, clientHeight) {
+    const sTop = Number(scrollTop) || 0;
+    const sHeight = Number(scrollHeight) || 0;
+    const cHeight = Number(clientHeight) || 0;
+    const maxScroll = sHeight - cHeight;
+    if (maxScroll <= 0) return 0;
+    const clampedTop = Math.max(0, Math.min(sTop, maxScroll));
+    const rawPct = (clampedTop / maxScroll) * 100;
+    return Math.max(0, Math.min(100, Math.round(rawPct)));
+  }
+
+  /**
+   * Pure calculation of SVG circular progress meter stroke-dasharray
+   * @param {number} percent 0 to 100
+   * @param {number} [circumference=100.53] 2 * PI * 16
+   * @returns {{ dasharray: string, filledLen: number, circumference: number, percent: number }}
+   */
+  function calculateScrollRingDash(percent, circumference = 100.53) {
+    const circ = Number(circumference) > 0 ? Number(circumference) : 100.53;
+    const clampedPct = Math.max(0, Math.min(100, Number(percent) || 0));
+    const filledLen = (clampedPct / 100) * circ;
+    return {
+      dasharray: `${filledLen.toFixed(1)} ${circ.toFixed(2)}`,
+      filledLen: Number(filledLen.toFixed(2)),
+      circumference: circ,
+      percent: clampedPct,
+    };
+  }
+
+  /**
+   * Pure resolution of scroll target Y coordinate
+   * @param {'top'|'bottom'|number} target
+   * @param {number} scrollHeight
+   * @param {number} clientHeight
+   * @returns {number} Target scroll Y coordinate
+   */
+  function resolveScrollJumpTarget(target, scrollHeight, clientHeight) {
+    const sHeight = Number(scrollHeight) || 0;
+    const cHeight = Number(clientHeight) || 0;
+    const maxScroll = Math.max(0, sHeight - cHeight);
+
+    if (target === 'top') return 0;
+    if (target === 'bottom') return maxScroll;
+    if (typeof target === 'number' && Number.isFinite(target)) {
+      return Math.max(0, Math.min(target, maxScroll));
+    }
+    return 0;
+  }
+
   return {
     formatSpeedReading,
     calculateRealMetrics,
@@ -1250,6 +1830,16 @@
     computeCountUpFrame,
     animateStatCountUp,
     createStatCardsRafLoop,
+    createTestHistoryEntry,
+    normalizeTestHistoryList,
+    appendTestHistoryEntry,
+    sortTestHistoryList,
+    computeIntegerCountUpFrame,
+    animateCompletedTestsCountUp,
+    calculateScrollPercentage,
+    calculateScrollRingDash,
+    resolveScrollJumpTarget,
   };
 });
+
 

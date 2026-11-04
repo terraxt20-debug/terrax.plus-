@@ -1,0 +1,20 @@
+# ==============================================================================
+# Terrax Plus (تيراكس بلاس) — Search Engine & AdSense Crawler Directives (robots.txt)
+# Specification: robots.txt Standard (https://developers.google.com/search/docs/crawling-indexing/robots/intro)
+# ==============================================================================
+
+# 1. Google AdSense Contextual Inventory Crawler
+User-agent: Mediapartners-Google
+Allow: /
+
+# 2. Primary Google Search & Indexing Crawler
+User-agent: Googlebot
+Allow: /
+Disallow: /backend/
+Disallow: /results/telemetry.php
+
+# 3. Universal Web Crawlers
+User-agent: *
+Allow: /
+Disallow: /backend/
+Disallow: /results/telemetry.php

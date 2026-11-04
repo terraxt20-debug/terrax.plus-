@@ -431,7 +431,47 @@ function librespeedRuntimePlugin(): Plugin {
         return;
       }
 
-      // 6. Map /frontend/<root-file> requests when /frontend/index.html or /frontend/stability.html is opened directly
+      // 6. Serve /ads.txt (Official Google AdSense Authorized Digital Sellers file)
+      if (pathname === '/ads.txt') {
+        setNoCacheHeaders();
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        const rawEnvPubId = String(
+          process.env.ADSENSE_PUBLISHER_ID ||
+            process.env.VITE_ADSENSE_PUBLISHER_ID ||
+            ''
+        ).trim();
+        const normalizedPubMatch = rawEnvPubId.match(/^(?:ca-)?(pub-\d{16})$/i);
+        if (
+          normalizedPubMatch &&
+          normalizedPubMatch[1].toLowerCase() !== 'pub-0000000000000000'
+        ) {
+          res.statusCode = 200;
+          res.end(
+            `google.com, ${normalizedPubMatch[1].toLowerCase()}, DIRECT, f08c47fec0942fa0\n`
+          );
+          return;
+        }
+        const adsTxtPath = path.resolve(ROOT_DIR, 'ads.txt');
+        if (fs.existsSync(adsTxtPath)) {
+          res.statusCode = 200;
+          res.end(fs.readFileSync(adsTxtPath, 'utf8'));
+          return;
+        }
+      }
+
+      // 6b. Serve /robots.txt (Official crawler access for Googlebot & Mediapartners-Google)
+      if (pathname === '/robots.txt') {
+        setNoCacheHeaders();
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        const robotsTxtPath = path.resolve(ROOT_DIR, 'robots.txt');
+        if (fs.existsSync(robotsTxtPath)) {
+          res.statusCode = 200;
+          res.end(fs.readFileSync(robotsTxtPath, 'utf8'));
+          return;
+        }
+      }
+
+      // 7. Map /frontend/<root-file> requests when /frontend/index.html or /frontend/stability.html is opened directly
       const rootSharedFiles = [
         'speedtest.js',
         'speedtest_worker.js',
@@ -441,6 +481,8 @@ function librespeedRuntimePlugin(): Plugin {
         'config.json',
         'design-switch.js',
         'index-modern.html',
+        'ads.txt',
+        'robots.txt',
       ];
       for (const sharedFile of rootSharedFiles) {
         if (pathname === `/frontend/${sharedFile}`) {
@@ -452,7 +494,9 @@ function librespeedRuntimePlugin(): Plugin {
                 ? 'text/javascript; charset=utf-8'
                 : ext === '.json'
                   ? 'application/json; charset=utf-8'
-                  : 'text/html; charset=utf-8';
+                  : ext === '.txt'
+                    ? 'text/plain; charset=utf-8'
+                    : 'text/html; charset=utf-8';
             res.setHeader('Content-Type', contentType);
             res.statusCode = 200;
             res.end(fs.readFileSync(targetPath));
@@ -491,6 +535,8 @@ function librespeedRuntimePlugin(): Plugin {
         'server-list.json',
         'manifest.webmanifest',
         'favicon.ico',
+        'ads.txt',
+        'robots.txt',
       ];
 
       for (const file of rootStaticFiles) {
@@ -501,7 +547,7 @@ function librespeedRuntimePlugin(): Plugin {
         }
       }
 
-      for (const dir of ['frontend', 'images']) {
+      for (const dir of ['frontend', 'images', 'ads', 'public']) {
         const srcDir = path.resolve(ROOT_DIR, dir);
         const destDir = path.resolve(distDir, dir);
         if (fs.existsSync(srcDir)) {

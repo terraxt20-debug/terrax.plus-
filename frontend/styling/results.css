@@ -41,9 +41,6 @@
   padding: 0 4.2rem;
   gap: 2.4rem;
   margin-top: -7.6rem;
-  transition: margin-top 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              padding 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              gap 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Base Circular Cyber Gauge */
@@ -62,9 +59,7 @@ div.gauge {
   box-shadow:
     0 14px 36px rgba(8, 22, 48, 0.36),
     inset 0 0 32px rgba(56, 189, 248, 0.22);
-  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.45s ease-in-out,
+  transition: transform 0.45s ease-in-out,
               box-shadow 0.45s ease-in-out,
               opacity 0.45s ease-in-out,
               border-color 0.45s ease-in-out,
@@ -669,6 +664,8 @@ div.gauge > .speed {
   font-size: 1.38rem;
   font-weight: 600;
   white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
   color: var(--ping-and-jitter-secondary-text-color);
   background: linear-gradient(135deg, rgba(22, 52, 102, 0.42) 0%, rgba(15, 37, 76, 0.48) 100%);
   border: 1px solid rgba(56, 189, 248, 0.48);
@@ -706,22 +703,25 @@ div.gauge > .speed {
 .summary-cards-row {
   width: 100%;
   max-width: 78rem;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.4rem;
+  gap: clamp(0.85rem, 1.5vw, 1.4rem);
   margin: 0 auto;
 }
 
 .cyber-stat-card {
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
   contain: layout style;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 1.2rem;
-  padding: 0.75rem 1.8rem;
+  padding: 0.75rem clamp(1.1rem, 1.8vw, 1.8rem);
   background:
     repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.035) 0px, rgba(56, 189, 248, 0.035) 1px, transparent 1px, transparent 32px),
     linear-gradient(
@@ -800,10 +800,12 @@ div.gauge > .speed {
   flex-direction: column;
   align-items: flex-start;
   text-align: right;
+  min-width: 0;
+  flex: 1;
 }
 
 .stat-title-ar {
-  font-size: 1.5rem;
+  font-size: clamp(1.32rem, 1.55vw, 1.5rem);
   font-weight: 700;
   color: #f8fafc;
 }
@@ -821,6 +823,8 @@ div.gauge > .speed {
   display: flex;
   align-items: baseline;
   gap: 0.45rem;
+  min-width: 0;
+  max-width: 100%;
   contain: layout style;
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
@@ -828,7 +832,7 @@ div.gauge > .speed {
 
 .stat-number {
   display: inline-block;
-  font-size: 2.85rem;
+  font-size: clamp(2.15rem, 2.8vw, 2.85rem);
   font-weight: 900;
   color: #ffffff;
   font-variant-numeric: tabular-nums;
@@ -883,17 +887,27 @@ div.gauge > .speed {
   height: 2.6rem;
 }
 
+/* Intermediate Desktop Zoom / Tablet Width (<= 960px): Prevent Secondary Gauges from Colliding with Center Gauge */
+@media screen and (max-width: 960px) {
+  .secondary-gauges-row {
+    margin-top: -3.6rem;
+    padding: 0 1.4rem;
+    justify-content: space-between;
+    gap: 1.4rem;
+  }
+}
+
 @media screen and (max-width: 768px) {
   :root {
-    --gauge-primary-size: clamp(16.5rem, 48vw, 19.5rem);
-    --gauge-secondary-size: clamp(13.0rem, 38vw, 15.6rem);
+    --gauge-primary-size: clamp(16.2rem, 44vw, 19rem);
+    --gauge-secondary-size: clamp(12.8rem, 36vw, 15.2rem);
   }
 
   .secondary-gauges-row {
-    margin-top: clamp(-3.8rem, -8vw, -2.8rem);
+    margin-top: -1.6rem;
     padding: 0 0.6rem;
-    justify-content: space-around;
-    gap: clamp(0.5rem, 2vw, 1.2rem);
+    justify-content: space-between;
+    gap: clamp(0.6rem, 2.5vw, 1.4rem);
   }
 
   .gauge-center-content {
@@ -947,7 +961,7 @@ div.gauge > .speed {
   }
 
   .cyber-stat-card {
-    padding: 1rem 1.5rem;
+    padding: 1rem 1.4rem;
   }
 
   .stat-number {
@@ -965,17 +979,28 @@ div.gauge > .speed {
   }
 }
 
-/* Mobile Portrait Mode (<480px): Safe text margins, strict no-wrapping & no-overlap */
-@media screen and (max-width: 480px) and (orientation: portrait) {
+/* Compact Viewport & High Zoom Mode (<= 620px in ANY orientation): Zero Negative Margin Overlap */
+@media screen and (max-width: 620px) {
+  .secondary-gauges-row {
+    margin-top: 0.35rem;
+    padding: 0 0.25rem;
+    justify-content: center;
+    gap: clamp(0.75rem, 3.5vw, 1.8rem);
+  }
+}
+
+/* Mobile & High-Zoom Width (<480px in ANY orientation): Safe text margins, strict no-wrapping & no-overlap */
+@media screen and (max-width: 480px) {
   :root {
-    --gauge-primary-size: clamp(16.0rem, 48vw, 17.8rem);
-    --gauge-secondary-size: clamp(12.8rem, 39vw, 14.2rem);
+    --gauge-primary-size: clamp(15.6rem, 46vw, 17.6rem);
+    --gauge-secondary-size: clamp(12.4rem, 38vw, 14.0rem);
   }
 
   .secondary-gauges-row {
-    margin-top: -3.2rem;
-    padding: 0 0.2rem;
-    gap: 0.45rem;
+    margin-top: 0.35rem;
+    padding: 0 0.15rem;
+    justify-content: center;
+    gap: clamp(0.5rem, 2.5vw, 1rem);
   }
 
   .gauge-center-content {
@@ -1005,21 +1030,21 @@ div.gauge > .speed {
   }
 
   .gauge-center-content h1 > span {
-    font-size: 2.45rem;
+    font-size: 2.4rem;
     white-space: nowrap !important;
   }
 
   .secondary-content h1 > span {
-    font-size: 1.80rem;
+    font-size: 1.76rem;
     white-space: nowrap !important;
   }
 
   .secondary-content h1 > small {
-    font-size: 1.05rem !important;
+    font-size: 1.02rem !important;
   }
 
   .stability-readout > small {
-    font-size: 1.15rem !important;
+    font-size: 1.12rem !important;
   }
 
   .gauge-unit-ar {
@@ -1051,26 +1076,36 @@ div.gauge > .speed {
     width: 3.2rem;
     height: 0.8rem;
   }
+
+  .ping,
+  .jitter {
+    white-space: normal;
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
 }
 
-/* Ultra-Compact Mobile Portrait (<360px): Extra safety bounds */
-@media screen and (max-width: 360px) and (orientation: portrait) {
+/* Ultra-Compact Viewport & Extreme Zoom (<360px in ANY orientation): Extra safety bounds */
+@media screen and (max-width: 360px) {
   :root {
-    --gauge-primary-size: 15.0rem;
-    --gauge-secondary-size: 12.0rem;
+    --gauge-primary-size: 14.6rem;
+    --gauge-secondary-size: 11.8rem;
   }
 
   .secondary-gauges-row {
-    margin-top: -2.8rem;
-    gap: 0.35rem;
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.65rem;
   }
 
   .gauge-center-content h1 > span {
-    font-size: 2.15rem;
+    font-size: 2.1rem;
   }
 
   .secondary-content h1 > span {
-    font-size: 1.60rem;
+    font-size: 1.58rem;
   }
 
   .gauge-title-ar {
@@ -1107,8 +1142,8 @@ div.gauge > .speed {
   }
 }
 
-/* Mobile & Tablet Landscape Mode: Viewport-Height Proportional Scaling with Zero Wrapping */
-@media screen and (orientation: landscape) and (max-height: 640px) {
+/* Wide Mobile & Tablet Landscape Mode (min-width: 621px): Viewport-Height Proportional Scaling with Safe Separation */
+@media screen and (orientation: landscape) and (max-height: 640px) and (min-width: 621px) {
   :root {
     --gauge-primary-size: clamp(13.2rem, 36vh, 15.2rem);
     --gauge-secondary-size: clamp(11.2rem, 31vh, 13.0rem);
@@ -1136,10 +1171,10 @@ div.gauge > .speed {
   }
 
   .secondary-gauges-row {
-    margin-top: clamp(-4.6rem, -11vh, -3.4rem);
+    margin-top: clamp(-3.2rem, -7vh, -1.8rem);
     padding: 0 clamp(0.8rem, 3vw, 2.5rem);
     gap: clamp(1.2rem, 4vw, 3rem);
-    justify-content: space-around;
+    justify-content: space-between;
   }
 
   .gauge-center-content {
@@ -1295,15 +1330,15 @@ div.gauge > .speed {
   }
 }
 
-/* Compact Mobile Landscape (<380px Height): Extreme space conservation */
-@media screen and (orientation: landscape) and (max-height: 380px) {
+/* Compact Mobile Landscape (<380px Height, min-width: 621px): Extreme space conservation */
+@media screen and (orientation: landscape) and (max-height: 380px) and (min-width: 621px) {
   :root {
     --gauge-primary-size: 13.0rem;
     --gauge-secondary-size: 11.0rem;
   }
 
   .secondary-gauges-row {
-    margin-top: -3.8rem;
+    margin-top: -2.2rem;
   }
 
   .gauge-center-content h1 > span {

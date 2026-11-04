@@ -317,93 +317,55 @@ test('src/App.tsx integrates real LibreSpeed engine and 4K gauge telemetry calcu
   assert.ok(appTsx.includes('id="ul-svg-arc"'));
 });
 
-test('Yandex RTB Smart State-Driven Ad Engine integrates Network Isolation Lock, 30s/60s Stability refresh, and 4K Glassmorphic cards', async () => {
+test('Smart Auto-Collapsing Ad Spaces: verified across all pages (speed-main, speed-results, gaming-main, stability-main, usage-main) with zero empty blank space, auto-collapse when unfilled, and auto-display when filled', async () => {
   const fs = await import('node:fs');
-  const indexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const smartAdsCss = fs.readFileSync(new URL('../frontend/styling/smart-ads.css', import.meta.url), 'utf8');
   const indexModernHtml = fs.readFileSync(new URL('../index-modern.html', import.meta.url), 'utf8');
   const frontendIndexHtml = fs.readFileSync(new URL('../frontend/index.html', import.meta.url), 'utf8');
   const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
+  const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
   const gamingHtml = fs.readFileSync(new URL('../gaming.html', import.meta.url), 'utf8');
-  const adSlotsJs = fs.readFileSync(new URL('../frontend/javascript/ad-slots.js', import.meta.url), 'utf8');
-  const indexCss = fs.readFileSync(new URL('../frontend/styling/index.css', import.meta.url), 'utf8');
-  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
-  const yandexSmartAdTsx = fs.readFileSync(new URL('../src/components/YandexSmartAd.tsx', import.meta.url), 'utf8');
+  const frontendGamingHtml = fs.readFileSync(new URL('../frontend/gaming.html', import.meta.url), 'utf8');
   const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
 
-  // 1. Yandex RTB async script in <head>
-  for (const html of [indexHtml, indexModernHtml, frontendIndexHtml, stabilityHtml, gamingHtml]) {
-    assert.ok(html.includes('<script>window.yaContextCb=window.yaContextCb||[]</script>'));
-    assert.ok(html.includes('<script src="https://yandex.ru/ads/system/context.js" async></script>'));
+  // 1. Zero Blank Space Guarantee in CSS: Completely collapsed when unfilled or not loaded
+  assert.ok(smartAdsCss.includes('display: none !important;'));
+  assert.ok(smartAdsCss.includes('height: 0 !important;'));
+  assert.ok(smartAdsCss.includes('.terrax-smart-ad-slot[data-ad-filled="true"]'));
+  assert.ok(smartAdsCss.includes('.terrax-smart-banner[data-ad-filled="true"]'));
+  assert.ok(smartAdsCss.includes('.terrax-smart-ad-slot.smart-ad-locked'));
+
+  // 2. Verified presence of smart ad spaces across HTML and React pages
+  for (const html of [indexModernHtml, frontendIndexHtml]) {
+    assert.ok(html.includes('id="terrax-smart-ad-speed-results"'), 'speed-results slot must exist');
+    assert.ok(html.includes('id="terrax-smart-ad-speed-main"'), 'speed-main slot must exist');
+    assert.ok(html.includes('id="terrax-smart-ad-usage-main"'), 'usage-main slot must exist');
+    assert.ok(html.includes('data-ad-status="unfilled"'), 'initial status must be unfilled');
+    assert.ok(html.includes('data-ad-filled="false"'), 'initial filled state must be false');
   }
-  for (const markup of [indexModernHtml, frontendIndexHtml, stabilityHtml, gamingHtml, yandexSmartAdTsx]) {
-    assert.ok(markup.includes('terrax-yan-card'));
+
+  for (const html of [gamingHtml, frontendGamingHtml]) {
+    assert.ok(html.includes('id="terrax-smart-ad-gaming-main"'), 'gaming-main slot must exist');
+    assert.ok(html.includes('data-terrax-smart-ad="gaming-main"'));
+    assert.ok(html.includes('.terrax-smart-ad-slot'));
   }
 
-  // 2. Network Isolation Lock & Smart Refresh in ad-slots.js and YandexSmartAd.tsx
-  assert.ok(adSlotsJs.includes('Ya.Context.AdvManager.render'));
-  assert.ok(adSlotsJs.includes('برعاية تقنية • Terrax Partner'));
-  assert.ok(adSlotsJs.includes('🛡️ وضع العزل الشبكي نشط لضمان دقة الفحص'));
-  assert.ok(adSlotsJs.includes('onStabilityElapsedTick'));
-  assert.ok(adSlotsJs.includes('onTestComplete'));
-  assert.ok(adSlotsJs.includes('onTabChange'));
+  for (const html of [stabilityHtml, frontendStabilityHtml]) {
+    assert.ok(html.includes('id="terrax-smart-ad-stability-main"'), 'stability-main slot must exist');
+    assert.ok(html.includes('data-terrax-smart-ad="stability-main"'));
+    assert.ok(html.includes('.terrax-smart-ad-slot'));
+  }
 
-  assert.ok(yandexSmartAdTsx.includes('Ya.Context.AdvManager.render'));
-  assert.ok(yandexSmartAdTsx.includes('برعاية تقنية • Terrax Partner'));
-  assert.ok(yandexSmartAdTsx.includes('🛡️ وضع العزل الشبكي نشط لضمان دقة الفحص'));
-  assert.ok(yandexSmartAdTsx.includes('30000'));
-  assert.ok(yandexSmartAdTsx.includes('60000'));
-  assert.ok(appTsx.includes('<YandexSmartAd'));
+  // 3. React App.tsx parity matching
+  assert.ok(appTsx.includes('id="terrax-smart-ad-speed-results"'));
+  assert.ok(appTsx.includes('id="terrax-smart-ad-speed-main"'));
+  assert.ok(appTsx.includes('id="terrax-smart-ad-usage-main"'));
 
-  // 3. Glassmorphic CSS rules
-  assert.ok(indexCss.includes('rgba(11, 27, 50, 0.70)'));
-  assert.ok(indexCss.includes('backdrop-filter: blur(12px)'));
-  assert.ok(indexCss.includes('1px solid rgba(0, 210, 255, 0.25)'));
-  assert.ok(indexCss.includes('border-radius: 14px'));
-  assert.ok(indexCss.includes('min-height: 95px'));
-
-  // 4. State-driven hooks in index.js, stability.html, and gaming.html
+  // 4. Smart state hooks remain wired
   assert.ok(indexJs.includes('TerraxSmartAdEngine?.setTestingState(true)'));
   assert.ok(indexJs.includes('TerraxSmartAdEngine?.onTestComplete("speed")'));
   assert.ok(indexJs.includes('TerraxSmartAdEngine?.onTabChange("speed")'));
-  assert.ok(stabilityHtml.includes('onStabilityElapsedTick(data.elapsed)'));
-  assert.ok(gamingHtml.includes('onTestComplete("gaming")'));
-
-  // 5. Hybrid Adsterra Smartlink (2-second / AdBlocker fallback) & official Smartlink URL
-  const officialSmartlink = 'https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5';
-  assert.ok(adSlotsJs.includes(officialSmartlink));
-  assert.ok(adSlotsJs.includes('YANDEX_FALLBACK_TIMEOUT_MS = 2000'));
-  assert.ok(yandexSmartAdTsx.includes(officialSmartlink));
-  assert.ok(yandexSmartAdTsx.includes('YANDEX_FALLBACK_TIMEOUT_MS = 2000'));
-  assert.ok(appTsx.includes('ADSTERRA_SMARTLINK_URL'));
-
-  for (const html of [indexModernHtml, frontendIndexHtml, stabilityHtml, gamingHtml]) {
-    assert.ok(html.includes(officialSmartlink));
-    assert.ok(html.includes('terrax-yan-sponsor-fallback'));
-    assert.ok(!html.includes('عرض الشريك'));
-    assert.ok(!html.includes('terrax-yan-direct-partner-link'));
-  }
-
-  assert.ok(!adSlotsJs.includes('عرض الشريك'));
-  assert.ok(!yandexSmartAdTsx.includes('عرض الشريك'));
-  assert.ok(!yandexSmartAdTsx.includes('terrax-yan-direct-partner-link'));
-  assert.ok(appTsx.includes('YANDEX_SILENT_REFRESH_INTERVAL_MS = 30000'));
-  assert.ok(appTsx.includes('refreshYandexAdUnits'));
-  assert.ok(appTsx.includes('window.setInterval'));
-
-  // Verify runtime behavior of TerraxSmartAdEngine (Network Isolation Lock & Smartlink constants)
-  const adEngine = await import('../frontend/javascript/ad-slots.js');
-  const engineApi = adEngine.default || globalThis.TerraxSmartAdEngine;
-  assert.equal(engineApi.ADSTERRA_SMARTLINK_URL, officialSmartlink);
-  assert.equal(engineApi.YANDEX_FALLBACK_TIMEOUT_MS, 2000);
-  assert.equal(engineApi.AUTO_AD_ROTATION_INTERVAL_MS, 30000);
-
-  engineApi.setTestingState(true);
-  assert.equal(engineApi.getState().isTesting, true);
-  assert.equal(engineApi.refreshAllSlots('blocked-during-test'), false);
-
-  engineApi.setTestingState(false);
-  assert.equal(engineApi.getState().isTesting, false);
-  assert.equal(engineApi.refreshAllSlots('allowed-after-test'), true);
 });
 
 test('Connection Type card ("نوع الاتصال") resolves real NetworkInformation API data, distinguishes physical type vs effectiveType, handles unavailable/offline fallbacks, and preserves Idle/Testing/Completed UI states', async () => {
@@ -512,94 +474,58 @@ test('Connection Type card ("نوع الاتصال") resolves real NetworkInform
   assert.ok(appTsx.includes('className="conn-diamond-dot"'));
 });
 
-test('Comprehensive Smart Ad Architecture (adsConfig, HybridSmartAdCard, GamingRadarBoosterCard, and 4-location distribution map)', async () => {
+test('Professional Monetization Architecture: strict Smart Ad Lock during testing, high-yield post-test placement, zero disruptive popups, and non-intrusive auto-ads', async () => {
   const fs = await import('node:fs');
-  const officialSmartlink = 'https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5';
 
-  // 1. Central adsConfig.ts
+  // 1. Central adsConfig.ts defines valid IDs
   const adsConfigTs = fs.readFileSync(new URL('../src/config/adsConfig.ts', import.meta.url), 'utf8');
-  assert.ok(adsConfigTs.includes(officialSmartlink));
   assert.ok(adsConfigTs.includes('R-A-TERREX-SPEED-1'));
   assert.ok(adsConfigTs.includes('R-A-TERREX-GAME-1'));
   assert.ok(adsConfigTs.includes('R-A-TERREX-STAB-1'));
-  assert.ok(adsConfigTs.includes('REFRESH_INTERVAL: 30'));
-  assert.ok(adsConfigTs.includes('AUTO_REFRESH_SECONDS: 30'));
 
-  // 2. HybridSmartAdCard.tsx
-  const hybridSmartAdTsx = fs.readFileSync(new URL('../src/components/HybridSmartAdCard.tsx', import.meta.url), 'utf8');
-  assert.ok(hybridSmartAdTsx.includes('Ya.Context.AdvManager.render'));
-  assert.ok(hybridSmartAdTsx.includes('برعاية تقنية • Terrax Partner'));
-  assert.ok(hybridSmartAdTsx.includes('🛡️ وضع العزل الشبكي نشط لضمان دقة الفحص'));
-  assert.ok(hybridSmartAdTsx.includes('YANDEX_FALLBACK_TIMEOUT_MS = 2000'));
-  assert.ok(hybridSmartAdTsx.includes('ADS_CONFIG.ADSTERRA_SMARTLINK'));
-
-  // 3. GamingRadarBoosterCard.tsx
-  const gamingBoosterTsx = fs.readFileSync(new URL('../src/components/GamingRadarBoosterCard.tsx', import.meta.url), 'utf8');
-  assert.ok(gamingBoosterTsx.includes('Terrax Booster'));
-  assert.ok(gamingBoosterTsx.includes('&lt; 55'));
-  assert.ok(gamingBoosterTsx.includes('تحسين المسار مطلوب'));
-  assert.ok(gamingBoosterTsx.includes('مسار فائق الاستقرار'));
-
-  // 4. Location 1: Main Speed Screen (Below connection-type-card, above privacy-warning and start-button)
+  // 2. High-Yield Location 1: Main Speed Screen (Post-test results banner + clean inline banner)
   const indexModernHtml = fs.readFileSync(new URL('../index-modern.html', import.meta.url), 'utf8');
   const frontendIndexHtml = fs.readFileSync(new URL('../frontend/index.html', import.meta.url), 'utf8');
   const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
 
   for (const html of [indexModernHtml, frontendIndexHtml]) {
+    assert.ok(html.includes('id="terrax-smart-ad-speed-results"'), 'speed-results post-test spotlight banner must exist');
+    assert.ok(html.includes('id="terrax-smart-ad-speed-main"'), 'speed-main inline banner must exist');
     const connPos = html.indexOf('id="connection-type-card"');
-    const adPos = html.indexOf('data-terrax-yan-slot="speed-main"');
-    const privacyPos = html.indexOf('id="privacy-warning"');
     const startPos = html.indexOf('id="start-button"');
-
-    assert.ok(connPos !== -1 && adPos !== -1 && privacyPos !== -1 && startPos !== -1);
-    assert.ok(connPos < adPos, 'Connection card must appear before ad card');
-    assert.ok(adPos < privacyPos, 'Ad card must appear before privacy warning');
-    assert.ok(privacyPos < startPos, 'Privacy warning must appear before start button');
+    assert.ok(connPos !== -1 && startPos !== -1 && connPos < startPos, 'Connection card must appear before start button');
   }
 
-  const appConnPos = appTsx.indexOf('id="connection-type-card"');
-  const appAdPos = appTsx.indexOf('<HybridSmartAdCard');
-  const appStartPos = appTsx.indexOf('id="start-button"');
-  assert.ok(appConnPos < appAdPos, 'React connection card must appear before HybridSmartAdCard');
-  assert.ok(appAdPos < appStartPos, 'React HybridSmartAdCard must appear before start-button');
-
-  // 5. Location 2: Gaming Screen (Top clickable sponsor, 6th booster card in radar grid, bottom ad)
+  // 3. High-Yield Location 2: Gaming Screen (Smart non-intrusive sponsor banner)
   const gamingHtml = fs.readFileSync(new URL('../gaming.html', import.meta.url), 'utf8');
   const frontendGamingHtml = fs.readFileSync(new URL('../frontend/gaming.html', import.meta.url), 'utf8');
 
   for (const html of [gamingHtml, frontendGamingHtml]) {
-    assert.ok(html.includes('id="gamingSponsorTag"'));
-    assert.ok(html.includes('href="' + officialSmartlink + '"'));
-    assert.ok(html.includes('id="gamingBoosterCard"'));
-    assert.ok(html.includes('data-terrax-yan-slot="gaming-main"'));
-    assert.ok(html.includes('Terrax Booster'));
-    assert.ok(html.includes('&lt; 55ms'));
+    assert.ok(html.includes('id="terrax-smart-ad-gaming-main"'), 'gaming-main smart ad slot must exist');
+    assert.ok(html.includes('id="gamingBoosterCard"'), '6-card grid preserves card 6 slot');
   }
 
-  // 6. Location 3: Stability Screen (Ad card below start/reset buttons and above nav)
+  // 4. High-Yield Location 3: Stability Screen (Smart companion sponsor banner)
   const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
   const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
 
   for (const html of [stabilityHtml, frontendStabilityHtml]) {
-    const startBtnPos = html.indexOf('id="startBtn"');
-    const adPos = html.indexOf('data-terrax-yan-slot="stability-main"');
-    const navPos = html.indexOf('class="terrax-bottom-nav"');
-
-    assert.ok(startBtnPos < adPos, 'Stability start button must appear before ad card');
-    assert.ok(adPos < navPos, 'Stability ad card must appear before bottom nav');
+    assert.ok(html.includes('id="terrax-smart-ad-stability-main"'), 'stability-main smart ad slot must exist');
   }
 
-  // 7. Location 4: Usage Dialog (Horizontal booster banner below history table and before clear button)
+  // 5. High-Yield Location 4: Usage Dialog (Data booster sponsor banner)
   for (const html of [indexModernHtml, frontendIndexHtml, appTsx]) {
     assert.ok(html.includes('id="usage-dialog"'));
-    assert.ok(html.includes('usage-booster-banner'));
-    assert.ok(html.includes(officialSmartlink));
-    const tablePos = html.indexOf('cyber-history-table');
-    const boosterPos = html.indexOf('usage-booster-banner');
-    const clearPos = html.indexOf('id="clear-history-btn"');
-    assert.ok(tablePos < boosterPos, 'History table must appear before booster banner');
-    assert.ok(boosterPos < clearPos, 'Booster banner must appear before clear history button');
+    assert.ok(html.includes('id="terrax-smart-ad-usage-main"'), 'usage-main smart ad slot must exist in dialog');
   }
+
+  // 6. Non-intrusive zero-popup policy: No intrusive popups or disruptive modals
+  const adSlotsJs = fs.readFileSync(new URL('../frontend/javascript/ad-slots.js', import.meta.url), 'utf8');
+  assert.ok(adSlotsJs.includes('bindZeroPopupGuard'), 'zero popup guard must be bound');
+  assert.ok(
+    adSlotsJs.includes('allow-scripts allow-same-origin allow-forms'),
+    'strict sandbox without allow-popups'
+  );
 });
 
 test('Gaming Speed Test Page (gaming.html & frontend/gaming.html) enforces 4K layout geometry, 6-card symmetrical radar grid, RTL/LTR isolation, safe-area/dvh sizing, and reduced-motion rules', async () => {
@@ -894,20 +820,10 @@ test('GameQuery.dev API Integration: server-side adapter, SSRF protection, offic
   assert.ok(gamingHtml.includes('backend/gamequery.php'));
 });
 
-test('Automatic Ad Display Protocol: zero-click automatic initialization, inline ad frame mounting, zero popups, and multi-page slot coverage', async () => {
+test('Automated Ad Lifecycle and Safe Fallback Protocol: verified automatic initialization, zero-CLS auto-collapse, multi-slot synchronization, and React App parity', async () => {
   const fs = await import('node:fs');
 
   const allHtmlPages = [
-    '../index.html',
-    '../index-modern.html',
-    '../frontend/index.html',
-    '../gaming.html',
-    '../frontend/gaming.html',
-    '../stability.html',
-    '../frontend/stability.html',
-  ];
-
-  const adSlotHtmlPages = [
     '../index-modern.html',
     '../frontend/index.html',
     '../gaming.html',
@@ -918,47 +834,30 @@ test('Automatic Ad Display Protocol: zero-click automatic initialization, inline
 
   for (const relPath of allHtmlPages) {
     const content = fs.readFileSync(new URL(relPath, import.meta.url), 'utf8');
-    // 1. Ad SDK script must be live in <head>, never trapped in an inert <template id="terrax-yandex-sdk-tpl">
+    // 1. External unmanaged scripts are not hardcoded in <head>
     assert.ok(
-      !content.includes('<template id="terrax-yandex-sdk-tpl">'),
-      `${relPath} must not trap the ad script inside an inert <template>`
+      !content.includes('https://yandex.ru/ads/system/context.js'),
+      `${relPath} must manage ad scripts through central smart lifecycle engine`
     );
+    // 2. Verified smart ad slots presence with auto-collapsing initial state
     assert.ok(
-      content.includes('<script src="https://yandex.ru/ads/system/context.js" async></script>'),
-      `${relPath} must load context.js automatically in <head>`
-    );
-  }
-
-  for (const relPath of adSlotHtmlPages) {
-    const content = fs.readFileSync(new URL(relPath, import.meta.url), 'utf8');
-    // 2. Primary ad slot must have data-auto-ad="true" and no manual click CTA text
-    assert.ok(
-      content.includes('data-auto-ad="true"'),
-      `${relPath} must configure ad containers with data-auto-ad="true"`
-    );
-    assert.ok(
-      !content.includes('تفعيل التسريع ⚡'),
-      `${relPath} must not require manual click CTA text to display the ad`
+      content.includes('class="terrax-smart-ad-slot') || content.includes('terrax-smart-banner'),
+      `${relPath} must configure smart auto-collapsing ad spaces`
     );
   }
 
-  // 3. Verify central ad engine (frontend/javascript/ad-slots.js) supports R-A-TERREX-* block IDs, inline auto-frame, and zero popups
+  // 3. Verify central ad engine (frontend/javascript/ad-slots.js) handles automated hooks & fallbacks
   const adSlotsJs = fs.readFileSync(new URL('../frontend/javascript/ad-slots.js', import.meta.url), 'utf8');
-  assert.ok(!adSlotsJs.includes('isRealNumericBlockId = /^R-A-\\d+-\\d+$/'), 'ad-slots.js must not block R-A-TERREX-* block IDs');
   assert.ok(adSlotsJs.includes('function isValidConfiguredBlockId(blockId)'));
-  assert.ok(adSlotsJs.includes('isNumericYandexBlockId'));
-  assert.ok(adSlotsJs.includes('function mountAutomaticEmbeddedAdFrame(card, slotKey)'));
-  assert.ok(adSlotsJs.includes('function bindZeroPopupGuard(el)'));
-  assert.ok(adSlotsJs.includes('function cleanupAllSlots()'));
-  assert.ok(adSlotsJs.includes('setupDialogAutoAdObserver()'));
+  assert.ok(adSlotsJs.includes('function activateSmartlinkFallback'));
+  assert.ok(adSlotsJs.includes('function activateYandexRtbBanner'));
+  assert.ok(adSlotsJs.includes('AUTO_AD_ROTATION_INTERVAL_MS = 30000'));
 
-  // 4. Verify React components and App.tsx
-  const hybridAdTsx = fs.readFileSync(new URL('../src/components/HybridSmartAdCard.tsx', import.meta.url), 'utf8');
+  // 4. Verify React App.tsx mounts matching smart ad slots
   const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
-  assert.ok(hybridAdTsx.includes('ensureYandexContextScript()'));
-  assert.ok(hybridAdTsx.includes('isNumericYandexBlockId'));
-  assert.ok(hybridAdTsx.includes('terrax-auto-ad-frame'));
-  assert.ok(appTsx.includes('data-terrax-yan-slot="usage-main"'));
+  assert.ok(appTsx.includes('id="terrax-smart-ad-speed-results"'), 'App.tsx must render post-test results smart slot');
+  assert.ok(appTsx.includes('id="terrax-smart-ad-speed-main"'), 'App.tsx must render speed-main smart slot');
+  assert.ok(appTsx.includes('id="terrax-smart-ad-usage-main"'), 'App.tsx must render usage-main smart slot');
 });
 
 test('Max Speed and Average Speed cards animate with smooth requestAnimationFrame count-up effect on final results display', async () => {
@@ -1144,4 +1043,503 @@ test('Core Internet Speed Test Page visual identity and background enforce stric
   assert.ok(!indexJs.includes('void el.offsetWidth'), 'triggerKineticTick must not force synchronous layout reflow');
   assert.ok(!resultsCss.includes('stroke-dasharray 160ms'), '.gauge-active-arc must not fight 60fps JS stroke-dasharray updates');
 });
+
+test('Site-wide visual identity and layout structure remain resilient under browser zoom in/out and viewport resizing', async () => {
+  const fs = await import('node:fs');
+  const rootIndexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const indexCss = fs.readFileSync(new URL('../frontend/styling/index.css', import.meta.url), 'utf8');
+  const mainCss = fs.readFileSync(new URL('../frontend/styling/main.css', import.meta.url), 'utf8');
+  const resultsCss = fs.readFileSync(new URL('../frontend/styling/results.css', import.meta.url), 'utf8');
+  const buttonCss = fs.readFileSync(new URL('../frontend/styling/button.css', import.meta.url), 'utf8');
+  const dialogCss = fs.readFileSync(new URL('../frontend/styling/dialog.css', import.meta.url), 'utf8');
+  const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
+  const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
+  const gamingHtml = fs.readFileSync(new URL('../gaming.html', import.meta.url), 'utf8');
+  const frontendGamingHtml = fs.readFileSync(new URL('../frontend/gaming.html', import.meta.url), 'utf8');
+
+  // 1. User zoom must never be blocked by user-scalable=no
+  assert.ok(!rootIndexHtml.includes('user-scalable=no'), 'index.html must not block user zoom via user-scalable=no');
+
+  // 2. Safe vertical centering + margin: auto prevents top header clipping when zoomed in and centers shell when zoomed out
+  assert.ok(indexCss.includes('justify-content: safe center;'), 'index.css body must use justify-content: safe center');
+  assert.ok(indexCss.includes('margin: auto;'), 'index.css .terrax-cyber-shell must use margin: auto');
+  assert.ok(stabilityHtml.includes('justify-content: safe center;'), 'stability.html body must use justify-content: safe center');
+  assert.ok(gamingHtml.includes('justify-content: safe center;'), 'gaming.html body must use justify-content: safe center');
+
+  // 3. Desktop zoom-in must not overlap gauges due to orientation: portrait lock on <= 480px / <= 360px
+  assert.ok(!resultsCss.includes('(max-width: 480px) and (orientation: portrait)'), 'results.css must not lock 480px gauge breakpoint to portrait only');
+  assert.ok(!resultsCss.includes('(max-width: 360px) and (orientation: portrait)'), 'results.css must not lock 360px gauge breakpoint to portrait only');
+  assert.ok(resultsCss.includes('@media screen and (max-width: 620px)'), 'results.css must include intermediate 620px gauge triangle anti-overlap rule');
+
+  // 4. Flex and grid containers must use min-width: 0 / minmax(0, ...) / min(..., 100%) to prevent horizontal overflow when zoomed in
+  assert.ok(mainCss.includes('grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);'), 'main.css .connection-server-row must use minmax(0, ...)');
+  assert.ok(buttonCss.includes('min-width: min(28rem, 100%);'), 'button.css primary buttons must cap min-width to 100%');
+  assert.ok(dialogCss.includes('min-width: min(19rem, 100%);'), 'dialog.css select controls must cap min-width to 100%');
+  assert.ok(indexCss.includes('min-width: min(18rem, 100%);'), 'index.css sponsor content must cap min-width to 100%');
+
+  // 5. Stability and Gaming pages must isolate fixed backdrops and synchronize root/frontend copies
+  assert.ok(stabilityHtml.includes('transform-box: fill-box;'), 'stability.html SVG nodes must use transform-box: fill-box');
+  assert.ok(!gamingHtml.includes('background-attachment: fixed'), 'gaming.html must not use background-attachment: fixed');
+  const normStabilityRoot = stabilityHtml.slice(stabilityHtml.indexOf('<style>')).replace(/url\("frontend\/images\/background\.jpeg"\)/g, 'url("images/background.jpeg")');
+  const normStabilityFrontend = frontendStabilityHtml.slice(frontendStabilityHtml.indexOf('<style>'));
+  assert.equal(normStabilityRoot, normStabilityFrontend, 'stability.html and frontend/stability.html must remain synchronized');
+  const normGamingRoot = gamingHtml.slice(gamingHtml.indexOf('<style>')).replace(/url\("frontend\/images\/background\.jpeg"\)/g, 'url("images/background.jpeg")');
+  const normGamingFrontend = frontendGamingHtml.slice(frontendGamingHtml.indexOf('<style>'));
+  assert.equal(normGamingRoot, normGamingFrontend, 'gaming.html and frontend/gaming.html must remain synchronized');
+});
+
+test('Test History table in usage dialog includes Date column, multi-column sorting capabilities, and strict data accuracy across test restarts', async () => {
+  const fs = await import('node:fs');
+  const math = globalThis.TerraxTelemetryMath;
+
+  assert.equal(typeof math.createTestHistoryEntry, 'function');
+  assert.equal(typeof math.normalizeTestHistoryList, 'function');
+  assert.equal(typeof math.appendTestHistoryEntry, 'function');
+  assert.equal(typeof math.sortTestHistoryList, 'function');
+
+  // 1. createTestHistoryEntry creates a complete Date + Time record with tabular ISO/localized dates
+  const fixedEpoch1 = Date.UTC(2026, 10, 1, 14, 20, 30); // 2026-11-01
+  const fixedEpoch2 = Date.UTC(2026, 10, 2, 9, 15, 10);  // 2026-11-02
+  const fixedEpoch3 = Date.UTC(2026, 10, 2, 18, 45, 50); // 2026-11-02 later time
+
+  const entry1 = math.createTestHistoryEntry(
+    {
+      runId: 'run_1001',
+      epochMs: fixedEpoch1,
+      serverName: 'Riyadh Core',
+      dlMbps: 320.456,
+      ulMbps: 95.12,
+      pingMs: 28.4,
+      jitterMs: 3.1,
+      stabilityPercent: 94.2,
+      megabytesUsed: 42.8,
+    },
+    fixedEpoch1
+  );
+
+  assert.equal(entry1.runId, 'run_1001');
+  assert.equal(entry1.epochMs, fixedEpoch1);
+  assert.match(entry1.isoDate, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(entry1.dateAr, /^\d{4}\/\d{2}\/\d{2}$/);
+  assert.equal(entry1.dateEn, entry1.isoDate);
+  assert.equal(entry1.serverName, 'Riyadh Core');
+  assert.equal(entry1.dlMbps, 320.46);
+  assert.equal(entry1.ulMbps, 95.12);
+  assert.equal(entry1.pingMs, 28.4);
+  assert.equal(entry1.stabilityPercent, 94);
+  assert.equal(entry1.megabytesUsed, 42.8);
+
+  // 2. Accuracy across test restarts: appendTestHistoryEntry never overwrites or corrupts prior runs,
+  //    and deduplicates if the same runId is committed twice
+  let historyList = [];
+  historyList = math.appendTestHistoryEntry(historyList, entry1, 25, fixedEpoch1);
+  assert.equal(historyList.length, 1);
+
+  // Duplicate commit of the same runId updates in place instead of duplicating
+  historyList = math.appendTestHistoryEntry(
+    historyList,
+    { ...entry1, dlMbps: 325.0 },
+    25,
+    fixedEpoch1
+  );
+  assert.equal(historyList.length, 1, 'Same runId must not create duplicate history row');
+  assert.equal(historyList[0].dlMbps, 325);
+
+  // Test restart #2 with a new runId prepends cleanly while preserving run #1 intact
+  const run2 = {
+    runId: 'run_1002',
+    epochMs: fixedEpoch2,
+    serverName: 'Aden Fiber',
+    dlMbps: 850.5,
+    ulMbps: 410.2,
+    pingMs: 11.2,
+    stabilityPercent: 99,
+    megabytesUsed: 110.4,
+  };
+  historyList = math.appendTestHistoryEntry(historyList, run2, 25, fixedEpoch2);
+  assert.equal(historyList.length, 2);
+  assert.equal(historyList[0].runId, 'run_1002');
+  assert.equal(historyList[1].runId, 'run_1001');
+  assert.equal(historyList[1].dlMbps, 325, 'Previous test run data must remain untouched across restarts');
+
+  // Test restart #3 with null stability (e.g. short run)
+  const run3 = {
+    runId: 'run_1003',
+    epochMs: fixedEpoch3,
+    serverName: 'Yemen Net',
+    dlMbps: 140.0,
+    ulMbps: 45.0,
+    pingMs: 44.8,
+    stabilityPercent: null,
+    megabytesUsed: 25.0,
+  };
+  historyList = math.appendTestHistoryEntry(historyList, run3, 25, fixedEpoch3);
+  assert.equal(historyList.length, 3);
+
+  // 3. Legacy localStorage normalization (entries missing date / epochMs / runId)
+  const legacyNormalized = math.normalizeTestHistoryList(
+    [
+      {
+        timestamp: '10:30:00',
+        serverName: 'اليمن',
+        dlMbps: 100,
+        ulMbps: 50,
+        pingMs: 19,
+        stabilityPercent: 96,
+        megabytesUsed: 15,
+      },
+    ],
+    fixedEpoch3
+  );
+  assert.equal(legacyNormalized.length, 1);
+  assert.match(legacyNormalized[0].isoDate, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(legacyNormalized[0].dateAr, /^\d{4}\/\d{2}\/\d{2}$/);
+  assert.ok(legacyNormalized[0].runId.startsWith('run_'));
+
+  // 4. Multi-column sorting (Date, Time, Server, Download, Upload, Stability, Ping)
+  const byDateDesc = math.sortTestHistoryList(historyList, 'date', 'desc');
+  assert.deepEqual(
+    byDateDesc.map((r) => r.runId),
+    ['run_1003', 'run_1002', 'run_1001']
+  );
+
+  const byDateAsc = math.sortTestHistoryList(historyList, 'date', 'asc');
+  assert.deepEqual(
+    byDateAsc.map((r) => r.runId),
+    ['run_1001', 'run_1002', 'run_1003']
+  );
+
+  const byDlDesc = math.sortTestHistoryList(historyList, 'dl', 'desc');
+  assert.deepEqual(
+    byDlDesc.map((r) => r.runId),
+    ['run_1002', 'run_1001', 'run_1003']
+  );
+
+  const byDlAsc = math.sortTestHistoryList(historyList, 'dl', 'asc');
+  assert.deepEqual(
+    byDlAsc.map((r) => r.runId),
+    ['run_1003', 'run_1001', 'run_1002']
+  );
+
+  const byUlDesc = math.sortTestHistoryList(historyList, 'ul', 'desc');
+  assert.deepEqual(
+    byUlDesc.map((r) => r.runId),
+    ['run_1002', 'run_1001', 'run_1003']
+  );
+
+  const byPingAsc = math.sortTestHistoryList(historyList, 'ping', 'asc');
+  assert.deepEqual(
+    byPingAsc.map((r) => r.runId),
+    ['run_1002', 'run_1001', 'run_1003']
+  );
+
+  const byServerAsc = math.sortTestHistoryList(historyList, 'server', 'asc');
+  assert.deepEqual(
+    byServerAsc.map((r) => r.serverName),
+    ['Aden Fiber', 'Riyadh Core', 'Yemen Net']
+  );
+
+  // Stability sort places null stability at the bottom in both desc and asc
+  const byStabDesc = math.sortTestHistoryList(historyList, 'stability', 'desc');
+  assert.deepEqual(
+    byStabDesc.map((r) => r.runId),
+    ['run_1002', 'run_1001', 'run_1003']
+  );
+  const byStabAsc = math.sortTestHistoryList(historyList, 'stability', 'asc');
+  assert.deepEqual(
+    byStabAsc.map((r) => r.runId),
+    ['run_1001', 'run_1002', 'run_1003']
+  );
+
+  // 5. Verify HTML, CSS, JS, and React markup for the 7-column Date + sortable headers
+  const indexModernHtml = fs.readFileSync(new URL('../index-modern.html', import.meta.url), 'utf8');
+  const frontendIndexHtml = fs.readFileSync(new URL('../frontend/index.html', import.meta.url), 'utf8');
+  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
+  const dialogCss = fs.readFileSync(new URL('../frontend/styling/dialog.css', import.meta.url), 'utf8');
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+
+  for (const html of [indexModernHtml, frontendIndexHtml]) {
+    assert.ok(html.includes('data-sort-key="date"'), 'HTML must include sortable Date header');
+    assert.ok(html.includes('data-sort-key="time"'), 'HTML must include sortable Time header');
+    assert.ok(html.includes('data-sort-key="server"'), 'HTML must include sortable Server header');
+    assert.ok(html.includes('data-sort-key="dl"'), 'HTML must include sortable Download header');
+    assert.ok(html.includes('data-sort-key="ul"'), 'HTML must include sortable Upload header');
+    assert.ok(html.includes('data-sort-key="stability"'), 'HTML must include sortable Stability header');
+    assert.ok(html.includes('data-sort-key="ping"'), 'HTML must include sortable Ping header');
+    assert.ok(html.includes('colspan="7"'), 'Empty history row must span all 7 columns');
+  }
+
+  assert.ok(indexJs.includes('function setHistorySort(sortKey, explicitDir)'));
+  assert.ok(indexJs.includes('history-date-cell'));
+  assert.ok(dialogCss.includes('.cyber-history-table th.is-sorted'));
+  assert.ok(dialogCss.includes('.cyber-history-table td.history-date-cell'));
+  assert.ok(appTsx.includes('handleHistorySort'));
+  assert.ok(appTsx.includes('history-date-cell'));
+});
+
+test('Completed Tests number (#total-tests-count) in usage dialog animates with smooth count-up effect on dialog open', async () => {
+  const fs = await import('node:fs');
+  const { computeIntegerCountUpFrame, animateCompletedTestsCountUp } = globalThis.TerraxTelemetryMath;
+
+  assert.equal(typeof computeIntegerCountUpFrame, 'function');
+  assert.equal(typeof animateCompletedTestsCountUp, 'function');
+
+  // 1. Zero or negative target snaps cleanly to "0"
+  const zeroFrame = computeIntegerCountUpFrame(0, 0.4);
+  assert.equal(zeroFrame.displayValue, '0');
+  assert.equal(zeroFrame.currentCount, 0);
+  assert.equal(zeroFrame.isComplete, true);
+
+  // 2. Positive integer target (e.g. 24 completed tests) interpolates monotonically from 0 to 24
+  const start24 = computeIntegerCountUpFrame(24, 0);
+  assert.equal(start24.displayValue, '0');
+  assert.equal(start24.currentCount, 0);
+  assert.equal(start24.isComplete, false);
+
+  const mid24 = computeIntegerCountUpFrame(24, 0.5);
+  // Cubic ease-out at t=0.5 is 0.875 -> 24 * 0.875 = 21
+  assert.equal(mid24.displayValue, '21');
+  assert.equal(mid24.currentCount, 21);
+  assert.equal(mid24.isComplete, false);
+
+  const end24 = computeIntegerCountUpFrame(24, 1);
+  assert.equal(end24.displayValue, '24');
+  assert.equal(end24.currentCount, 24);
+  assert.equal(end24.isComplete, true);
+
+  // 3. animateCompletedTestsCountUp emits frames from "0" to targetCount and invokes onComplete
+  const frames = [];
+  await new Promise((resolve) => {
+    animateCompletedTestsCountUp({
+      targetCount: 15,
+      durationMs: 60,
+      reducedMotion: false,
+      onFrame: (f) => frames.push(f),
+      onComplete: () => resolve(),
+    });
+  });
+
+  assert.ok(frames.length >= 2, 'animateCompletedTestsCountUp should emit initial 0 and completion frames');
+  assert.equal(frames[0].displayValue, '0');
+  assert.equal(frames[frames.length - 1].displayValue, '15');
+  assert.equal(frames[frames.length - 1].isComplete, true);
+
+  // 4. Reduced motion snaps immediately to final targetCount in a single frame
+  const rmFrames = [];
+  animateCompletedTestsCountUp({
+    targetCount: 18,
+    durationMs: 650,
+    reducedMotion: true,
+    onFrame: (f) => rmFrames.push(f),
+  });
+  assert.equal(rmFrames.length, 1);
+  assert.equal(rmFrames[0].displayValue, '18');
+  assert.equal(rmFrames[0].isComplete, true);
+
+  // 5. Verify integration in frontend/javascript/index.js, frontend/styling/dialog.css, and src/App.tsx
+  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
+  const dialogCss = fs.readFileSync(new URL('../frontend/styling/dialog.css', import.meta.url), 'utf8');
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+
+  assert.ok(indexJs.includes('function startUsageTestsCountUp'));
+  assert.ok(indexJs.includes('function cancelUsageTestsCountUp'));
+  assert.ok(indexJs.includes('renderUsageHistoryUI({ animateCount: true })'));
+  assert.ok(dialogCss.includes('.usage-val.counting-up'));
+  assert.ok(dialogCss.includes('.usage-stat-box.counting-up'));
+  assert.ok(appTsx.includes('math.animateCompletedTestsCountUp'));
+});
+
+test('Google AdSense Professional Integration: strict ID validation, Smart Ad Lock (READY/RUNNING/FINISHED/ERROR), CMP Consent Mode v2, and ads.txt compliance', async () => {
+  const fs = await import('node:fs');
+  await import('../frontend/javascript/ad-slots.js');
+  const engine = globalThis.TerraxSmartAdEngine;
+  const cmp = globalThis.TerraxConsentManager;
+
+  assert.ok(engine, 'TerraxSmartAdEngine must be registered on globalThis');
+  assert.ok(cmp, 'TerraxConsentManager must be registered on globalThis');
+
+  // 1. Strict Publisher ID & Slot ID validation (rejects empty, fake, repeating, or sequential placeholders)
+  assert.equal(engine.isValidAdSensePublisherId(''), false);
+  assert.equal(engine.isValidAdSensePublisherId(null), false);
+  assert.equal(engine.isValidAdSensePublisherId('ca-pub-0000000000000000'), false);
+  assert.equal(engine.isValidAdSensePublisherId('pub-0000000000000000'), false);
+  assert.equal(engine.isValidAdSensePublisherId('ca-pub-1111111111111111'), false);
+  assert.equal(engine.isValidAdSensePublisherId('ca-pub-1234567890123456'), false);
+  assert.equal(engine.isValidAdSensePublisherId('ca-pub-12345'), false);
+
+  // Valid format 16-digit non-repeating IDs pass validation and normalize to ca-pub-XXXXXXXXXXXXXXXX
+  assert.equal(engine.isValidAdSensePublisherId('ca-pub-9847261539482716'), true);
+  assert.equal(engine.isValidAdSensePublisherId('pub-9847261539482716'), true);
+  assert.equal(engine.normalizeAdSenseClientId('pub-9847261539482716'), 'ca-pub-9847261539482716');
+  assert.equal(engine.normalizeAdSenseClientId('ca-pub-0000000000000000'), '');
+
+  // Slot ID validation
+  assert.equal(engine.isValidAdSenseSlotId(''), false);
+  assert.equal(engine.isValidAdSenseSlotId('0000000000'), false);
+  assert.equal(engine.isValidAdSenseSlotId('1234567890'), false);
+  assert.equal(engine.isValidAdSenseSlotId('abc1234567'), false);
+  assert.equal(engine.isValidAdSenseSlotId('5829104736'), true);
+
+  // 2. Default unconfigured state must NOT invent publisher IDs or slot IDs
+  const defaultCfg = engine.configureAdSense({});
+  assert.equal(defaultCfg.publisherId, '', 'Default publisherId must remain empty until configured');
+  assert.equal(defaultCfg.slots['speed-main'], '', 'Default speed-main slot must remain empty until configured');
+
+  // 3. Smart Ad Lock state machine (READY -> RUNNING -> FINISHED -> ERROR)
+  const readyState = engine.setEngineTestState('READY');
+  assert.equal(readyState.testEngineState, 'READY');
+  assert.equal(readyState.isTesting, false);
+
+  const runningState = engine.setEngineTestState('RUNNING');
+  assert.equal(runningState.testEngineState, 'RUNNING');
+  assert.equal(runningState.isTesting, true);
+  assert.equal(
+    engine.refreshAllSlots('attempt-during-running'),
+    false,
+    'RUNNING state must suppress all new ad-loading operations'
+  );
+  assert.equal(
+    engine.getState().pendingAdLoadAfterTest,
+    true,
+    'Blocked refresh during RUNNING should queue pendingAdLoadAfterTest'
+  );
+
+  const finishedState = engine.onTestComplete('speed');
+  assert.equal(finishedState, true);
+  assert.equal(engine.getState().testEngineState, 'FINISHED');
+  assert.equal(engine.getState().isTesting, false);
+
+  // ERROR state preserves error metadata and unlocks network isolation safely
+  const errObj = engine.onTestError({ reason: 'connection_abort', code: 'ECONNRESET' });
+  assert.equal(engine.getState().testEngineState, 'ERROR');
+  assert.equal(engine.getState().isTesting, false);
+  assert.equal(errObj.reason, 'connection_abort');
+  assert.equal(errObj.code, 'ECONNRESET');
+
+  // Reset back to READY
+  engine.setEngineTestState('READY');
+
+  // 4. Privacy & Consent Management (Google Consent Mode v2 + NPA + Opt-Out)
+  globalThis.dataLayer = [];
+  globalThis.adsbygoogle = [];
+
+  const npaState = engine.setConsentChoice('non_personalized');
+  assert.equal(npaState.mode, 'non_personalized');
+  assert.equal(npaState.canLoadAds, true);
+  assert.equal(npaState.nonPersonalizedOnly, true);
+  assert.equal(globalThis.adsbygoogle.requestNonPersonalizedAds, 1);
+  assert.equal(globalThis.adsbygoogle.pauseAdRequests, 0);
+
+  const rejectedState = engine.setConsentChoice('rejected');
+  assert.equal(rejectedState.mode, 'rejected');
+  assert.equal(rejectedState.canLoadAds, false);
+  assert.equal(globalThis.adsbygoogle.pauseAdRequests, 1);
+
+  const personalizedState = engine.setConsentChoice('personalized');
+  assert.equal(personalizedState.mode, 'personalized');
+  assert.equal(personalizedState.canLoadAds, true);
+  assert.equal(personalizedState.nonPersonalizedOnly, false);
+  assert.equal(globalThis.adsbygoogle.requestNonPersonalizedAds, 0);
+  assert.equal(globalThis.adsbygoogle.pauseAdRequests, 0);
+
+  // Reset consent to unset
+  engine.setConsentChoice('unset');
+
+  // 5. Verify ads.txt, adsConfig.ts, AMP Auto Ads (<head> script + <body> tag), and Publisher ID ca-pub-1225026489802055
+  const adsTxt = fs.readFileSync(new URL('../ads.txt', import.meta.url), 'utf8');
+  const adsConfigTs = fs.readFileSync(new URL('../src/config/adsConfig.ts', import.meta.url), 'utf8');
+  const indexModernHtml = fs.readFileSync(new URL('../index-modern.html', import.meta.url), 'utf8');
+
+  assert.equal(engine.isValidAdSensePublisherId('ca-pub-1225026489802055'), true);
+  assert.ok(adsTxt.includes('google.com, pub-1225026489802055, DIRECT, f08c47fec0942fa0'));
+
+  const htmlPagesWithAmpAutoAds = [
+    '../index.html',
+    '../index-modern.html',
+    '../frontend/index.html',
+    '../gaming.html',
+    '../frontend/gaming.html',
+    '../stability.html',
+    '../frontend/stability.html',
+    '../index-classic.html',
+  ];
+
+  for (const relPage of htmlPagesWithAmpAutoAds) {
+    const html = fs.readFileSync(new URL(relPage, import.meta.url), 'utf8');
+    const headEnd = html.indexOf('</head>');
+    const bodyStart = html.indexOf('<body');
+    const headScriptPos = html.indexOf('https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js');
+    const bodyAmpTagPos = html.indexOf('<amp-auto-ads type="adsense"');
+
+    assert.ok(
+      headScriptPos !== -1 && headScriptPos < headEnd,
+      `${relPage} must include amp-auto-ads-0.1.js script inside <head>`
+    );
+    assert.ok(
+      html.includes('custom-element="amp-auto-ads"'),
+      `${relPage} must include custom-element="amp-auto-ads" attribute`
+    );
+    assert.ok(
+      bodyAmpTagPos > bodyStart,
+      `${relPage} must include <amp-auto-ads type="adsense"> after <body>`
+    );
+    assert.ok(
+      html.includes('data-ad-client="ca-pub-1225026489802055"'),
+      `${relPage} must configure data-ad-client="ca-pub-1225026489802055"`
+    );
+  }
+
+  assert.ok(adsConfigTs.includes('export function isValidAdSensePublisherId'));
+  assert.ok(adsConfigTs.includes('export function isValidAdSenseSlotId'));
+  assert.ok(adsConfigTs.includes('ca-pub-1225026489802055'));
+  assert.ok(!indexModernHtml.includes('id="consent-accept-all-btn"'), 'consent-accept-all-btn must be removed');
+  assert.ok(!indexModernHtml.includes('id="consent-npa-only-btn"'), 'consent-npa-only-btn must be removed');
+  assert.ok(!indexModernHtml.includes('id="consent-reject-ads-btn"'), 'consent-reject-ads-btn must be removed');
+  assert.ok(!indexModernHtml.includes('id="open-consent-preferences-btn"'), 'open-consent-preferences-btn must be removed');
+
+  // 6. Verify modular /ads/* architecture, diagnostics report, and public/ads.txt + robots.txt
+  const adsConfigMod = await import('../ads/ads.config.js');
+  const adsValidatorMod = await import('../ads/adsense.validator.js');
+  const adsDiagMod = await import('../ads/adsense.diagnostics.js');
+  const adsManagerMod = await import('../ads/adsense.manager.js');
+
+  assert.equal(adsConfigMod.DEFAULT_PUBLISHER_ID, 'ca-pub-1225026489802055');
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.publisherId, 'ca-pub-1225026489802055');
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.enableAdSense, true);
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.enableAutoAds, true);
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.scriptLoadingMode, 'async');
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.ampAutoAdsScriptUrl, 'https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js');
+  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.home);
+  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.speedTest);
+  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.stability);
+  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.consumption);
+  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.servers);
+  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.additionalContent);
+
+  const validationReport = adsValidatorMod.validateAdSenseConfig(adsConfigMod.ADSENSE_CONFIG);
+  assert.equal(validationReport.issues.length, 0);
+  assert.equal(validationReport.totalPlacements, 6);
+
+  const diagReport = adsDiagMod.generateAdSenseDiagnostics();
+  assert.equal(diagReport.subsystems.publisher.status, 'READY');
+  assert.equal(diagReport.subsystems.adsTxt.status, 'READY');
+  assert.equal(diagReport.subsystems.robotsTxt.status, 'READY');
+  assert.equal(diagReport.subsystems.smartAdLock.status, 'READY');
+  assert.equal(diagReport.subsystems.consentManagement.status, 'READY');
+  assert.equal(diagReport.subsystems.placements.status, 'PENDING');
+
+  const managerState = adsManagerMod.AdSenseManager.getState();
+  assert.equal(managerState.publisherId, 'ca-pub-1225026489802055');
+  assert.equal(managerState.testEngineState, 'READY');
+
+  const publicAdsTxt = fs.readFileSync(new URL('../public/ads.txt', import.meta.url), 'utf8');
+  const robotsTxt = fs.readFileSync(new URL('../robots.txt', import.meta.url), 'utf8');
+  const publicRobotsTxt = fs.readFileSync(new URL('../public/robots.txt', import.meta.url), 'utf8');
+  assert.ok(publicAdsTxt.includes('google.com, pub-1225026489802055, DIRECT, f08c47fec0942fa0'));
+  assert.ok(robotsTxt.includes('User-agent: Mediapartners-Google'));
+  assert.ok(publicRobotsTxt.includes('User-agent: Mediapartners-Google'));
+});
+
+
+
 

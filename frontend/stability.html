@@ -89,10 +89,12 @@
   <link rel="stylesheet" type="text/css" href="styling/button.css" onerror="this.onerror=null;this.href='frontend/styling/button.css';" />
   <link rel="prefetch" href="index.html" />
   <link rel="prefetch" href="gaming.html" />
-  <script>window.yaContextCb=window.yaContextCb||[]</script>
-  <script src="https://yandex.ru/ads/system/context.js" async></script>
+
   <script type="text/javascript" src="javascript/telemetry-math.js" onerror="this.onerror=null;this.src='frontend/javascript/telemetry-math.js';"></script>
   <script type="text/javascript" src="javascript/ad-slots.js" onerror="this.onerror=null;this.src='frontend/javascript/ad-slots.js';"></script>
+  <script async custom-element="amp-auto-ads"
+        src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+  </script>
   <title>LibreSpeed - Stability Test</title>
   <style>
     :root {
@@ -143,7 +145,12 @@
     }
 
     html {
-      font-size: clamp(58%, 0.42vw + 48%, 82%);
+      font-size: 62.5%;
+      min-height: 100%;
+      min-height: 100dvh;
+      overflow-x: clip;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
       background-color: var(--bg-primary);
       color: var(--text-primary);
       color-scheme: dark;
@@ -158,8 +165,17 @@
       scrollbar-color: rgba(39, 221, 248, 0.45) rgba(8, 22, 48, 0.45);
     }
 
+    @media screen and (max-width: 800px) {
+      html {
+        font-size: 56.25%;
+      }
+    }
+
     body {
       min-height: 100vh;
+      min-height: 100dvh;
+      width: 100%;
+      max-width: 100%;
       font-family: var(--font-ar);
       font-size: 1.5rem;
       line-height: 1.55;
@@ -175,9 +191,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      padding: 1rem 1.6rem calc(1.6rem + env(safe-area-inset-bottom, 0px));
-      overflow-x: hidden;
+      justify-content: safe center;
+      padding:
+        max(0.85rem, env(safe-area-inset-top, 0px))
+        clamp(0.75rem, 2.2vw, 1.6rem)
+        calc(1.6rem + env(safe-area-inset-bottom, 0px));
+      overflow-x: clip;
       position: relative;
       touch-action: manipulation;
       transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -196,6 +215,9 @@
       pointer-events: none;
       z-index: 0;
       overflow: hidden;
+      contain: strict;
+      transform: translate3d(0, 0, 0);
+      backface-visibility: hidden;
     }
 
     .stability-grid-bg {
@@ -247,11 +269,15 @@
 
     .trace-node-glow {
       fill: var(--cyber-cyan);
+      transform-box: fill-box;
+      transform-origin: center;
       animation: nodeGlowPulse 3s ease-in-out infinite alternate;
     }
 
     .trace-node-purple {
       fill: var(--holo-purple);
+      transform-box: fill-box;
+      transform-origin: center;
       animation: nodeGlowPulse 3.5s ease-in-out infinite alternate 0.8s;
     }
 
@@ -275,6 +301,9 @@
       z-index: 1;
       width: 100%;
       max-width: 96rem;
+      min-width: 0;
+      margin: auto;
+      overflow: clip;
       background: linear-gradient(
         165deg,
         rgba(22, 50, 96, 0.24) 0%,
@@ -282,14 +311,14 @@
         rgba(14, 34, 68, 0.26) 100%
       );
       border: 1.5px solid rgba(39, 221, 248, 0.48);
-      border-radius: 2.6rem;
+      border-radius: clamp(1.6rem, 2.2vw, 2.6rem);
       box-shadow:
         0 20px 56px rgba(8, 22, 48, 0.38),
         0 0 38px rgba(39, 221, 248, 0.22),
         inset 0 1px 1px rgba(240, 246, 255, 0.32);
       backdrop-filter: blur(2.5px) saturate(145%);
       -webkit-backdrop-filter: blur(2.5px) saturate(145%);
-      padding: 1.15rem 1.9rem 1.25rem;
+      padding: clamp(0.95rem, 1.5vw, 1.15rem) clamp(0.95rem, 2vw, 1.9rem) clamp(1.05rem, 1.6vw, 1.25rem);
       display: flex;
       flex-direction: column;
       gap: 0.95rem;
@@ -323,12 +352,14 @@
         linear-gradient(90deg, rgba(20, 48, 96, 0.32) 0%, rgba(14, 34, 72, 0.28) 100%);
       border: 1px solid rgba(39, 221, 248, 0.44);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      min-width: 0;
     }
 
     .brand-cluster {
       display: flex;
       align-items: center;
       gap: 1.2rem;
+      min-width: 0;
     }
 
     .brand-shield {
@@ -353,6 +384,7 @@
     .brand-titles {
       display: flex;
       flex-direction: column;
+      min-width: 0;
     }
 
     .brand-name-row {
@@ -362,7 +394,7 @@
     }
 
     .brand-ar {
-      font-size: 1.85rem;
+      font-size: clamp(1.55rem, 1.8vw, 1.85rem);
       font-weight: 800;
       color: var(--text-primary);
       letter-spacing: 0;
@@ -374,7 +406,7 @@
     }
 
     .brand-tag {
-      font-size: 1.15rem;
+      font-size: clamp(0.98rem, 1.15vw, 1.15rem);
       font-weight: 600;
       color: var(--text-secondary);
     }
@@ -384,21 +416,25 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
+      min-width: 0;
+      flex: 1 1 auto;
     }
 
     .page-main-title {
-      font-size: 2.1rem;
+      font-size: clamp(1.65rem, 2.1vw, 2.1rem);
       font-weight: 800;
       color: var(--text-primary);
       text-shadow: 0 0 18px rgba(39, 221, 248, 0.35);
       display: flex;
       align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
       gap: 0.8rem;
     }
 
     .page-sub-caption {
       font-family: var(--font-num);
-      font-size: 1.1rem;
+      font-size: clamp(0.92rem, 1.1vw, 1.1rem);
       font-weight: 700;
       letter-spacing: 0.14em;
       color: var(--cyber-cyan);
@@ -411,6 +447,7 @@
       align-items: center;
       gap: 1rem;
       flex-wrap: wrap;
+      min-width: 0;
     }
 
     .live-connection-badge {
@@ -475,6 +512,7 @@
         repeating-linear-gradient(90deg, rgba(39, 221, 248, 0.035) 0px, rgba(39, 221, 248, 0.035) 1px, transparent 1px, transparent 32px),
         rgba(18, 44, 86, 0.32);
       border: 1px solid rgba(55, 141, 255, 0.44);
+      min-width: 0;
     }
 
     .config-group {
@@ -482,6 +520,7 @@
       flex-wrap: wrap;
       align-items: center;
       gap: 0.9rem;
+      min-width: 0;
     }
 
     .config-item {
@@ -530,14 +569,18 @@
 
     .threshold-control {
       display: inline-flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 0.6rem;
       font-size: 1.2rem;
       color: var(--text-secondary);
+      max-width: 100%;
+      min-width: 0;
     }
 
     .threshold-control input[type="range"] {
       width: 9.5rem;
+      max-width: 100%;
       accent-color: var(--cyber-cyan);
       cursor: pointer;
     }
@@ -574,6 +617,7 @@
     /* Phase 5 & 6: Connection Monitoring Panel & Smart Stability Chart */
     .monitoring-panel {
       position: relative;
+      min-width: 0;
       border-radius: 2rem;
       background:
         radial-gradient(circle at 50% 100%, rgba(39, 221, 248, 0.16) 0%, transparent 62%),
@@ -825,6 +869,7 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 1.3rem;
       width: 100%;
+      min-width: 0;
     }
 
     .stability-info-card {
@@ -833,6 +878,7 @@
       flex-direction: column;
       justify-content: space-between;
       min-height: 10.6rem;
+      min-width: 0;
       padding: 1rem 1.3rem;
       border-radius: 1.8rem;
       background: linear-gradient(
@@ -1033,12 +1079,15 @@
       align-items: center;
       gap: 0.55rem;
       margin-top: 0;
+      min-width: 0;
     }
 
     .stability-cta-row {
       width: 100%;
       max-width: 64rem;
+      min-width: 0;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: center;
       gap: 1.2rem;
@@ -1047,9 +1096,11 @@
     button#startBtn {
       position: relative;
       overflow: hidden;
-      flex: 1;
+      flex: 1 1 18rem;
+      min-width: 0;
+      max-width: 100%;
       height: 4.8rem;
-      padding: 0 2.8rem;
+      padding: 0 clamp(1.2rem, 3vw, 2.8rem);
       border-radius: 1.5rem;
       border: 1.5px solid rgba(39, 221, 248, 0.78);
       background: linear-gradient(
@@ -1060,7 +1111,7 @@
       );
       color: var(--text-primary);
       font-family: var(--font-ar);
-      font-size: 1.7rem;
+      font-size: clamp(1.42rem, 2.2vw, 1.7rem);
       font-weight: 800;
       white-space: nowrap;
       cursor: pointer;
@@ -1188,6 +1239,7 @@
     /* Phase 10: Bottom Navigation Bar */
     .terrax-bottom-nav {
       width: 100%;
+      min-width: 0;
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       align-items: stretch;
@@ -1209,6 +1261,8 @@
 
     .nav-dock-item {
       position: relative;
+      min-width: 0;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1227,6 +1281,14 @@
       white-space: nowrap;
       cursor: pointer;
       transition: all 0.22s ease;
+    }
+
+    .nav-dock-item > span:not(.nav-active-bar) {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
     }
 
     .nav-dock-item svg {
@@ -1388,8 +1450,8 @@
       display: flex;
       flex-direction: column;
       gap: 0.18rem;
-      flex: 1;
-      min-width: 18rem;
+      flex: 1 1 16rem;
+      min-width: min(18rem, 100%);
     }
     .terrax-yan-sponsor-headline {
       display: flex;
@@ -1489,6 +1551,34 @@
       }
     }
 
+    @media screen and (max-width: 420px) {
+      .stability-cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .stability-cta-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      button#startBtn,
+      button#resetBtn {
+        width: 100%;
+        flex: 1 1 auto;
+      }
+      .terrax-bottom-nav {
+        gap: 0.24rem;
+        padding: 0.38rem;
+      }
+      .nav-dock-item {
+        font-size: 0.94rem;
+        padding: 0.42rem 0.14rem;
+        min-height: 4.2rem;
+      }
+      .nav-dock-item svg {
+        width: 1.65rem;
+        height: 1.65rem;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *,
       *::before,
@@ -1498,10 +1588,69 @@
         transition-duration: 0.01ms !important;
       }
     }
+
+    /* Smart Auto-Collapsing High-Yield Monetization Slot */
+    .terrax-smart-ad-slot,
+    .terrax-smart-banner {
+      display: none !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      opacity: 0 !important;
+      border: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      transition: opacity 0.35s ease, max-height 0.4s ease;
+    }
+    .terrax-smart-ad-slot[data-ad-filled="true"],
+    .terrax-smart-banner[data-ad-filled="true"] {
+      display: flex !important;
+      flex-direction: column !important;
+      height: auto !important;
+      min-height: 85px !important;
+      max-height: 400px !important;
+      margin: 0.85rem auto !important;
+      padding: 0.85rem 1.25rem !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      border-radius: 14px !important;
+      background: rgba(11, 27, 50, 0.70) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      border: 1px solid rgba(0, 210, 255, 0.25) !important;
+      box-shadow: 0 10px 28px rgba(2, 8, 23, 0.42), 0 0 18px rgba(0, 210, 255, 0.08) !important;
+      width: 100% !important;
+      max-width: 72.8rem !important;
+      box-sizing: border-box !important;
+    }
+    .terrax-smart-ad-slot.smart-ad-locked {
+      pointer-events: none;
+      filter: grayscale(0.2) opacity(0.85);
+    }
+    .terrax-smart-ad-header,
+    .terrax-ad-badge,
+    .terrax-ad-status-pill,
+    .terrax-native-sponsor-card,
+    .sponsor-brand-row,
+    .sponsor-icon-glow,
+    .sponsor-title,
+    .sponsor-desc {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+      overflow: hidden !important;
+    }
   </style>
 </head>
 
 <body>
+  <amp-auto-ads type="adsense"
+        data-ad-client="ca-pub-1225026489802055">
+  </amp-auto-ads>
   <!-- Ambient 4K Cyber Backdrop -->
   <div class="stability-backdrop" aria-hidden="true">
     <div class="stability-grid-bg"></div>
@@ -1811,33 +1960,33 @@
           <span id="stabilityPctLabel" dir="ltr">0%</span>
         </div>
       </div>
-    </section>
-
-    <!-- Smart Hybrid Yandex RTB + Adsterra Smartlink Glassmorphic Card (Auto-Refreshes at 30s & 60s) -->
-    <aside class="terrax-yan-card" data-terrax-yan-slot="stability-main" data-block-id="R-A-TERREX-STAB-1" data-auto-ad="true" data-smartlink-url="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" aria-label="برعاية تقنية • Terrax Partner">
-      <div class="terrax-yan-header">
-        <div class="terrax-yan-brand">
-          <span class="terrax-yan-dot" aria-hidden="true"></span>
-          <span class="terrax-yan-title">برعاية تقنية • Terrax Partner</span>
-        </div>
-        <div class="terrax-yan-header-actions">
-          <span class="terrax-yan-status-indicator" aria-live="polite" style="font-size:0.92rem;font-weight:700;color:#38bdf8;opacity:0.9;">عرض تلقائي نشط</span>
-          <span class="terrax-yan-isolation-badge" hidden>🛡️ وضع العزل الشبكي نشط لضمان دقة الفحص</span>
-        </div>
+    <!-- Smart Auto-Collapsing High-Yield Stability Ad Slot -->
+    <div class="terrax-smart-ad-slot terrax-smart-banner stability-smart-ad-slot"
+         id="terrax-smart-ad-stability-main"
+         data-terrax-smart-ad="stability-main"
+         data-ad-status="unfilled"
+         data-ad-filled="false"
+         role="complementary">
+      <div class="terrax-smart-ad-header" hidden aria-hidden="true" style="display:none;">
+        <span class="terrax-ad-badge"></span>
+        <span class="terrax-ad-status-pill"></span>
       </div>
-      <div class="terrax-yan-body">
-        <div id="yandex_rtb_R-A-TERREX-STAB-1" class="terrax-yan-rtb-mount"></div>
-        <a href="https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5" rel="noopener noreferrer sponsored" class="terrax-yan-sponsor-fallback" data-smartlink-fallback="true">
-          <div class="terrax-yan-fallback-content terrax-yan-sponsor-content">
-            <div class="terrax-yan-sponsor-headline">
-              <span class="terrax-yan-fallback-pill terrax-yan-sponsor-badge">إعلان مدعوم • AD</span>
-              <strong class="terrax-yan-fallback-title terrax-yan-sponsor-title">Terrax Cloud DNS &amp; Fiber Optimizer — استجابة أسرع للألعاب والبث 4K</strong>
-            </div>
-            <span class="terrax-yan-fallback-sub terrax-yan-sponsor-desc">توجيه ذكي للحزم عبر مسارات الألياف المباشرة لتقليل الـ Ping والـ Jitter واستقرار البث</span>
+      <div class="terrax-smart-ad-body">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-1225026489802055"
+             data-ad-slot=""
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <div class="terrax-native-sponsor-card" hidden aria-hidden="true" style="display:none;">
+          <div class="sponsor-brand-row">
+            <span class="sponsor-icon-glow"></span>
+            <strong class="sponsor-title"></strong>
           </div>
-        </a>
+          <p class="sponsor-desc"></p>
+        </div>
       </div>
-    </aside>
+    </div>
 
     <!-- Phase 10: Bottom 5-Tab Navigation Bar (RTL Order: السرعة -> الاستهلاك -> الاستقرار -> الخوادم -> الإعدادات) -->
     <nav class="terrax-bottom-nav" aria-label="التنقل الرئيسي" data-layer="bottom-navigation">

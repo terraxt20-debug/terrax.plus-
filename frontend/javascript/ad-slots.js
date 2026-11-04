@@ -87,12 +87,36 @@
     }
   ];
 
+  var CONSENT_STORAGE_KEY = "terrax_adsense_consent_v1";
+  var DEFAULT_ADSENSE_SLOTS = {
+    "speed-main": "",
+    "speed-results": "",
+    "stability-main": "",
+    "gaming-main": "",
+    "usage-main": "",
+    "servers-main": "",
+    "settings-main": "",
+    "multiplex-main": ""
+  };
+
+  var EEA_UK_CH_TIMEZONES = [
+    "europe/",
+    "atlantic/reykjavik",
+    "atlantic/canary",
+    "atlantic/faroe",
+    "atlantic/madeira",
+    "atlantic/azores"
+  ];
+
   var autoRotationTimer = null;
   var dialogObserver = null;
   var lifecycleBound = false;
 
   var engineState = {
     isTesting: false,
+    testEngineState: "READY",
+    lastTestError: null,
+    pendingAdLoadAfterTest: false,
     initialized: false,
     refreshCount: 0,
     lastRefreshReason: "init",
@@ -102,8 +126,589 @@
     smartlinkUrl: ADSTERRA_SMARTLINK_URL,
     fallbackTimeoutMs: YANDEX_FALLBACK_TIMEOUT_MS,
     blockIds: Object.assign({}, DEFAULT_BLOCK_IDS),
-    activeSlots: {}
+    activeSlots: {},
+    adsensePublisherId: "",
+    adsenseAutoAdsEnabled: false,
+    adsenseCmpEnabled: true,
+    adsenseScriptLoaded: false,
+    adsenseSlots: Object.assign({}, DEFAULT_ADSENSE_SLOTS),
+    consentMode: "unset",
+    regulatedRegionDetected: false,
+    cmpCertifiedDetected: false
   };
+
+  /**
+   * Validate whether a publisherId is a real, non-placeholder Google AdSense Publisher ID
+   * Format: "ca-pub-XXXXXXXXXXXXXXXX" or "pub-XXXXXXXXXXXXXXXX" (16 digits, not all repeating or sequential placeholder)
+   */
+  function isValidAdSensePublisherId(publisherId) {
+    if (!publisherId || typeof publisherId !== "string") return false;
+    var trimmed = publisherId.trim();
+    var match = trimmed.match(/^(?:ca-)?pub-(\d{16})$/i);
+    if (!match) return false;
+    var digits = match[1];
+    if (/^(\d)\1{15}$/.test(digits) || digits === "1234567890123456") {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Normalize a valid publisher ID to "ca-pub-XXXXXXXXXXXXXXXX"
+   */
+  function normalizeAdSenseClientId(publisherId) {
+    if (!isValidAdSensePublisherId(publisherId)) return "";
+    var trimmed = String(publisherId).trim();
+    var match = trimmed.match(/^(?:ca-)?pub-(\d{16})$/i);
+    return match ? "ca-pub-" + match[1] : "";
+  }
+
+  /**
+   * Validate whether a slotId is a real Google AdSense numeric Ad Slot ID (8-12 digits, not all zeros or 1234567890)
+   */
+  function isValidAdSenseSlotId(slotId) {
+    if (!slotId || typeof slotId !== "string") return false;
+    var trimmed = slotId.trim();
+    if (!/^\d{8,12}$/.test(trimmed)) return false;
+    if (/^0+$/.test(trimmed) || trimmed === "1234567890") return false;
+    return true;
+  }
+
+  /**
+   * Detect whether the user is likely in the EEA, UK, or Switzerland (CH)
+   * where explicit GDPR/ePrivacy consent or a Google-certified CMP is required.
+   */
+  function detectRegulatedPrivacyRegion() {
+    try {
+      if (typeof root !== "undefined" && root.TERREX_FORCE_REGULATED_REGION !== undefined) {
+        return Boolean(root.TERREX_FORCE_REGULATED_REGION);
+      }
+      if (typeof Intl !== "undefined" && typeof Intl.DateTimeFormat === "function") {
+        var tz = String(Intl.DateTimeFormat().resolvedOptions().timeZone || "").toLowerCase();
+        for (var i = 0; i < EEA_UK_CH_TIMEZONES.length; i++) {
+          if (tz.indexOf(EEA_UK_CH_TIMEZONES[i]) === 0) {
+            return true;
+          }
+        }
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  /**
+   * Detect whether a Google-certified CMP (IAB TCF v2.2 __tcfapi or Google Funding Choices googlefc) is active
+   */
+  function detectCertifiedCmpPresent() {
+    if (typeof root === "undefined") return false;
+    return Boolean(
+      typeof root.__tcfapi === "function" ||
+        (root.googlefc && typeof root.googlefc.callbackQueue === "object")
+    );
+  }
+
+  /**
+   * Synchronize Google Consent Mode v2 and adsbygoogle privacy flags with current user choice.
+   * Never fabricates consent or bypasses user privacy choices.
+   */
+  function syncGoogleConsentSignals() {
+    if (typeof root === "undefined") return;
+    root.dataLayer = root.dataLayer || [];
+    root.adsbygoogle = root.adsbygoogle || [];
+
+    var mode = engineState.consentMode || "unset";
+    var isRegulated = Boolean(engineState.regulatedRegionDetected);
+    var adStorage = "denied";
+    var adUserData = "denied";
+    var adPersonalization = "denied";
+    var analyticsStorage = "denied";
+
+    if (mode === "personalized") {
+      adStorage = "granted";
+      adUserData = "granted";
+      adPersonalization = "granted";
+      analyticsStorage = "granted";
+      root.adsbygoogle.pauseAdRequests = 0;
+      root.adsbygoogle.requestNonPersonalizedAds = 0;
+    } else if (mode === "non_personalized") {
+      adStorage = "granted";
+      adUserData = "denied";
+      adPersonalization = "denied";
+      analyticsStorage = "granted";
+      root.adsbygoogle.pauseAdRequests = 0;
+      root.adsbygoogle.requestNonPersonalizedAds = 1;
+    } else if (mode === "rejected") {
+      adStorage = "denied";
+      adUserData = "denied";
+      adPersonalization = "denied";
+      analyticsStorage = "denied";
+      root.adsbygoogle.pauseAdRequests = 1;
+      root.adsbygoogle.requestNonPersonalizedAds = 1;
+    } else {
+      // "unset": In EEA/UK/CH without explicit user consent, default to non-personalized / restricted until choice
+      if (isRegulated) {
+        adStorage = "denied";
+        adUserData = "denied";
+        adPersonalization = "denied";
+        analyticsStorage = "denied";
+        root.adsbygoogle.requestNonPersonalizedAds = 1;
+      } else {
+        adStorage = "granted";
+        adUserData = "granted";
+        adPersonalization = "denied";
+        analyticsStorage = "granted";
+        root.adsbygoogle.requestNonPersonalizedAds = 0;
+      }
+      root.adsbygoogle.pauseAdRequests = 0;
+    }
+
+    var consentPayload = {
+      ad_storage: adStorage,
+      ad_user_data: adUserData,
+      ad_personalization: adPersonalization,
+      analytics_storage: analyticsStorage
+    };
+
+    try {
+      root.dataLayer.push(["consent", mode === "unset" ? "default" : "update", consentPayload]);
+    } catch (e) {}
+
+    // Listen to IAB TCF v2.2 CMP updates if a Google-certified CMP is present
+    if (typeof root.__tcfapi === "function" && !root._terraxTcfListenerBound) {
+      root._terraxTcfListenerBound = true;
+      try {
+        root.__tcfapi("addEventListener", 2, function (tcData, success) {
+          if (success && tcData && (tcData.eventStatus === "tcloaded" || tcData.eventStatus === "useractioncomplete")) {
+            engineState.cmpCertifiedDetected = true;
+            var purpose1 = tcData.purpose && tcData.purpose.consents && tcData.purpose.consents[1];
+            if (purpose1 === false) {
+              root.adsbygoogle = root.adsbygoogle || [];
+              root.adsbygoogle.requestNonPersonalizedAds = 1;
+            }
+          }
+        });
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * Load persisted user consent preference from localStorage (never fabricates consent)
+   */
+  function loadConsentPreferences() {
+    engineState.regulatedRegionDetected = detectRegulatedPrivacyRegion();
+    engineState.cmpCertifiedDetected = detectCertifiedCmpPresent();
+    var savedChoice = "unset";
+    try {
+      if (typeof localStorage !== "undefined") {
+        var raw = localStorage.getItem(CONSENT_STORAGE_KEY);
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          if (
+            parsed &&
+            (parsed.mode === "personalized" ||
+              parsed.mode === "non_personalized" ||
+              parsed.mode === "rejected")
+          ) {
+            savedChoice = parsed.mode;
+          }
+        }
+      }
+    } catch (e) {}
+    engineState.consentMode = savedChoice;
+    syncGoogleConsentSignals();
+    syncConsentUiControls();
+    return engineState.consentMode;
+  }
+
+  /**
+   * Save user's explicit consent choice ("personalized" | "non_personalized" | "rejected" | "unset")
+   */
+  function setConsentChoice(choiceMode) {
+    var validModes = ["personalized", "non_personalized", "rejected", "unset"];
+    var normalized = validModes.indexOf(choiceMode) !== -1 ? choiceMode : "non_personalized";
+    engineState.consentMode = normalized;
+    try {
+      if (typeof localStorage !== "undefined") {
+        if (normalized === "unset") {
+          localStorage.removeItem(CONSENT_STORAGE_KEY);
+        } else {
+          localStorage.setItem(
+            CONSENT_STORAGE_KEY,
+            JSON.stringify({
+              mode: normalized,
+              updatedAt: new Date().toISOString()
+            })
+          );
+        }
+      }
+    } catch (e) {}
+    syncGoogleConsentSignals();
+    syncConsentUiControls();
+    if (!engineState.isTesting && normalized !== "rejected") {
+      refreshAllSlots("consent-updated:" + normalized);
+    } else {
+      syncAdCardsVisualState();
+    }
+    return getConsentState();
+  }
+
+  /**
+   * Check whether ad loading is permitted under current privacy & consent settings
+   */
+  function canLoadAdsUnderConsent() {
+    if (engineState.consentMode === "rejected") {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Return structured snapshot of current CMP / Consent state
+   */
+  function getConsentState() {
+    return {
+      mode: engineState.consentMode,
+      canLoadAds: canLoadAdsUnderConsent(),
+      nonPersonalizedOnly:
+        engineState.consentMode === "non_personalized" ||
+        (engineState.consentMode === "unset" && engineState.regulatedRegionDetected),
+      regulatedRegionDetected: Boolean(engineState.regulatedRegionDetected),
+      cmpCertifiedDetected: detectCertifiedCmpPresent() || Boolean(engineState.cmpCertifiedDetected)
+    };
+  }
+
+  /**
+   * Update consent preference buttons & status badge inside #privacy dialog if present
+   */
+  function syncConsentUiControls() {
+    if (typeof document === "undefined") return;
+    var statusBadge = document.getElementById("consent-current-status-badge");
+    var lang = getCurrentLang();
+    var mode = engineState.consentMode;
+
+    if (statusBadge) {
+      var labelAr = "الوضع الافتراضي الآمن (إعلانات متوافقة مع الخصوصية)";
+      var labelEn = "Default Safe Mode (Privacy-Compliant Ads)";
+      if (mode === "personalized") {
+        labelAr = "مفعّل: الإعلانات المخصصة (Personalized Ads)";
+        labelEn = "Active: Personalized Ads";
+      } else if (mode === "non_personalized") {
+        labelAr = "مفعّل: إعلانات غير مخصصة فقط (Non-Personalized Ads - EEA/UK/CH)";
+        labelEn = "Active: Non-Personalized Ads Only (EEA/UK/CH)";
+      } else if (mode === "rejected") {
+        labelAr = "مفعّل: إيقاف طلبات إعلانات الطرف الثالث (Opt-Out)";
+        labelEn = "Active: Third-Party Ad Requests Paused (Opt-Out)";
+      }
+      statusBadge.textContent = lang === "en" ? labelEn : labelAr;
+      statusBadge.setAttribute("data-consent-mode", mode);
+    }
+
+    var btnMap = [
+      { id: "consent-accept-all-btn", mode: "personalized" },
+      { id: "consent-npa-only-btn", mode: "non_personalized" },
+      { id: "consent-reject-ads-btn", mode: "rejected" }
+    ];
+    for (var i = 0; i < btnMap.length; i++) {
+      var btn = document.getElementById(btnMap[i].id);
+      if (btn) {
+        var isSelected = mode === btnMap[i].mode;
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        btn.classList.toggle("active-consent-choice", isSelected);
+      }
+    }
+  }
+
+  /**
+   * Bind click handlers for the privacy & consent preference controls inside #privacy and #settings-dialog
+   */
+  function bindConsentUiControls() {
+    if (typeof document === "undefined") return;
+    var acceptBtn = document.getElementById("consent-accept-all-btn");
+    if (acceptBtn && !acceptBtn._terraxConsentBound) {
+      acceptBtn._terraxConsentBound = true;
+      acceptBtn.addEventListener("click", function () {
+        setConsentChoice("personalized");
+      });
+    }
+    var npaBtn = document.getElementById("consent-npa-only-btn");
+    if (npaBtn && !npaBtn._terraxConsentBound) {
+      npaBtn._terraxConsentBound = true;
+      npaBtn.addEventListener("click", function () {
+        setConsentChoice("non_personalized");
+      });
+    }
+    var rejectBtn = document.getElementById("consent-reject-ads-btn");
+    if (rejectBtn && !rejectBtn._terraxConsentBound) {
+      rejectBtn._terraxConsentBound = true;
+      rejectBtn.addEventListener("click", function () {
+        setConsentChoice("rejected");
+      });
+    }
+    var manageBtn = document.getElementById("open-consent-preferences-btn");
+    if (manageBtn && !manageBtn._terraxConsentBound) {
+      manageBtn._terraxConsentBound = true;
+      manageBtn.addEventListener("click", function () {
+        // If Google Funding Choices CMP is loaded, open its revocation dialog; otherwise open #privacy modal
+        if (
+          typeof root !== "undefined" &&
+          root.googlefc &&
+          typeof root.googlefc.showRevocationMessage === "function"
+        ) {
+          root.googlefc.showRevocationMessage();
+          return;
+        }
+        var settingsModal = document.getElementById("settings-dialog");
+        if (settingsModal && typeof settingsModal.close === "function") {
+          settingsModal.close();
+        }
+        var privacyModal = document.getElementById("privacy");
+        if (privacyModal && typeof privacyModal.showModal === "function") {
+          privacyModal.showModal();
+        }
+      });
+    }
+    syncConsentUiControls();
+  }
+
+  var TerraxConsentManager = {
+    CONSENT_STORAGE_KEY: CONSENT_STORAGE_KEY,
+    loadConsentPreferences: loadConsentPreferences,
+    setConsentChoice: setConsentChoice,
+    getConsentState: getConsentState,
+    canLoadAds: canLoadAdsUnderConsent,
+    detectRegulatedPrivacyRegion: detectRegulatedPrivacyRegion,
+    detectCertifiedCmpPresent: detectCertifiedCmpPresent,
+    syncConsentUiControls: syncConsentUiControls,
+    bindConsentUiControls: bindConsentUiControls
+  };
+
+  /**
+   * Configure Google AdSense publisher ID, Auto Ads, and slot IDs dynamically or from DOM/window config.
+   * Strictly rejects fake/placeholder publisher IDs and slot IDs.
+   */
+  function configureAdSense(customConfig) {
+    var cfg = customConfig || (typeof root !== "undefined" && root.TERREX_ADSENSE_CONFIG) || {};
+    var candidatePubId = cfg.publisherId || cfg.PUBLISHER_ID || "";
+    var ampAutoAdsDetected = false;
+
+    if (!candidatePubId && typeof document !== "undefined") {
+      var metaEl = document.querySelector('meta[name="google-adsense-account"]');
+      if (metaEl) {
+        candidatePubId = metaEl.getAttribute("content") || "";
+      }
+      var ampAutoAdsEl = document.querySelector('amp-auto-ads[type="adsense"]');
+      if (ampAutoAdsEl) {
+        ampAutoAdsDetected = true;
+        if (!candidatePubId) {
+          candidatePubId = ampAutoAdsEl.getAttribute("data-ad-client") || "";
+        }
+      }
+    }
+
+    var validClientId = normalizeAdSenseClientId(candidatePubId);
+    engineState.adsensePublisherId = validClientId;
+    engineState.adsenseAutoAdsEnabled = Boolean(
+      cfg.autoAdsEnabled || cfg.AUTO_ADS_ENABLED || (ampAutoAdsDetected && validClientId)
+    );
+    if (cfg.cmpEnabled !== undefined || cfg.CMP_ENABLED !== undefined) {
+      engineState.adsenseCmpEnabled = Boolean(
+        cfg.cmpEnabled !== undefined ? cfg.cmpEnabled : cfg.CMP_ENABLED
+      );
+    }
+
+    var incomingSlots = cfg.slots || cfg.SLOTS || {};
+    var nextSlots = Object.assign({}, DEFAULT_ADSENSE_SLOTS, engineState.adsenseSlots);
+    for (var key in incomingSlots) {
+      if (Object.prototype.hasOwnProperty.call(incomingSlots, key)) {
+        var rawSlot = String(incomingSlots[key] || "").trim();
+        nextSlots[key] = isValidAdSenseSlotId(rawSlot) ? rawSlot : "";
+      }
+    }
+    engineState.adsenseSlots = nextSlots;
+
+    if (validClientId && typeof document !== "undefined") {
+      ensureGoogleAdSenseVerificationMeta(validClientId);
+      if (engineState.adsenseAutoAdsEnabled && !engineState.isTesting && canLoadAdsUnderConsent()) {
+        ensureGoogleAdSenseScriptLoaded(validClientId);
+      }
+    }
+
+    return {
+      publisherId: engineState.adsensePublisherId,
+      autoAdsEnabled: engineState.adsenseAutoAdsEnabled,
+      cmpEnabled: engineState.adsenseCmpEnabled,
+      slots: Object.assign({}, engineState.adsenseSlots)
+    };
+  }
+
+  /**
+   * Ensure official <meta name="google-adsense-account" content="ca-pub-..."> exists in <head>
+   * ONLY when a real, validated publisher ID is configured.
+   */
+  function ensureGoogleAdSenseVerificationMeta(clientId) {
+    var validClient = normalizeAdSenseClientId(clientId || engineState.adsensePublisherId);
+    if (!validClient || typeof document === "undefined" || !document.head) {
+      return false;
+    }
+    var existingMeta = document.querySelector('meta[name="google-adsense-account"]');
+    if (!existingMeta) {
+      existingMeta = document.createElement("meta");
+      existingMeta.setAttribute("name", "google-adsense-account");
+      document.head.appendChild(existingMeta);
+    }
+    existingMeta.setAttribute("content", validClient);
+    return true;
+  }
+
+  /**
+   * Load the official Google AdSense script asynchronously in <head> once and only once.
+   * Respects Smart Ad Lock (never loads during RUNNING state), offline state, and user consent.
+   */
+  function ensureGoogleAdSenseScriptLoaded(clientId) {
+    var validClient = normalizeAdSenseClientId(clientId || engineState.adsensePublisherId);
+    if (!validClient || typeof document === "undefined") return false;
+    if (engineState.isTesting || isBrowserOffline() || !canLoadAdsUnderConsent()) {
+      return false;
+    }
+
+    ensureGoogleAdSenseVerificationMeta(validClient);
+    syncGoogleConsentSignals();
+
+    var existingScripts = document.querySelectorAll(
+      'script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]'
+    );
+    if (
+      existingScripts.length > 0 ||
+      document.getElementById("terrax-adsense-sdk-runtime")
+    ) {
+      engineState.adsenseScriptLoaded = true;
+      return true;
+    }
+
+    var s = document.createElement("script");
+    s.id = "terrax-adsense-sdk-runtime";
+    s.async = true;
+    s.crossOrigin = "anonymous";
+    s.src =
+      "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" +
+      encodeURIComponent(validClient);
+    s.onload = function () {
+      engineState.adsenseScriptLoaded = true;
+    };
+    s.onerror = function () {
+      engineState.adsenseScriptLoaded = false;
+    };
+    (document.head || document.documentElement).appendChild(s);
+    engineState.adsenseScriptLoaded = true;
+    return true;
+  }
+
+  /**
+   * Mount and initialize an official Google AdSense <ins class="adsbygoogle"> unit inside a card
+   * when both a valid Publisher ID and a valid Slot ID are configured.
+   * Strictly prevents duplicate .push({}) calls on the same <ins> element and handles unfilled inventory gracefully.
+   */
+  function mountOrPushAdSenseUnit(card, slotKey) {
+    if (!card || typeof document === "undefined") return false;
+    if (engineState.isTesting || isBrowserOffline() || !canLoadAdsUnderConsent()) {
+      return false;
+    }
+
+    var clientId = normalizeAdSenseClientId(
+      card.getAttribute("data-adsense-client") || engineState.adsensePublisherId
+    );
+    var slotId = String(
+      card.getAttribute("data-adsense-slot") ||
+        engineState.adsenseSlots[slotKey] ||
+        ""
+    ).trim();
+
+    if (!isValidAdSensePublisherId(clientId) || !isValidAdSenseSlotId(slotId)) {
+      return false;
+    }
+
+    var bodyEl = card.querySelector(".terrax-yan-body") || card;
+    var adsenseMount = bodyEl.querySelector(".terrax-adsense-mount");
+    if (!adsenseMount) {
+      adsenseMount = document.createElement("div");
+      adsenseMount.className = "terrax-adsense-mount";
+      adsenseMount.style.cssText =
+        "width:100%;min-height:90px;display:block;overflow:hidden;";
+      bodyEl.insertBefore(adsenseMount, bodyEl.firstChild);
+    }
+
+    var existingIns = adsenseMount.querySelector("ins.adsbygoogle");
+    if (
+      existingIns &&
+      existingIns.getAttribute("data-ad-client") === clientId &&
+      existingIns.getAttribute("data-ad-slot") === slotId &&
+      (existingIns.getAttribute("data-terrax-pushed") === "true" ||
+        existingIns.getAttribute("data-adsbygoogle-status"))
+    ) {
+      // Prevent duplicate push on an already-initialized AdSense <ins> unit
+      return true;
+    }
+
+    adsenseMount.innerHTML = "";
+    var insEl = document.createElement("ins");
+    insEl.className = "adsbygoogle";
+    insEl.style.display = "block";
+    insEl.setAttribute("data-ad-client", clientId);
+    insEl.setAttribute("data-ad-slot", slotId);
+
+    var requestedFormat = card.getAttribute("data-adsense-format") || "auto";
+    insEl.setAttribute("data-ad-format", requestedFormat);
+    if (requestedFormat !== "autorelaxed") {
+      insEl.setAttribute("data-full-width-responsive", "true");
+    }
+
+    adsenseMount.appendChild(insEl);
+    ensureGoogleAdSenseScriptLoaded(clientId);
+
+    try {
+      if (typeof root !== "undefined") {
+        root.adsbygoogle = root.adsbygoogle || [];
+        insEl.setAttribute("data-terrax-pushed", "true");
+        root.adsbygoogle.push({});
+        card.setAttribute("data-adsense-active", "true");
+        card.setAttribute("data-adsense-client", clientId);
+        card.setAttribute("data-adsense-slot", slotId);
+      }
+    } catch (err) {
+      card.setAttribute("data-adsense-active", "fallback");
+      return false;
+    }
+
+    // Observe data-ad-status ("filled" vs "unfilled") to handle unavailable inventory with Zero-CLS
+    if (typeof MutationObserver === "function" && !insEl._terraxStatusObserved) {
+      insEl._terraxStatusObserved = true;
+      var statusObserver = new MutationObserver(function () {
+        var adStatus = insEl.getAttribute("data-ad-status");
+        if (adStatus === "unfilled") {
+          adsenseMount.style.display = "none";
+          card.setAttribute("data-adsense-status", "unfilled");
+          card.setAttribute("data-ad-status", "unfilled");
+          card.setAttribute("data-ad-filled", "false");
+          card.classList.remove("ad-filled");
+          activateSmartlinkFallback(card, "adsense-unfilled");
+        } else if (adStatus === "filled") {
+          adsenseMount.style.display = "block";
+          card.setAttribute("data-adsense-status", "filled");
+          card.setAttribute("data-ad-status", "filled");
+          card.setAttribute("data-ad-filled", "true");
+          card.classList.add("ad-filled");
+          var fallbackEl = card.querySelector(".terrax-yan-sponsor-fallback, .terrax-native-sponsor-card");
+          if (fallbackEl) fallbackEl.style.display = "none";
+          updateCardStatusIndicator(card, "ready");
+        }
+      });
+      statusObserver.observe(insEl, {
+        attributes: true,
+        attributeFilter: ["data-ad-status", "data-adsbygoogle-status"]
+      });
+    }
+
+    return true;
+  }
 
   /**
    * Ensure window.yaContextCb asynchronous queue exists
@@ -143,13 +748,31 @@
   }
 
   /**
-   * Discover all Yandex Smart Ad containers in the current DOM
+   * Discover all Smart Ad containers in the current DOM
    */
   function getAdCards() {
     if (typeof document === "undefined") return [];
-    return Array.prototype.slice.call(
+    var smartCards = Array.prototype.slice.call(
+      document.querySelectorAll("[data-terrax-smart-ad], [data-terrax-placement], .terrax-adsense-container")
+    );
+    var yanCards = Array.prototype.slice.call(
       document.querySelectorAll("[data-terrax-yan-slot]")
     );
+    var list = [];
+    var seen = [];
+    for (var i = 0; i < smartCards.length; i++) {
+      if (seen.indexOf(smartCards[i]) === -1) {
+        seen.push(smartCards[i]);
+        list.push(smartCards[i]);
+      }
+    }
+    for (var j = 0; j < yanCards.length; j++) {
+      if (seen.indexOf(yanCards[j]) === -1) {
+        seen.push(yanCards[j]);
+        list.push(yanCards[j]);
+      }
+    }
+    return list;
   }
 
   /**
@@ -223,9 +846,12 @@
       }
     }
 
-    // Ensure header has an automatic status indicator for loading/ready feedback
-    var headerEl = card.querySelector(".terrax-yan-header");
+    // Ensure header has an automatic status indicator for loading/ready feedback (kept hidden per clean ad-space design)
+    var headerEl = card.querySelector(".terrax-yan-header, .terrax-smart-ad-header");
     if (headerEl) {
+      headerEl.hidden = true;
+      headerEl.setAttribute("aria-hidden", "true");
+      headerEl.style.display = "none";
       var actionsEl = headerEl.querySelector(".terrax-yan-header-actions");
       if (!actionsEl) {
         actionsEl = document.createElement("div");
@@ -236,34 +862,43 @@
         }
         headerEl.appendChild(actionsEl);
       }
-      var statusEl = actionsEl.querySelector(".terrax-yan-status-indicator");
+      var statusEl = actionsEl.querySelector(".terrax-yan-status-indicator, .terrax-ad-status-pill");
       if (!statusEl) {
         statusEl = document.createElement("span");
         statusEl.className = "terrax-yan-status-indicator";
         statusEl.setAttribute("aria-live", "polite");
+        statusEl.hidden = true;
+        statusEl.style.display = "none";
         actionsEl.insertBefore(statusEl, actionsEl.firstChild);
+      } else {
+        statusEl.textContent = "";
+        statusEl.hidden = true;
+        statusEl.style.display = "none";
       }
     }
 
-    var bodyEl = card.querySelector(".terrax-yan-body");
+    var bodyEl = card.querySelector(".terrax-yan-body, .terrax-smart-ad-body") || card;
     if (!bodyEl) return null;
 
-    var mountEl = bodyEl.querySelector(".terrax-yan-rtb-mount");
-    if (!mountEl) {
+    var mountEl = bodyEl.querySelector(".terrax-yan-rtb-mount, .terrax-adsense-mount");
+    if (!mountEl && card.classList.contains("terrax-yan-card")) {
       mountEl = document.createElement("div");
       mountEl.className = "terrax-yan-rtb-mount";
       bodyEl.insertBefore(mountEl, bodyEl.firstChild);
     }
 
-    var fallbackEl = bodyEl.querySelector(".terrax-yan-sponsor-fallback");
+    var fallbackEl = bodyEl.querySelector(".terrax-yan-sponsor-fallback, .terrax-native-sponsor-card");
     if (!fallbackEl) {
       fallbackEl = document.createElement("a");
       fallbackEl.className = "terrax-yan-sponsor-fallback";
       fallbackEl.href = ADSTERRA_SMARTLINK_URL;
       fallbackEl.rel = "noopener noreferrer sponsored";
       fallbackEl.setAttribute("data-smartlink-fallback", "true");
+      fallbackEl.setAttribute("aria-hidden", "true");
+      fallbackEl.hidden = true;
+      fallbackEl.style.display = "none";
       fallbackEl.innerHTML =
-        '<div class="terrax-yan-fallback-content terrax-yan-sponsor-content">' +
+        '<div class="terrax-yan-fallback-content terrax-yan-sponsor-content" style="display:none;" hidden>' +
         '<div class="terrax-yan-sponsor-headline">' +
         '<span class="terrax-yan-fallback-pill terrax-yan-sponsor-badge"></span>' +
         '<strong class="terrax-yan-fallback-title terrax-yan-sponsor-title"></strong>' +
@@ -275,6 +910,9 @@
       fallbackEl.setAttribute("href", ADSTERRA_SMARTLINK_URL);
       fallbackEl.setAttribute("rel", "noopener noreferrer sponsored");
       fallbackEl.setAttribute("data-smartlink-fallback", "true");
+      fallbackEl.setAttribute("aria-hidden", "true");
+      fallbackEl.hidden = true;
+      fallbackEl.style.display = "none";
       var legacyCta = fallbackEl.querySelector(".terrax-yan-sponsor-cta");
       if (legacyCta && legacyCta.parentNode) {
         legacyCta.parentNode.removeChild(legacyCta);
@@ -292,7 +930,7 @@
    */
   function mountAutomaticEmbeddedAdFrame(card, slotKey) {
     if (!card || typeof document === "undefined") return;
-    if (engineState.isTesting || isBrowserOffline()) return;
+    if (engineState.isTesting || isBrowserOffline() || !canLoadAdsUnderConsent()) return;
 
     var bodyEl = card.querySelector(".terrax-yan-body");
     if (!bodyEl) return;
@@ -338,37 +976,17 @@
   }
 
   /**
-   * Update the card's non-intrusive automatic status badge (loading / ready / isolated / offline)
+   * Update the card's non-intrusive automatic status badge (kept hidden with no visible text)
    */
   function updateCardStatusIndicator(card, statusState) {
     if (!card) return;
     card.setAttribute("data-ad-state", statusState);
-    var statusEl = card.querySelector(".terrax-yan-status-indicator");
-    if (!statusEl) return;
-
-    var lang = getCurrentLang();
-    if (engineState.isTesting) {
-      statusEl.textContent = "";
-      statusEl.hidden = true;
-      return;
-    }
-
-    statusEl.hidden = false;
-    if (statusState === "loading") {
-      statusEl.textContent =
-        lang === "en" ? "Auto-loading ad..." : "جاري التحميل التلقائي...";
-      statusEl.style.cssText =
-        "font-size:0.92rem;font-weight:700;color:#67e8f9;opacity:0.88;";
-    } else if (statusState === "offline") {
-      statusEl.textContent =
-        lang === "en" ? "Ad paused (Offline)" : "الإعلان متوقف مؤقتاً (غير متصل)";
-      statusEl.style.cssText =
-        "font-size:0.92rem;font-weight:700;color:#94a3b8;opacity:0.85;";
-    } else {
-      statusEl.textContent =
-        lang === "en" ? "Auto Ad Active • تفعيل تلقائي" : "عرض تلقائي نشط";
-      statusEl.style.cssText =
-        "font-size:0.92rem;font-weight:700;color:#38bdf8;opacity:0.9;";
+    var statusEls = card.querySelectorAll(".terrax-yan-status-indicator, .terrax-ad-status-pill");
+    for (var i = 0; i < statusEls.length; i++) {
+      statusEls[i].textContent = "";
+      statusEls[i].hidden = true;
+      statusEls[i].setAttribute("aria-hidden", "true");
+      statusEls[i].style.display = "none";
     }
   }
 
@@ -386,16 +1004,29 @@
     if (mountEl) {
       mountEl.style.display = "none";
     }
-    var fallbackEl = card.querySelector(".terrax-yan-sponsor-fallback");
-    if (fallbackEl) {
-      fallbackEl.style.display = "flex";
+    var fallbackEls = card.querySelectorAll(".terrax-yan-sponsor-fallback, .terrax-native-sponsor-card");
+    for (var i = 0; i < fallbackEls.length; i++) {
+      fallbackEls[i].hidden = true;
+      fallbackEls[i].setAttribute("aria-hidden", "true");
+      fallbackEls[i].style.display = "none";
     }
     var status =
       fallbackReason === "awaiting-rtb"
         ? "loading"
         : isBrowserOffline()
           ? "offline"
-          : "ready";
+          : !canLoadAdsUnderConsent()
+            ? "consent-paused"
+            : "ready";
+    if (status === "ready" || status === "loading") {
+      card.setAttribute("data-ad-filled", "true");
+      card.setAttribute("data-ad-status", "filled");
+      card.classList.add("ad-filled");
+    } else {
+      card.setAttribute("data-ad-filled", "false");
+      card.setAttribute("data-ad-status", "unfilled");
+      card.classList.remove("ad-filled");
+    }
     updateCardStatusIndicator(card, status);
   }
 
@@ -405,11 +1036,14 @@
   function activateYandexRtbBanner(card) {
     if (!card) return;
     card.setAttribute("data-yan-mode", "rtb-active");
-    var mountEl = card.querySelector(".terrax-yan-rtb-mount");
+    card.setAttribute("data-ad-filled", "true");
+    card.setAttribute("data-ad-status", "filled");
+    card.classList.add("ad-filled");
+    var mountEl = card.querySelector(".terrax-yan-rtb-mount, .terrax-adsense-mount");
     if (mountEl) {
       mountEl.style.display = "flex";
     }
-    var fallbackEl = card.querySelector(".terrax-yan-sponsor-fallback");
+    var fallbackEl = card.querySelector(".terrax-yan-sponsor-fallback, .terrax-native-sponsor-card");
     if (fallbackEl) {
       fallbackEl.style.display = "none";
     }
@@ -417,84 +1051,89 @@
   }
 
   /**
-   * Update the visual state of all ad cards (header text, isolation badge, slot-specific automatic ad copy)
+   * Update the visual state of all ad cards (hiding all ad-space text labels across pages)
    */
   function syncAdCardsVisualState() {
     var cards = getAdCards();
     var isTesting = Boolean(engineState.isTesting);
-    var lang = getCurrentLang();
 
     bindPageAuxiliaryAdElements();
+    bindConsentUiControls();
 
     for (var i = 0; i < cards.length; i++) {
       var card = cards[i];
       ensureSmartlinkDomInCard(card);
 
-      var slotKey = card.getAttribute("data-terrax-yan-slot") || "speed-main";
-      var slotOffset = SLOT_CREATIVE_OFFSETS[slotKey] || 0;
-      var sponsorItem =
-        SPONSOR_FALLBACK_ITEMS[
-          (engineState.refreshCount + slotOffset) % SPONSOR_FALLBACK_ITEMS.length
-        ];
-
       card.setAttribute("data-testing", isTesting ? "true" : "false");
+      card.setAttribute("data-engine-test-state", engineState.testEngineState || "READY");
       card.classList.toggle("yan-isolation-active", isTesting);
       card.classList.toggle("terrax-yan-isolated", isTesting);
+      card.classList.toggle("smart-ad-locked", isTesting);
 
       // Pause/remove background ad frame during active speed test for 100% network isolation
-      if (isTesting) {
+      if (isTesting || !canLoadAdsUnderConsent()) {
         var activeFrame = card.querySelector("iframe.terrax-auto-ad-frame");
         if (activeFrame && activeFrame.parentNode) {
           activeFrame.parentNode.removeChild(activeFrame);
         }
       }
 
-      var partnerTextEl =
-        card.querySelector(".terrax-yan-partner-label") ||
-        card.querySelector(".terrax-yan-title");
-      if (partnerTextEl) {
-        partnerTextEl.textContent = "برعاية تقنية • Terrax Partner";
+      // Hide all text elements inside the ad slot
+      var textNodesToHide = card.querySelectorAll(
+        ".terrax-smart-ad-header, .terrax-adsense-header, .terrax-yan-header, " +
+        ".terrax-ad-badge, .terrax-ad-status-pill, .terrax-yan-status-indicator, " +
+        ".terrax-yan-partner-label, .terrax-yan-title, .terrax-yan-isolation-badge, " +
+        ".terrax-yan-sponsor-fallback, .terrax-native-sponsor-card, " +
+        ".terrax-yan-fallback-title, .terrax-yan-sponsor-title, .sponsor-title, " +
+        ".terrax-yan-fallback-sub, .terrax-yan-sponsor-desc, .sponsor-desc, " +
+        ".terrax-yan-fallback-pill, .terrax-yan-sponsor-badge"
+      );
+      for (var t = 0; t < textNodesToHide.length; t++) {
+        var node = textNodesToHide[t];
+        node.hidden = true;
+        node.setAttribute("aria-hidden", "true");
+        node.style.display = "none";
+        if (
+          node.classList.contains("terrax-ad-badge") ||
+          node.classList.contains("terrax-ad-status-pill") ||
+          node.classList.contains("terrax-yan-status-indicator") ||
+          node.classList.contains("terrax-yan-partner-label") ||
+          node.classList.contains("terrax-yan-title") ||
+          node.classList.contains("terrax-yan-isolation-badge") ||
+          node.classList.contains("terrax-yan-fallback-title") ||
+          node.classList.contains("terrax-yan-sponsor-title") ||
+          node.classList.contains("sponsor-title") ||
+          node.classList.contains("terrax-yan-fallback-sub") ||
+          node.classList.contains("terrax-yan-sponsor-desc") ||
+          node.classList.contains("sponsor-desc") ||
+          node.classList.contains("terrax-yan-fallback-pill") ||
+          node.classList.contains("terrax-yan-sponsor-badge")
+        ) {
+          node.textContent = "";
+        }
       }
 
-      var badgeEl = card.querySelector(".terrax-yan-isolation-badge");
-      if (badgeEl) {
-        badgeEl.textContent = "🛡️ وضع العزل الشبكي نشط لضمان دقة الفحص";
-        badgeEl.hidden = !isTesting;
-        badgeEl.setAttribute("aria-hidden", isTesting ? "false" : "true");
-      }
-
-      var fallbackEl = card.querySelector(".terrax-yan-sponsor-fallback");
+      var fallbackEl = card.querySelector(".terrax-yan-sponsor-fallback, .terrax-native-sponsor-card");
       if (fallbackEl) {
-        fallbackEl.href = ADSTERRA_SMARTLINK_URL;
+        if (fallbackEl.tagName === "A") {
+          fallbackEl.href = ADSTERRA_SMARTLINK_URL;
+        }
         bindZeroPopupGuard(fallbackEl);
       }
 
-      var fallbackHeadline =
-        card.querySelector(".terrax-yan-fallback-title") ||
-        card.querySelector(".terrax-yan-sponsor-title");
-      var fallbackSub =
-        card.querySelector(".terrax-yan-fallback-sub") ||
-        card.querySelector(".terrax-yan-sponsor-desc");
-      var fallbackBadge =
-        card.querySelector(".terrax-yan-fallback-pill") ||
-        card.querySelector(".terrax-yan-sponsor-badge");
-
-      if (fallbackHeadline) {
-        fallbackHeadline.textContent =
-          lang === "en" ? sponsorItem.titleEn : sponsorItem.titleAr;
-      }
-      if (fallbackSub) {
-        fallbackSub.textContent =
-          lang === "en" ? sponsorItem.subEn : sponsorItem.subAr;
-      }
-      if (fallbackBadge) {
-        fallbackBadge.textContent =
-          lang === "en" ? sponsorItem.badgeEn : sponsorItem.badgeAr;
+      if (!isTesting && canLoadAdsUnderConsent() && !isBrowserOffline()) {
+        card.setAttribute("data-ad-filled", "true");
+        card.setAttribute("data-ad-status", "filled");
+        card.classList.add("ad-filled");
       }
 
       updateCardStatusIndicator(
         card,
-        isBrowserOffline() ? "offline" : card.getAttribute("data-ad-state") || "ready"
+        isBrowserOffline()
+          ? "offline"
+          : !canLoadAdsUnderConsent()
+            ? "consent-paused"
+            : card.getAttribute("data-ad-state") || "ready"
       );
     }
   }
@@ -514,7 +1153,7 @@
    * (Also activates any inert <template id="terrax-yandex-sdk-tpl"> if present)
    */
   function ensureExternalYandexScriptLoaded() {
-    if (typeof document === "undefined" || isBrowserOffline()) return;
+    if (typeof document === "undefined" || isBrowserOffline() || !canLoadAdsUnderConsent()) return;
 
     var tpl = document.getElementById("terrax-yandex-sdk-tpl");
     if (tpl && tpl.parentNode) {
@@ -539,24 +1178,39 @@
   }
 
   /**
-   * Render or refresh a single Hybrid Yandex RTB + Automatic Embedded Ad card
-   * ONLY when Network Isolation Lock is OFF (engineState.isTesting === false)
+   * Render or refresh a single Hybrid Google AdSense / Yandex RTB / Automatic Embedded Ad card
+   * ONLY when Smart Ad Lock is NOT in RUNNING state (engineState.isTesting === false)
    */
   function renderCardUnit(card, reason) {
     if (!card || engineState.isTesting) {
+      if (engineState.isTesting) {
+        engineState.pendingAdLoadAfterTest = true;
+      }
       return false;
     }
 
     ensureYandexQueue();
     ensureSmartlinkDomInCard(card);
 
-    var slotKey = card.getAttribute("data-terrax-yan-slot") || "speed-main";
+    var slotKey =
+      card.getAttribute("data-terrax-smart-ad") ||
+      card.getAttribute("data-terrax-yan-slot") ||
+      "speed-main";
     var blockId =
       card.getAttribute("data-yan-block-id") ||
       card.getAttribute("data-block-id") ||
       engineState.blockIds[slotKey] ||
       DEFAULT_BLOCK_IDS[slotKey] ||
       DEFAULT_BLOCK_IDS["speed-main"];
+
+    // Policy Compliance: Do not auto-refresh a filled Google AdSense unit on the 30-second timer
+    if (
+      reason === "auto-rotation" &&
+      card.getAttribute("data-adsense-active") === "true" &&
+      card.getAttribute("data-adsense-status") === "filled"
+    ) {
+      return true;
+    }
 
     // Deduplicate rapid identical initialization calls on the same slot
     var nowTs = Date.now();
@@ -570,7 +1224,9 @@
       return true;
     }
 
-    var mountEl = card.querySelector(".terrax-yan-rtb-mount");
+    var mountEl = card.querySelector(
+      ".terrax-yan-rtb-mount, .terrax-smart-ad-body, .terrax-adsense-mount"
+    ) || card;
     if (!mountEl) return false;
 
     // Clean up any existing timers on this card before starting a new cycle
@@ -616,9 +1272,17 @@
       return true;
     }
 
+    if (!canLoadAdsUnderConsent()) {
+      activateSmartlinkFallback(card, "consent-opt-out");
+      return true;
+    }
+
+    // 1. Official Google AdSense Unit Mount (if valid publisherId & slotId are configured)
+    mountOrPushAdSenseUnit(card, slotKey);
+
     var isSupportedBlock = isValidConfiguredBlockId(blockId);
 
-    // Mount the automatic inline ad loader frame for the project's ad source
+    // 2. Mount the automatic inline ad loader frame for the project's ad source
     mountAutomaticEmbeddedAdFrame(card, slotKey);
 
     if (!isSupportedBlock) {
@@ -691,12 +1355,64 @@
   }
 
   /**
+   * Smart Ad Lock — Integrate advertising system with the real speed-test engine states:
+   * - READY: Advertising may load in approved placements.
+   * - RUNNING: Suppress new ad-loading operations that could interfere with the active test.
+   * - FINISHED: Allow approved advertising placements.
+   * - ERROR: Preserve the error information and application functionality.
+   */
+  function setEngineTestState(stateName, errorDetails) {
+    var normalized = String(stateName || "READY").toUpperCase();
+    if (
+      normalized !== "READY" &&
+      normalized !== "RUNNING" &&
+      normalized !== "FINISHED" &&
+      normalized !== "ERROR"
+    ) {
+      normalized = "READY";
+    }
+
+    var wasTesting = Boolean(engineState.isTesting);
+    engineState.testEngineState = normalized;
+    engineState.isTesting = normalized === "RUNNING";
+
+    if (normalized === "ERROR") {
+      engineState.lastTestError = errorDetails || {
+        message: "Test execution interrupted",
+        timestamp: Date.now()
+      };
+    } else if (normalized === "RUNNING") {
+      engineState.lastTestError = null;
+    }
+
+    syncAdCardsVisualState();
+
+    // If transitioning out of RUNNING to READY or FINISHED and a load was queued, flush safely
+    if (
+      wasTesting &&
+      !engineState.isTesting &&
+      (normalized === "READY" || normalized === "FINISHED") &&
+      engineState.pendingAdLoadAfterTest
+    ) {
+      engineState.pendingAdLoadAfterTest = false;
+      refreshAllSlots("smart-lock-released:" + normalized.toLowerCase());
+    }
+
+    return {
+      testEngineState: engineState.testEngineState,
+      isTesting: engineState.isTesting,
+      lastTestError: engineState.lastTestError
+    };
+  }
+
+  /**
    * Set Network Isolation Lock state.
    * When isTesting === true, strictly blocks all network ad loads/refreshes.
    */
   function setTestingState(isTesting) {
     var nextState = Boolean(isTesting);
     engineState.isTesting = nextState;
+    engineState.testEngineState = nextState ? "RUNNING" : "READY";
     syncAdCardsVisualState();
     return engineState.isTesting;
   }
@@ -707,7 +1423,8 @@
    */
   function refreshAllSlots(reason) {
     if (engineState.isTesting) {
-      // Strictly blocked by Network Isolation Lock during active speed/gaming tests
+      // Strictly blocked by Smart Ad Lock during active speed/gaming tests
+      engineState.pendingAdLoadAfterTest = true;
       syncAdCardsVisualState();
       return false;
     }
@@ -730,7 +1447,18 @@
    */
   function onTestComplete(sourcePage) {
     engineState.isTesting = false;
+    engineState.testEngineState = "FINISHED";
+    engineState.pendingAdLoadAfterTest = false;
     return refreshAllSlots("test-complete:" + String(sourcePage || "main"));
+  }
+
+  /**
+   * Called when a Speed Test, Gaming Test, or Stability Test encounters a connection/server error.
+   * Preserves error information and application functionality without fabricating measurements.
+   */
+  function onTestError(errorInfo) {
+    setEngineTestState("ERROR", errorInfo || { message: "Connection error", timestamp: Date.now() });
+    return engineState.lastTestError;
   }
 
   /**
@@ -800,7 +1528,7 @@
   }
 
   /**
-   * Observe <dialog> elements (such as #usage-dialog and #settings-dialog) so ads inside modals
+   * Observe <dialog> elements (such as #usage-dialog, #settings-dialog, #privacy) so ads and consent controls inside modals
    * automatically initialize and render as soon as the dialog opens.
    */
   function setupDialogAutoAdObserver() {
@@ -812,6 +1540,7 @@
       return;
     }
     dialogObserver = new MutationObserver(function (mutations) {
+      bindConsentUiControls();
       if (engineState.isTesting) return;
       for (var i = 0; i < mutations.length; i++) {
         var m = mutations[i];
@@ -821,7 +1550,7 @@
           m.target &&
           m.target.hasAttribute("open")
         ) {
-          var dialogSlots = m.target.querySelectorAll("[data-terrax-yan-slot]");
+          var dialogSlots = m.target.querySelectorAll("[data-terrax-smart-ad], [data-terrax-yan-slot]");
           for (var j = 0; j < dialogSlots.length; j++) {
             renderCardUnit(dialogSlots[j], "dialog-open");
           }
@@ -896,9 +1625,12 @@
    */
   function init() {
     engineState.initialized = true;
+    loadConsentPreferences();
+    configureAdSense();
     ensureYandexQueue();
     bindLifecycleEvents();
     setupDialogAutoAdObserver();
+    bindConsentUiControls();
     syncAdCardsVisualState();
     if (!engineState.isTesting) {
       refreshAllSlots("initial-load");
@@ -919,6 +1651,20 @@
     YANDEX_FALLBACK_TIMEOUT_MS: YANDEX_FALLBACK_TIMEOUT_MS,
     AUTO_AD_ROTATION_INTERVAL_MS: AUTO_AD_ROTATION_INTERVAL_MS,
     DEFAULT_BLOCK_IDS: DEFAULT_BLOCK_IDS,
+    DEFAULT_ADSENSE_SLOTS: DEFAULT_ADSENSE_SLOTS,
+    CONSENT_STORAGE_KEY: CONSENT_STORAGE_KEY,
+    TerraxConsentManager: TerraxConsentManager,
+    isValidAdSensePublisherId: isValidAdSensePublisherId,
+    normalizeAdSenseClientId: normalizeAdSenseClientId,
+    isValidAdSenseSlotId: isValidAdSenseSlotId,
+    configureAdSense: configureAdSense,
+    ensureGoogleAdSenseVerificationMeta: ensureGoogleAdSenseVerificationMeta,
+    ensureGoogleAdSenseScriptLoaded: ensureGoogleAdSenseScriptLoaded,
+    mountOrPushAdSenseUnit: mountOrPushAdSenseUnit,
+    setEngineTestState: setEngineTestState,
+    onTestError: onTestError,
+    setConsentChoice: setConsentChoice,
+    getConsentState: getConsentState,
     init: init,
     setTestingState: setTestingState,
     refreshAllSlots: refreshAllSlots,
@@ -929,14 +1675,36 @@
     onTabChange: onTabChange,
     resetStabilityMilestones: resetStabilityMilestones,
     syncAdCardsVisualState: syncAdCardsVisualState,
+    getDiagnostics: function () {
+      var isPubValid = isValidAdSensePublisherId(engineState.adsensePublisherId);
+      var slots = engineState.adsenseSlots || {};
+      var validSlotsCount = 0;
+      for (var s in slots) {
+        if (isValidAdSenseSlotId(slots[s])) validSlotsCount++;
+      }
+      return {
+        timestamp: new Date().toISOString(),
+        overallReadiness: isPubValid && validSlotsCount > 0 ? "READY" : "PENDING",
+        publisherStatus: isPubValid ? "READY" : "PENDING",
+        publisherId: isPubValid ? engineState.adsensePublisherId : "UNCONFIGURED (PENDING)",
+        autoAdsEnabled: engineState.adsenseAutoAdsEnabled,
+        smartAdLockState: engineState.testEngineState || "READY",
+        isTesting: engineState.isTesting,
+        consentMode: engineState.consentMode,
+        configuredSlotsCount: validSlotsCount
+      };
+    },
     getState: function () {
-      return Object.assign({}, engineState);
+      return Object.assign({}, engineState, {
+        adsenseSlots: Object.assign({}, engineState.adsenseSlots)
+      });
     }
   };
 
   if (typeof root !== "undefined") {
     root.TerraxSmartAdEngine = api;
     root.TerraxAdSlots = api;
+    root.TerraxConsentManager = TerraxConsentManager;
   }
   if (typeof module === "object" && module.exports) {
     module.exports = api;
