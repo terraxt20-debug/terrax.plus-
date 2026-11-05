@@ -12,20 +12,33 @@
 
 .terrax-smart-ad-slot,
 .terrax-smart-banner {
-  display: none !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 72.8rem !important;
+  min-width: min(250px, 100%) !important;
   height: 0 !important;
   min-height: 0 !important;
   max-height: 0 !important;
-  margin: 0 !important;
+  margin: 0 auto !important;
   padding: 0 !important;
   overflow: hidden !important;
   opacity: 0 !important;
   border: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
+  box-sizing: border-box !important;
   transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
               max-height 0.4s ease;
+}
+
+.terrax-smart-ad-body,
+.terrax-adsense-mount,
+ins.adsbygoogle {
+  display: block;
+  width: 100%;
+  min-width: min(250px, 100%);
+  box-sizing: border-box;
 }
 
 /* Appears ONLY when ad is genuinely filled */
@@ -54,15 +67,49 @@
   box-sizing: border-box !important;
 }
 
-/* Explicitly collapse if AdSense marks it unfilled */
+/* Explicitly collapse height to 0 if AdSense marks it unfilled while preserving width for layout calculation */
+ins.adsbygoogle:empty {
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+}
+
 ins.adsbygoogle[data-ad-status="unfilled"],
-.terrax-smart-ad-slot[data-ad-status="unfilled"],
-.terrax-smart-banner[data-ad-status="unfilled"] {
+.terrax-smart-ad-slot:has(ins.adsbygoogle[data-ad-status="unfilled"]),
+.terrax-smart-banner:has(ins.adsbygoogle[data-ad-status="unfilled"]) {
   display: none !important;
   height: 0 !important;
   min-height: 0 !important;
+  max-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
+  border: none !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.terrax-smart-ad-slot[data-ad-status="unfilled"]:not([data-ad-filled="true"]),
+.terrax-smart-banner[data-ad-status="unfilled"]:not([data-ad-filled="true"]),
+.terrax-smart-ad-slot[data-ad-filled="false"],
+.terrax-smart-banner[data-ad-filled="false"] {
+  display: block !important;
+  width: 100% !important;
+  min-width: min(250px, 100%) !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* Smart Ad Lock during testing */
@@ -95,6 +142,48 @@ ins.adsbygoogle[data-ad-status="unfilled"],
   padding: 0 !important;
   overflow: hidden !important;
   opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.terrax-ad-disclosure-label {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: rgba(203, 213, 225, 0.68);
+  text-align: center;
+  user-select: none;
+}
+
+.terrax-smart-ad-slot[data-ad-filled="true"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])) .terrax-ad-disclosure-label,
+.terrax-smart-ad-slot[data-ad-status="filled"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])) .terrax-ad-disclosure-label,
+.terrax-smart-banner[data-ad-filled="true"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])) .terrax-ad-disclosure-label,
+.terrax-smart-banner[data-ad-status="filled"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])) .terrax-ad-disclosure-label,
+.terrax-smart-ad-slot:has(ins.adsbygoogle[data-ad-status="filled"]) .terrax-ad-disclosure-label,
+.terrax-smart-banner:has(ins.adsbygoogle[data-ad-status="filled"]) .terrax-ad-disclosure-label {
+  display: block !important;
+  height: auto !important;
+  max-height: 2rem !important;
+  margin: 0.35rem auto 0 !important;
+  padding: 0 !important;
+  font-size: 0.72rem !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.04em !important;
+  color: rgba(203, 213, 225, 0.68) !important;
+  text-align: center !important;
+  opacity: 0.85 !important;
+  visibility: visible !important;
   pointer-events: none !important;
 }
 

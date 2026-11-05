@@ -2,11 +2,13 @@
 
 .server-selector {
   position: relative;
+  z-index: 45;
   width: 100%;
   min-width: 0;
   max-width: 100%;
   margin: 0;
   display: none;
+  pointer-events: auto;
 }
 
 .server-selector.active,
@@ -18,13 +20,18 @@
 
 .server-selector > .chosen {
   position: relative;
+  z-index: 46;
   overflow: hidden;
   min-width: 0;
   max-width: 100%;
-  min-height: 5.2rem;
-  padding: 0.7rem clamp(1rem, 1.6vw, 1.6rem) 0.7rem 4.2rem;
-  border: 1px solid rgba(56, 189, 248, 0.46);
-  border-radius: 1.5rem;
+  min-height: 5.6rem;
+  height: 100%;
+  box-sizing: border-box;
+  padding-block: 0.75rem;
+  padding-inline-start: clamp(1.1rem, 1.8vw, 1.8rem);
+  padding-inline-end: 4.4rem;
+  border: 1px solid rgba(56, 189, 248, 0.48);
+  border-radius: 1.6rem;
   background:
     repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.035) 0px, rgba(56, 189, 248, 0.035) 1px, transparent 1px, transparent 32px),
     linear-gradient(
@@ -33,9 +40,10 @@
       rgba(15, 37, 76, 0.42) 100%
     );
   box-shadow:
-    0 8px 22px rgba(8, 22, 48, 0.28),
+    0 10px 26px rgba(8, 22, 48, 0.3),
     inset 0 1px 0 rgba(224, 242, 254, 0.32);
   cursor: pointer;
+  pointer-events: auto;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   display: flex;
@@ -70,7 +78,7 @@
 
 .server-selector > .chosen > div.chevron {
   position: absolute;
-  left: 1.8rem;
+  inset-inline-end: 1.8rem;
   top: 50%;
   transform: translateY(-50%);
   width: 2.6rem;
@@ -78,6 +86,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
 }
 
 .server-selector > .chosen > div.chevron img {
@@ -88,18 +97,22 @@
 
 .server-selector > .chosen > p {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--dl-neon-bright);
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .server-selector > .chosen > h2 {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: clamp(1.42rem, 1.7vw, 1.72rem);
   font-weight: 800;
   color: var(--primary-text-color);
-  text-align: right;
+  text-align: start;
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
@@ -109,12 +122,13 @@
 .server-selector > .chosen > h2 span {
   font-weight: 500;
   color: #94a3b8;
+  white-space: nowrap;
 }
 
 /* Single server state */
 .server-selector.single-server > .chosen {
   cursor: default;
-  padding-left: 2rem;
+  padding-inline-end: 2rem;
 }
 
 .server-selector.single-server > .chosen > div.chevron {
@@ -136,7 +150,7 @@
   left: 0;
   max-height: 26rem;
   overflow-y: auto;
-  z-index: 50;
+  z-index: 120;
   border: 1.5px solid rgba(56, 189, 248, 0.62);
   border-radius: 1.6rem;
   background:
@@ -177,14 +191,14 @@
   font-weight: 700;
   color: #f1f5f9;
   text-decoration: none;
-  text-align: right;
+  text-align: start;
   border-bottom: 1px solid rgba(56, 189, 248, 0.12);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   transition:
     background-color var(--motion-fast),
     color var(--motion-fast),
-    padding-right var(--motion-fast);
+    padding-inline-start var(--motion-fast);
 }
 
 .server-selector > ul.servers > li a:active {

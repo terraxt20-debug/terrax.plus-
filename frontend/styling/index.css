@@ -984,6 +984,18 @@ footer {
   filter: none;
 }
 
+.terrax-cyber-shell > footer,
+footer p.source {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /* ==========================================================================
    Smart State-Driven Yandex RTB & Technical Sponsor Glassmorphic Card
    Zero-CLS, Network-Isolation Aware, Native 4K Glassmorphic Integration
@@ -1350,7 +1362,11 @@ footer {
   background: rgba(56, 189, 248, 0.16);
   border-color: rgba(56, 189, 248, 0.45);
   color: #ffffff;
-  transform: translateX(dir-adjusted(-3px));
+  transform: translate3d(-3px, 0, 0);
+}
+
+[dir="ltr"] .scroll-quick-link:hover {
+  transform: translate3d(3px, 0, 0);
 }
 
 .scroll-quick-link.active {
@@ -1388,10 +1404,11 @@ footer {
   overflow: hidden;
 }
 
-body.terrax-page-leaving {
-  opacity: 0;
-  transform: scale(0.992) translate3d(0, 4px, 0);
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
+/* 2K QHD & 4K UHD Ultra-High-Resolution Proportional Scaling */
+@media screen and (min-width: 2200px) {
+  html {
+    font-size: clamp(68%, 0.48vw, 95%);
+  }
 }
+
 

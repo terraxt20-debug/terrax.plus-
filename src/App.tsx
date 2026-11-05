@@ -1048,11 +1048,32 @@ export default function App() {
     setUiState(READY);
   }, []);
 
+  const startRunTokenRef = useRef<number>(0);
+  const warmupAbortRef = useRef<AbortController | null>(null);
+  const warmupTimeoutRef = useRef<number | null>(null);
+
+  const cancelPendingWarmup = useCallback(() => {
+    if (warmupTimeoutRef.current !== null) {
+      window.clearTimeout(warmupTimeoutRef.current);
+      warmupTimeoutRef.current = null;
+    }
+    if (warmupAbortRef.current) {
+      try {
+        warmupAbortRef.current.abort();
+      } catch {
+        // ignore abort error
+      }
+      warmupAbortRef.current = null;
+    }
+  }, []);
+
   const handleStartOrAbort = useCallback(() => {
     const st = speedtestRef.current;
     if (!st) return;
 
     if (uiState === RUNNING || st.getState() === 3) {
+      startRunTokenRef.current += 1;
+      cancelPendingWarmup();
       if (statCountUpCancelRef.current) {
         statCountUpCancelRef.current();
         statCountUpCancelRef.current = null;
@@ -1060,7 +1081,11 @@ export default function App() {
       statCardsLoopRef.current?.reset('--', 'Mbps');
       setStatCountUp(null);
       try {
-        st.abort();
+        if (st.getState() === 3) {
+          st.abort();
+        } else {
+          setUiState(READY);
+        }
       } catch {
         setUiState(READY);
       }
@@ -1068,6 +1093,9 @@ export default function App() {
     }
 
     if (uiState === READY || uiState === FINISHED) {
+      startRunTokenRef.current += 1;
+      const activeRunToken = startRunTokenRef.current;
+      cancelPendingWarmup();
       if (statCountUpCancelRef.current) {
         statCountUpCancelRef.current();
         statCountUpCancelRef.current = null;
@@ -1097,11 +1125,16 @@ export default function App() {
           : null;
         if (pingUrl) {
           const t0 = performance.now();
-          fetch(pingUrl, { cache: 'no-store' })
+          const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+          warmupAbortRef.current = ctrl;
+          fetch(pingUrl, { cache: 'no-store', signal: ctrl?.signal })
             .then(() => {
+              if (startRunTokenRef.current !== activeRunToken || uiStateRef.current !== RUNNING) {
+                return;
+              }
               const latency = performance.now() - t0;
               // Reasonable threshold: <= 250ms; keep minimum warm RTT
-              if (latency > 0 && latency <= 250) {
+              if (latency > 0 && latency <= 250 && st.getState() !== 3) {
                 yemenCandidate.pingT =
                   typeof yemenCandidate.pingT === 'number' && yemenCandidate.pingT > 0
                     ? Math.min(yemenCandidate.pingT, latency)
@@ -1112,8 +1145,19 @@ export default function App() {
             })
             .catch(() => {})
             .finally(() => {
-              window.setTimeout(() => {
-                if (uiStateRef.current === RUNNING) {
+              if (warmupAbortRef.current === ctrl) {
+                warmupAbortRef.current = null;
+              }
+              if (startRunTokenRef.current !== activeRunToken || uiStateRef.current !== RUNNING) {
+                return;
+              }
+              warmupTimeoutRef.current = window.setTimeout(() => {
+                warmupTimeoutRef.current = null;
+                if (
+                  startRunTokenRef.current === activeRunToken &&
+                  uiStateRef.current === RUNNING &&
+                  st.getState() !== 3
+                ) {
                   st.start();
                 }
               }, 20);
@@ -1122,9 +1166,11 @@ export default function App() {
         }
       }
 
-      st.start();
+      if (startRunTokenRef.current === activeRunToken && st.getState() !== 3) {
+        st.start();
+      }
     }
-  }, [uiState, servers]);
+  }, [uiState, servers, cancelPendingWarmup]);
 
   const handleTabSwitch = useCallback(
     (tab: 'speed' | 'usage' | 'stability' | 'gaming' | 'settings') => {
@@ -1141,19 +1187,27 @@ export default function App() {
       } else {
         setUsageOpen(false);
       }
-      if (tab === 'gaming') {
+      if (tab === 'gaming' || tab === 'stability') {
         isNavigatingRef.current = true;
-        window.location.assign('gaming.html');
-        return;
-      }
-      if (tab === 'stability') {
-        isNavigatingRef.current = true;
-        window.location.assign('stability.html');
+        startRunTokenRef.current += 1;
+        cancelPendingWarmup();
+        if (statCountUpCancelRef.current) {
+          statCountUpCancelRef.current();
+          statCountUpCancelRef.current = null;
+        }
+        try {
+          if (speedtestRef.current?.getState() === 3) {
+            speedtestRef.current.abort();
+          }
+        } catch {
+          // ignore
+        }
+        window.location.assign(tab === 'gaming' ? 'gaming.html' : 'stability.html');
         return;
       }
       refreshYandexAdUnits(`tab-switch:${tab}`);
     },
-    [activeTab, refreshYandexAdUnits]
+    [activeTab, refreshYandexAdUnits, cancelPendingWarmup]
   );
 
   const telemetry = computeRealTimeGaugeTelemetry(
@@ -1561,38 +1615,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Smart Auto-Collapsing High-Yield Ad Slot (Post-Test Results) */}
-        <div
-          className="terrax-smart-ad-slot terrax-smart-banner"
-          id="terrax-smart-ad-speed-results"
-          data-terrax-smart-ad="speed-results"
-          data-ad-status="unfilled"
-          data-ad-filled={uiState === FINISHED ? 'true' : 'false'}
-          role="complementary"
-        >
-          <div className="terrax-smart-ad-header" hidden aria-hidden="true" style={{ display: 'none' }}>
-            <span className="terrax-ad-badge" />
-            <span className="terrax-ad-status-pill" />
-          </div>
-          <div className="terrax-smart-ad-body">
-            <ins
-              className="adsbygoogle"
-              style={{ display: 'block' }}
-              data-ad-client="ca-pub-1225026489802055"
-              data-ad-slot=""
-              data-ad-format="auto"
-              data-full-width-responsive="true"
-            />
-            <div className="terrax-native-sponsor-card" hidden aria-hidden="true" style={{ display: 'none' }}>
-              <div className="sponsor-brand-row">
-                <span className="sponsor-icon-glow" />
-                <strong className="sponsor-title" />
-              </div>
-              <p className="sponsor-desc" />
-            </div>
-          </div>
-        </div>
-
         {/* Server Selector & Connection Row */}
         <div className="connection-server-row" data-layer="controls-surface">
           <div
@@ -1636,30 +1658,6 @@ export default function App() {
                 </li>
               ))}
             </ul>
-            {/* Smart Auto-Collapsing High-Yield Ad Slot (Servers Placement) */}
-            <div
-              className="terrax-smart-ad-slot terrax-smart-banner terrax-adsense-container"
-              id="terrax-smart-ad-servers-main"
-              data-terrax-smart-ad="servers-main"
-              data-terrax-placement="servers"
-              data-ad-status="unfilled"
-              data-ad-filled="false"
-            >
-              <div className="terrax-smart-ad-header" hidden aria-hidden="true" style={{ display: 'none' }}>
-                <span className="terrax-ad-badge" />
-                <span className="terrax-ad-status-pill" />
-              </div>
-              <div className="terrax-smart-ad-body">
-                <ins
-                  className="adsbygoogle"
-                  style={{ display: 'block' }}
-                  data-ad-client="ca-pub-1225026489802055"
-                  data-ad-slot=""
-                  data-ad-format="auto"
-                  data-full-width-responsive="true"
-                />
-              </div>
-            </div>
           </div>
 
           <div
@@ -1706,37 +1704,32 @@ export default function App() {
           </div>
         </div>
 
-        {/* Smart Auto-Collapsing High-Yield Ad Slot (Main Speed) */}
+        {/* Zero-CLS Google AdSense Container (Auto-Collapses when unfilled) */}
         <div
-          className="terrax-smart-ad-slot terrax-smart-banner"
+          className="terrax-adsense-container terrax-smart-ad-slot terrax-smart-banner"
           id="terrax-smart-ad-speed-main"
           data-terrax-smart-ad="speed-main"
           data-ad-status="unfilled"
           data-ad-filled="false"
         >
-          <div className="terrax-smart-ad-header" hidden aria-hidden="true" style={{ display: 'none' }}>
-            <span className="terrax-ad-badge" />
-            <span className="terrax-ad-status-pill" />
-          </div>
-          <div className="terrax-smart-ad-body">
+          <div className="terrax-smart-ad-body terrax-adsense-mount">
             <ins
               className="adsbygoogle"
               style={{ display: 'block' }}
               data-ad-client="ca-pub-1225026489802055"
-              data-ad-slot=""
+              data-ad-slot="7159014601"
               data-ad-format="auto"
               data-full-width-responsive="true"
             />
-            <div className="terrax-native-sponsor-card" hidden aria-hidden="true" style={{ display: 'none' }}>
-              <div className="sponsor-brand-row">
-                <span className="sponsor-icon-glow" />
-                <strong className="sponsor-title" />
-              </div>
-              <p className="sponsor-desc" />
-            </div>
           </div>
+          <span
+            className="terrax-ad-disclosure-label"
+            data-label-ar="اعلان"
+            data-label-en="Sponsored"
+          >
+            {isEnglish ? 'Sponsored' : 'اعلان • Sponsored'}
+          </span>
         </div>
-
 
         {/* Primary Action Button */}
         <div className="cta-button-container" data-layer="primary-controls">
@@ -2055,37 +2048,6 @@ export default function App() {
                 )}
               </tbody>
             </table>
-          </div>
-
-          {/* Smart Auto-Collapsing Booster Slot (Usage Dialog) */}
-          <div
-            className="terrax-smart-ad-slot terrax-smart-banner usage-smart-ad-slot"
-            id="terrax-smart-ad-usage-main"
-            data-terrax-smart-ad="usage-main"
-            data-ad-status="unfilled"
-            data-ad-filled="false"
-          >
-            <div className="terrax-smart-ad-header" hidden aria-hidden="true" style={{ display: 'none' }}>
-              <span className="terrax-ad-badge" />
-              <span className="terrax-ad-status-pill" />
-            </div>
-            <div className="terrax-smart-ad-body">
-              <ins
-                className="adsbygoogle"
-                style={{ display: 'block' }}
-                data-ad-client="ca-pub-1225026489802055"
-                data-ad-slot=""
-                data-ad-format="auto"
-                data-full-width-responsive="true"
-              />
-              <div className="terrax-native-sponsor-card" hidden aria-hidden="true" style={{ display: 'none' }}>
-                <div className="sponsor-brand-row">
-                  <span className="sponsor-icon-glow" />
-                  <strong className="sponsor-title" />
-                </div>
-                <p className="sponsor-desc" />
-              </div>
-            </div>
           </div>
 
           <div className="modal-actions-row">

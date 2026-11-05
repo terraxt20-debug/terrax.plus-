@@ -329,40 +329,58 @@ test('Smart Auto-Collapsing Ad Spaces: verified across all pages (speed-main, sp
   const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
   const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
 
-  // 1. Zero Blank Space Guarantee in CSS: Completely collapsed when unfilled or not loaded
-  assert.ok(smartAdsCss.includes('display: none !important;'));
-  assert.ok(smartAdsCss.includes('height: 0 !important;'));
-  assert.ok(smartAdsCss.includes('.terrax-smart-ad-slot[data-ad-filled="true"]'));
-  assert.ok(smartAdsCss.includes('.terrax-smart-banner[data-ad-filled="true"]'));
-  assert.ok(smartAdsCss.includes('.terrax-smart-ad-slot.smart-ad-locked'));
+  const adsenseStylesCss = fs.readFileSync(new URL('../ads/adsense.styles.css', import.meta.url), 'utf8');
+  const frontendAdsenseStylesCss = fs.readFileSync(new URL('../frontend/styling/adsense.styles.css', import.meta.url), 'utf8');
+  const rootIndexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
-  // 2. Verified presence of smart ad spaces across HTML and React pages
+  // 1. Zero Blank Space (Zero-CLS) Guarantee & Filled-Only Disclosure Label in adsense.styles.css & smart-ads.css
+  for (const css of [adsenseStylesCss, frontendAdsenseStylesCss, smartAdsCss]) {
+    assert.ok(css.includes('display: none !important;'));
+    assert.ok(css.includes('height: 0 !important;'));
+    assert.ok(css.includes('min-height: 0 !important;'));
+    assert.ok(css.includes('max-height: 0 !important;'));
+    assert.ok(css.includes('ins.adsbygoogle[data-ad-status="unfilled"]'));
+    assert.ok(css.includes('ins.adsbygoogle:empty'));
+    assert.ok(css.includes(':has(ins.adsbygoogle[data-ad-status="unfilled"])'));
+    assert.ok(css.includes('.terrax-smart-ad-slot.smart-ad-locked'));
+    assert.ok(css.includes('.terrax-ad-disclosure-label'));
+    assert.ok(css.includes('rgba(203, 213, 225, 0.68)'));
+  }
+
+  // 2. Verified Google AdSense unit with Zero-CLS attributes & 'اعلان • Sponsored' disclosure label
+  assert.ok(rootIndexHtml.includes('ads/adsense.styles.css'));
+  assert.ok(rootIndexHtml.includes('id="terrax-smart-ad-entry-main"'));
+  assert.ok(rootIndexHtml.includes('data-ad-client="ca-pub-1225026489802055"'));
+  assert.ok(rootIndexHtml.includes('data-ad-slot="7159014601"'));
+  assert.ok(rootIndexHtml.includes('data-ad-status="unfilled"'));
+  assert.ok(rootIndexHtml.includes('data-ad-filled="false"'));
+  assert.ok(rootIndexHtml.includes('class="terrax-ad-disclosure-label"'));
+  assert.ok(rootIndexHtml.includes('اعلان • Sponsored'));
+
   for (const html of [indexModernHtml, frontendIndexHtml]) {
-    assert.ok(html.includes('id="terrax-smart-ad-speed-results"'), 'speed-results slot must exist');
-    assert.ok(html.includes('id="terrax-smart-ad-speed-main"'), 'speed-main slot must exist');
-    assert.ok(html.includes('id="terrax-smart-ad-usage-main"'), 'usage-main slot must exist');
-    assert.ok(html.includes('data-ad-status="unfilled"'), 'initial status must be unfilled');
-    assert.ok(html.includes('data-ad-filled="false"'), 'initial filled state must be false');
+    assert.ok(html.includes('adsense.styles.css'), 'adsense.styles.css must be linked');
+    assert.ok(html.includes('id="terrax-smart-ad-speed-main"'), 'speed-main slot must exist in index page');
+    assert.ok(html.includes('data-ad-status="unfilled"'), 'initial status must be unfilled for Zero-CLS');
+    assert.ok(html.includes('data-ad-filled="false"'), 'initial filled state must be false for Zero-CLS');
+    assert.ok(html.includes('<ins class="adsbygoogle"'), 'Google AdSense <ins> must be present in index page');
+    assert.ok(html.includes('class="terrax-ad-disclosure-label"'), 'disclosure label must be present below ad unit');
+    assert.ok(html.includes('اعلان • Sponsored'), 'disclosure label must include اعلان and Sponsored');
   }
 
   for (const html of [gamingHtml, frontendGamingHtml]) {
-    assert.ok(html.includes('id="terrax-smart-ad-gaming-main"'), 'gaming-main slot must exist');
-    assert.ok(html.includes('data-terrax-smart-ad="gaming-main"'));
-    assert.ok(html.includes('.terrax-smart-ad-slot'));
+    assert.ok(!html.includes('id="terrax-smart-ad-gaming-main"'), 'gaming-main slot remains removed');
   }
 
   for (const html of [stabilityHtml, frontendStabilityHtml]) {
-    assert.ok(html.includes('id="terrax-smart-ad-stability-main"'), 'stability-main slot must exist');
-    assert.ok(html.includes('data-terrax-smart-ad="stability-main"'));
-    assert.ok(html.includes('.terrax-smart-ad-slot'));
+    assert.ok(!html.includes('id="terrax-smart-ad-stability-main"'), 'stability-main slot remains removed');
   }
 
   // 3. React App.tsx parity matching
-  assert.ok(appTsx.includes('id="terrax-smart-ad-speed-results"'));
   assert.ok(appTsx.includes('id="terrax-smart-ad-speed-main"'));
-  assert.ok(appTsx.includes('id="terrax-smart-ad-usage-main"'));
+  assert.ok(appTsx.includes('className="adsbygoogle"'));
+  assert.ok(appTsx.includes('className="terrax-ad-disclosure-label"'));
 
-  // 4. Smart state hooks remain wired
+  // 4. Smart state hooks remain wired safely
   assert.ok(indexJs.includes('TerraxSmartAdEngine?.setTestingState(true)'));
   assert.ok(indexJs.includes('TerraxSmartAdEngine?.onTestComplete("speed")'));
   assert.ok(indexJs.includes('TerraxSmartAdEngine?.onTabChange("speed")'));
@@ -489,34 +507,33 @@ test('Professional Monetization Architecture: strict Smart Ad Lock during testin
   const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
 
   for (const html of [indexModernHtml, frontendIndexHtml]) {
-    assert.ok(html.includes('id="terrax-smart-ad-speed-results"'), 'speed-results post-test spotlight banner must exist');
-    assert.ok(html.includes('id="terrax-smart-ad-speed-main"'), 'speed-main inline banner must exist');
+    assert.ok(html.includes('id="terrax-smart-ad-speed-main"'), 'speed-main Zero-CLS AdSense banner must exist in index page');
     const connPos = html.indexOf('id="connection-type-card"');
     const startPos = html.indexOf('id="start-button"');
     assert.ok(connPos !== -1 && startPos !== -1 && connPos < startPos, 'Connection card must appear before start button');
   }
 
-  // 3. High-Yield Location 2: Gaming Screen (Smart non-intrusive sponsor banner)
+  // 3. Gaming Screen (All manual ad slots removed, 6-card grid preserved)
   const gamingHtml = fs.readFileSync(new URL('../gaming.html', import.meta.url), 'utf8');
   const frontendGamingHtml = fs.readFileSync(new URL('../frontend/gaming.html', import.meta.url), 'utf8');
 
   for (const html of [gamingHtml, frontendGamingHtml]) {
-    assert.ok(html.includes('id="terrax-smart-ad-gaming-main"'), 'gaming-main smart ad slot must exist');
+    assert.ok(!html.includes('id="terrax-smart-ad-gaming-main"'), 'gaming-main smart ad slot must be removed');
     assert.ok(html.includes('id="gamingBoosterCard"'), '6-card grid preserves card 6 slot');
   }
 
-  // 4. High-Yield Location 3: Stability Screen (Smart companion sponsor banner)
+  // 4. Stability Screen (All manual ad slots removed)
   const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
   const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
 
   for (const html of [stabilityHtml, frontendStabilityHtml]) {
-    assert.ok(html.includes('id="terrax-smart-ad-stability-main"'), 'stability-main smart ad slot must exist');
+    assert.ok(!html.includes('id="terrax-smart-ad-stability-main"'), 'stability-main smart ad slot must be removed');
   }
 
-  // 5. High-Yield Location 4: Usage Dialog (Data booster sponsor banner)
+  // 5. Usage Dialog (All manual ad slots removed)
   for (const html of [indexModernHtml, frontendIndexHtml, appTsx]) {
     assert.ok(html.includes('id="usage-dialog"'));
-    assert.ok(html.includes('id="terrax-smart-ad-usage-main"'), 'usage-main smart ad slot must exist in dialog');
+    assert.ok(!html.includes('id="terrax-smart-ad-usage-main"'), 'usage-main smart ad slot must be removed from dialog');
   }
 
   // 6. Non-intrusive zero-popup policy: No intrusive popups or disruptive modals
@@ -839,25 +856,21 @@ test('Automated Ad Lifecycle and Safe Fallback Protocol: verified automatic init
       !content.includes('https://yandex.ru/ads/system/context.js'),
       `${relPath} must manage ad scripts through central smart lifecycle engine`
     );
-    // 2. Verified smart ad slots presence with auto-collapsing initial state
-    assert.ok(
-      content.includes('class="terrax-smart-ad-slot') || content.includes('terrax-smart-banner'),
-      `${relPath} must configure smart auto-collapsing ad spaces`
-    );
   }
 
-  // 3. Verify central ad engine (frontend/javascript/ad-slots.js) handles automated hooks & fallbacks
+  // 3. Verify central ad engine (frontend/javascript/ad-slots.js) handles IntersectionObserver lazy-loading & fallbacks
   const adSlotsJs = fs.readFileSync(new URL('../frontend/javascript/ad-slots.js', import.meta.url), 'utf8');
   assert.ok(adSlotsJs.includes('function isValidConfiguredBlockId(blockId)'));
   assert.ok(adSlotsJs.includes('function activateSmartlinkFallback'));
   assert.ok(adSlotsJs.includes('function activateYandexRtbBanner'));
   assert.ok(adSlotsJs.includes('AUTO_AD_ROTATION_INTERVAL_MS = 30000'));
+  assert.ok(adSlotsJs.includes('new IntersectionObserver'), 'ad-slots.js must use IntersectionObserver for viewport lazy loading');
+  assert.ok(adSlotsJs.includes('function setupViewportAdObserver()'), 'ad-slots.js must define setupViewportAdObserver');
+  assert.ok(adSlotsJs.includes('function observeAdCardInViewport(card, reason)'), 'ad-slots.js must define observeAdCardInViewport');
 
-  // 4. Verify React App.tsx mounts matching smart ad slots
+  // 4. Verify React App.tsx mounts matching Zero-CLS AdSense slot
   const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
-  assert.ok(appTsx.includes('id="terrax-smart-ad-speed-results"'), 'App.tsx must render post-test results smart slot');
-  assert.ok(appTsx.includes('id="terrax-smart-ad-speed-main"'), 'App.tsx must render speed-main smart slot');
-  assert.ok(appTsx.includes('id="terrax-smart-ad-usage-main"'), 'App.tsx must render usage-main smart slot');
+  assert.ok(appTsx.includes('id="terrax-smart-ad-speed-main"'), 'App.tsx must render speed-main Zero-CLS AdSense slot');
 });
 
 test('Max Speed and Average Speed cards animate with smooth requestAnimationFrame count-up effect on final results display', async () => {
@@ -1471,6 +1484,23 @@ test('Google AdSense Professional Integration: strict ID validation, Smart Ad Lo
     const headScriptPos = html.indexOf('https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js');
     const bodyAmpTagPos = html.indexOf('<amp-auto-ads type="adsense"');
 
+    const headMetaPos = html.indexOf('<meta name="google-adsense-account" content="ca-pub-1225026489802055">');
+    const headAdsenseScriptPos = html.indexOf(
+      'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1225026489802055'
+    );
+
+    assert.ok(
+      headMetaPos !== -1 && headMetaPos < headEnd,
+      `${relPage} must include <meta name="google-adsense-account" content="ca-pub-1225026489802055"> inside <head>`
+    );
+    assert.ok(
+      headAdsenseScriptPos !== -1 && headAdsenseScriptPos < headEnd,
+      `${relPage} must include adsbygoogle.js?client=ca-pub-1225026489802055 script inside <head>`
+    );
+    assert.ok(
+      html.includes('crossorigin="anonymous"'),
+      `${relPage} must include crossorigin="anonymous" on the AdSense script`
+    );
     assert.ok(
       headScriptPos !== -1 && headScriptPos < headEnd,
       `${relPage} must include amp-auto-ads-0.1.js script inside <head>`
@@ -1487,11 +1517,29 @@ test('Google AdSense Professional Integration: strict ID validation, Smart Ad Lo
       html.includes('data-ad-client="ca-pub-1225026489802055"'),
       `${relPage} must configure data-ad-client="ca-pub-1225026489802055"`
     );
+
+    const bodyContent = html.slice(bodyStart);
+    if (relPage === '../index.html' || relPage === '../index-modern.html' || relPage === '../frontend/index.html') {
+      assert.ok(
+        bodyContent.includes('class="adsbygoogle"'),
+        `${relPage} must include <ins class="adsbygoogle"> inside <body>`
+      );
+      assert.ok(
+        bodyContent.includes('data-ad-slot="7159014601"'),
+        `${relPage} must configure data-ad-slot="7159014601" inside <body>`
+      );
+      assert.ok(
+        bodyContent.includes('data-ad-status="unfilled"') && bodyContent.includes('data-ad-filled="false"'),
+        `${relPage} must initialize ad container with Zero-CLS unfilled state`
+      );
+    }
   }
 
+  assert.equal(engine.isValidAdSenseSlotId('7159014601'), true);
   assert.ok(adsConfigTs.includes('export function isValidAdSensePublisherId'));
   assert.ok(adsConfigTs.includes('export function isValidAdSenseSlotId'));
   assert.ok(adsConfigTs.includes('ca-pub-1225026489802055'));
+  assert.ok(adsConfigTs.includes('7159014601'));
   assert.ok(!indexModernHtml.includes('id="consent-accept-all-btn"'), 'consent-accept-all-btn must be removed');
   assert.ok(!indexModernHtml.includes('id="consent-npa-only-btn"'), 'consent-npa-only-btn must be removed');
   assert.ok(!indexModernHtml.includes('id="consent-reject-ads-btn"'), 'consent-reject-ads-btn must be removed');
@@ -1504,21 +1552,23 @@ test('Google AdSense Professional Integration: strict ID validation, Smart Ad Lo
   const adsManagerMod = await import('../ads/adsense.manager.js');
 
   assert.equal(adsConfigMod.DEFAULT_PUBLISHER_ID, 'ca-pub-1225026489802055');
+  assert.equal(adsConfigMod.DEFAULT_SLOT_ID, '7159014601');
   assert.equal(adsConfigMod.ADSENSE_CONFIG.publisherId, 'ca-pub-1225026489802055');
   assert.equal(adsConfigMod.ADSENSE_CONFIG.enableAdSense, true);
   assert.equal(adsConfigMod.ADSENSE_CONFIG.enableAutoAds, true);
   assert.equal(adsConfigMod.ADSENSE_CONFIG.scriptLoadingMode, 'async');
   assert.equal(adsConfigMod.ADSENSE_CONFIG.ampAutoAdsScriptUrl, 'https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js');
-  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.home);
-  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.speedTest);
-  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.stability);
-  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.consumption);
-  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.servers);
-  assert.ok(adsConfigMod.ADSENSE_CONFIG.placements.additionalContent);
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.placements.home.adSlotId, '7159014601');
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.placements.speedTest.adSlotId, '7159014601');
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.placements.stability.adSlotId, '7159014601');
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.placements.consumption.adSlotId, '7159014601');
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.placements.servers.adSlotId, '7159014601');
+  assert.equal(adsConfigMod.ADSENSE_CONFIG.placements.additionalContent.adSlotId, '7159014601');
 
   const validationReport = adsValidatorMod.validateAdSenseConfig(adsConfigMod.ADSENSE_CONFIG);
   assert.equal(validationReport.issues.length, 0);
   assert.equal(validationReport.totalPlacements, 6);
+  assert.equal(validationReport.readyPlacements, 6);
 
   const diagReport = adsDiagMod.generateAdSenseDiagnostics();
   assert.equal(diagReport.subsystems.publisher.status, 'READY');
@@ -1526,7 +1576,7 @@ test('Google AdSense Professional Integration: strict ID validation, Smart Ad Lo
   assert.equal(diagReport.subsystems.robotsTxt.status, 'READY');
   assert.equal(diagReport.subsystems.smartAdLock.status, 'READY');
   assert.equal(diagReport.subsystems.consentManagement.status, 'READY');
-  assert.equal(diagReport.subsystems.placements.status, 'PENDING');
+  assert.equal(diagReport.subsystems.placements.status, 'READY');
 
   const managerState = adsManagerMod.AdSenseManager.getState();
   assert.equal(managerState.publisherId, 'ca-pub-1225026489802055');
@@ -1540,6 +1590,243 @@ test('Google AdSense Professional Integration: strict ID validation, Smart Ad Lo
   assert.ok(publicRobotsTxt.includes('User-agent: Mediapartners-Google'));
 });
 
+test('Basic Speed & Stability Test pages: instantaneous disconnection resilience, race-condition guards, process isolation, and zero floating text below bottom bar', async () => {
+  const fs = await import('node:fs');
+  const math = globalThis.TerraxTelemetryMath;
+
+  // 1. Instantaneous internet disconnection before/during RTT samples records packet loss & stability drop
+  const disconnectEval = math.evaluateGamingStability(0, 0, 100, 1);
+  assert.equal(disconnectEval.hasData, true, 'evaluateGamingStability must report hasData: true when packet loss is recorded on sample 1');
+  assert.equal(disconnectEval.grade, 'bad', '100% packet loss on instantaneous disconnect must grade as bad');
+  assert.equal(disconnectEval.titleAr, 'غير مستقر للألعاب');
+  assert.ok(disconnectEval.scorePercent <= 35, 'Score percentage must drop sharply under 100% packet loss');
+
+  const partialDisconnectEval = math.evaluateGamingStability(32, 8.5, 25, 4);
+  assert.equal(partialDisconnectEval.hasData, true);
+  assert.equal(partialDisconnectEval.grade, 'bad');
+  assert.ok(partialDisconnectEval.scorePercent < 60, '25% packet loss during stability run must drop stability score');
+
+  // 2. Verify stability_worker.js handles offline_blip and prevents double-counting probe timeouts/errors
+  const workerJs = fs.readFileSync(new URL('../stability_worker.js', import.meta.url), 'utf8');
+  assert.ok(workerJs.includes('params[0] === "offline_blip"'), 'stability_worker.js must handle offline_blip command');
+  assert.ok(workerJs.includes('let probeSettled = false;'), 'stability_worker.js must guard each probe with probeSettled');
+  assert.ok(workerJs.includes('function clearScheduledPing()'), 'stability_worker.js must clear scheduled ping timers cleanly');
+  assert.ok(workerJs.includes('function abortActiveProbe()'), 'stability_worker.js must abort active XHR cleanly');
+
+  // 3. Verify floating footer text below bottom bar is removed and stability-cta-section is properly closed
+  const indexModernHtml = fs.readFileSync(new URL('../index-modern.html', import.meta.url), 'utf8');
+  const frontendIndexHtml = fs.readFileSync(new URL('../frontend/index.html', import.meta.url), 'utf8');
+  const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
+  const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
+
+  assert.ok(!indexModernHtml.includes('<p class="source">'), 'index-modern.html must not render floating footer source link below bottom bar');
+  assert.ok(!frontendIndexHtml.includes('<p class="source">'), 'frontend/index.html must not render floating footer source link below bottom bar');
+  assert.ok(
+    stabilityHtml.includes('</section>\n\n    <!-- Phase 10: Bottom 5-Tab Navigation Bar'),
+    'stability.html must close <section class="stability-cta-section"> before <nav class="terrax-bottom-nav">'
+  );
+  assert.ok(
+    frontendStabilityHtml.includes('</section>\n\n    <!-- Phase 10: Bottom 5-Tab Navigation Bar'),
+    'frontend/stability.html must close <section class="stability-cta-section"> before <nav class="terrax-bottom-nav">'
+  );
+
+  // 4. Verify live stability percentage badge (#statStabilityPct), dirty-checking UI cache, and process isolation
+  assert.ok(stabilityHtml.includes('id="statStabilityPct"'), 'stability.html must include #statStabilityPct stability percentage badge');
+  assert.ok(stabilityHtml.includes('function cleanupStabilityPageResources()'), 'stability.html must define cleanupStabilityPageResources()');
+  assert.ok(stabilityHtml.includes('uiRenderCache'), 'stability.html must use uiRenderCache dirty-checking to prevent unnecessary DOM re-renders');
+  assert.ok(stabilityHtml.includes('postMessage("offline_blip")'), 'stability.html must notify worker of instantaneous offline blips without crashing');
+
+  // 5. Verify race-condition guard and process isolation in frontend/javascript/index.js and src/App.tsx
+  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+
+  assert.ok(indexJs.includes('testState._startRunToken'), 'index.js must guard test start cycle with testState._startRunToken');
+  assert.ok(indexJs.includes('function cancelPendingTestWarmup()'), 'index.js must cancel pending pre-test warmup on re-click or navigation');
+  assert.ok(indexJs.includes('function cleanupSpeedPageResources()'), 'index.js must clean up timers, animations, and workers when leaving speed page');
+  assert.ok(appTsx.includes('startRunTokenRef'), 'src/App.tsx must guard test start cycle with startRunTokenRef');
+  assert.ok(appTsx.includes('cancelPendingWarmup'), 'src/App.tsx must cancel pending pre-test warmup on re-click or navigation');
+});
+
+test('Stability graph moving average window (computeStabilityMovingAverage) reduces visual jitter while preserving raw telemetry and packet loss discontinuities', async () => {
+  const fs = await import('node:fs');
+  const math = globalThis.TerraxTelemetryMath;
+
+  assert.equal(typeof math.computeStabilityMovingAverage, 'function', 'computeStabilityMovingAverage must be exported by TerraxTelemetryMath');
+
+  // 1. Empty or invalid input returns empty array
+  assert.deepEqual(math.computeStabilityMovingAverage([]), []);
+  assert.deepEqual(math.computeStabilityMovingAverage(null), []);
+
+  // 2. Moving average window (windowSize = 5) dampens high-frequency jitter while preserving raw ping & jitter
+  const rawSeries = [
+    { t: 0.5, ping: 20, jitter: 1.0, lost: false },
+    { t: 1.0, ping: 30, jitter: 10.0, lost: false },
+    { t: 1.5, ping: 22, jitter: 8.0, lost: false },
+    { t: 2.0, ping: 28, jitter: 6.0, lost: false },
+    { t: 2.5, ping: 25, jitter: 3.0, lost: false },
+    { t: 3.0, ping: 25, jitter: 0.0, lost: false },
+  ];
+  const smoothed = math.computeStabilityMovingAverage(rawSeries, 5);
+  assert.equal(smoothed.length, 6);
+  // Sample 0: window [20] -> 20
+  assert.equal(smoothed[0].ping, 20);
+  assert.equal(smoothed[0].smoothedPing, 20);
+  assert.equal(smoothed[0].windowCount, 1);
+  // Sample 1: window [20, 30] -> 25
+  assert.equal(smoothed[1].ping, 30);
+  assert.equal(smoothed[1].smoothedPing, 25);
+  assert.equal(smoothed[1].smoothedJitter, 5.5);
+  assert.equal(smoothed[1].windowCount, 2);
+  // Sample 4: window [20, 30, 22, 28, 25] -> 125 / 5 = 25
+  assert.equal(smoothed[4].smoothedPing, 25);
+  assert.equal(smoothed[4].smoothedJitter, 5.6);
+  assert.equal(smoothed[4].windowCount, 5);
+  // Sample 5: sliding window [30, 22, 28, 25, 25] -> 130 / 5 = 26
+  assert.equal(smoothed[5].smoothedPing, 26);
+  assert.equal(smoothed[5].smoothedJitter, 5.4);
+  assert.equal(smoothed[5].windowCount, 5);
+
+  // 3. Packet loss (lost: true) resets the moving average window so disconnection boundaries remain sharp
+  const seriesWithLoss = [
+    { t: 1.0, ping: 100, jitter: 20, lost: false },
+    { t: 1.5, ping: 120, jitter: 20, lost: false },
+    { t: 2.0, ping: 0, jitter: 0, lost: true },
+    { t: 2.5, ping: 24, jitter: 2, lost: false },
+    { t: 3.0, ping: 26, jitter: 2, lost: false },
+  ];
+  const lossSmoothed = math.computeStabilityMovingAverage(seriesWithLoss, 5);
+  assert.equal(lossSmoothed[2].lost, true);
+  assert.equal(lossSmoothed[2].smoothedPing, 0);
+  assert.equal(lossSmoothed[2].windowCount, 0);
+  // Sample after packet loss starts a fresh window at 24ms (not polluted by pre-loss 100ms/120ms)
+  assert.equal(lossSmoothed[3].lost, false);
+  assert.equal(lossSmoothed[3].smoothedPing, 24);
+  assert.equal(lossSmoothed[3].windowCount, 1);
+  assert.equal(lossSmoothed[4].smoothedPing, 25);
+  assert.equal(lossSmoothed[4].windowCount, 2);
+
+  // 4. Verify drawChart() in stability.html and frontend/stability.html uses MOVING_AVG_WINDOW and computeStabilityMovingAverage
+  const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
+  const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
+  assert.ok(stabilityHtml.includes('var MOVING_AVG_WINDOW = 5;'), 'stability.html must define MOVING_AVG_WINDOW');
+  assert.ok(stabilityHtml.includes('math.computeStabilityMovingAverage(windowSlice, MOVING_AVG_WINDOW)'), 'stability.html drawChart must smooth visible samples with computeStabilityMovingAverage');
+  assert.ok(frontendStabilityHtml.includes('math.computeStabilityMovingAverage(windowSlice, MOVING_AVG_WINDOW)'), 'frontend/stability.html drawChart must smooth visible samples with computeStabilityMovingAverage');
+});
+
+test('Comprehensive 5-Page Engineering Audit (Phases B, C, D, E, F): original engine linkage, server probe verification, cross-page isolation, dead code removal, and unified storage', async () => {
+  const fs = await import('node:fs');
+  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
+  const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
+  const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
+  const gamingHtml = fs.readFileSync(new URL('../gaming.html', import.meta.url), 'utf8');
+  const frontendGamingHtml = fs.readFileSync(new URL('../frontend/gaming.html', import.meta.url), 'utf8');
+
+  // Phase B: Gaming page records runs via math.appendTestHistoryEntry and respects persisted autoGbps setting
+  assert.ok(indexJs.includes('const AUTO_GBPS_STORAGE_KEY = "terrax_auto_gbps_v1";'), 'index.js must persist autoGbps setting in localStorage');
+  assert.ok(gamingHtml.includes('math.appendTestHistoryEntry(list, rawRun, 25, nowDate)'), 'gaming.html must normalize and append history entries via TerraxTelemetryMath');
+  assert.ok(gamingHtml.includes('localStorage.getItem("terrax_auto_gbps_v1")'), 'gaming.html must respect persisted autoGbps setting');
+  assert.ok(gamingHtml.includes('math.computeStabilityMovingAverage(samples, 5)'), 'gaming.html drawWaveform must smooth live RTT samples with computeStabilityMovingAverage');
+
+  // Phase C: Server probe verification and sessionStorage caching in stability.html without double-callback race
+  assert.ok(stabilityHtml.includes('var settled = false;'), 'stability.html pingServer must guard callback with settled flag');
+  assert.ok(stabilityHtml.includes('sessionStorage.setItem("terrax_verified_servers_cache_v1"'), 'stability.html nextServerProbe must cache verified servers in sessionStorage');
+
+  // Phase D: Complete process isolation across all pages on navigation / pagehide / beforeunload
+  assert.ok(indexJs.includes('function cleanupSpeedPageResources()'), 'index.js must clean up resources on navigation');
+  assert.ok(stabilityHtml.includes('function cleanupStabilityPageResources()'), 'stability.html must clean up resources on navigation');
+  assert.ok(gamingHtml.includes('function cleanupGamingPageResources()'), 'gaming.html must clean up resources on navigation');
+  assert.ok(frontendGamingHtml.includes('function cleanupGamingPageResources()'), 'frontend/gaming.html must clean up resources on navigation');
+
+  // Phase E: Zero dead for(var i=0; false; i++) loops and zero synchronous layout reflows during 60fps updates
+  assert.ok(!stabilityHtml.includes('for (var i = 0; false; i++)'), 'stability.html must not contain dead unreachable loop');
+  assert.ok(!frontendStabilityHtml.includes('for (var i = 0; false; i++)'), 'frontend/stability.html must not contain dead unreachable loop');
+  assert.ok(!gamingHtml.includes('void dlEl.offsetWidth'), 'gaming.html must not force synchronous layout reflow on dlEl during 60fps updates');
+  assert.ok(!gamingHtml.includes('void ulEl.offsetWidth'), 'gaming.html must not force synchronous layout reflow on ulEl during 60fps updates');
+});
+
+test('High-Load Stability Graph Rendering Performance: WebWorker O(1) incremental moving average and dirty-flag requestAnimationFrame loop without layout thrashing', async () => {
+  const fs = await import('node:fs');
+  const math = globalThis.TerraxTelemetryMath;
+  const workerJs = fs.readFileSync(new URL('../stability_worker.js', import.meta.url), 'utf8');
+  const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
+  const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
+
+  // 1. Verify stateful createStabilityMovingAverageProcessor smooths high-frequency volatility incrementally in O(1)
+  assert.equal(typeof math.createStabilityMovingAverageProcessor, 'function', 'createStabilityMovingAverageProcessor must be exported');
+  const proc = math.createStabilityMovingAverageProcessor(5);
+  assert.equal(proc.getWindowSize(), 5);
+  const s1 = proc.pushSample({ t: 0.2, ping: 20, jitter: 2, lost: false });
+  const s2 = proc.pushSample({ t: 0.4, ping: 40, jitter: 22, lost: false });
+  const s3 = proc.pushSample({ t: 0.6, ping: 24, jitter: 6, lost: false });
+  assert.equal(s1.smoothedPing, 20);
+  assert.equal(s2.smoothedPing, 30);
+  assert.equal(s3.smoothedPing, 28);
+  assert.equal(s3.windowCount, 3);
+  const sLoss = proc.pushSample({ t: 0.8, ping: 0, jitter: 0, lost: true });
+  assert.equal(sLoss.lost, true);
+  assert.equal(sLoss.windowCount, 0);
+  const sAfterLoss = proc.pushSample({ t: 1.0, ping: 18, jitter: 1, lost: false });
+  assert.equal(sAfterLoss.smoothedPing, 18);
+  assert.equal(sAfterLoss.windowCount, 1);
+
+  // 2. Verify stability_worker.js computes O(1) incremental moving average (smoothedPing, smoothedJitter, windowCount) and resets on packet loss
+  assert.ok(workerJs.includes('moving_avg_window: 5'), 'stability_worker.js must support moving_avg_window setting');
+  assert.ok(workerJs.includes('smoothedPing: parseFloat((pingMaSum / count).toFixed(2))'), 'stability_worker.js must compute O(1) incremental smoothedPing');
+  assert.ok(workerJs.includes('smoothedJitter: parseFloat((jitterMaSum / jitterMaWindow.length).toFixed(2))'), 'stability_worker.js must compute O(1) incremental smoothedJitter');
+  assert.ok(workerJs.includes('pingMaWindow.length = 0;'), 'stability_worker.js recordLoss must reset moving-average window on packet loss');
+
+  // 3. Verify stability.html and frontend/stability.html ingest samples through moving-average processor, use 4K quadratic spline smoothing, and eliminate forced synchronous reflows
+  for (const [label, html] of [['stability.html', stabilityHtml], ['frontend/stability.html', frontendStabilityHtml]]) {
+    assert.ok(html.includes('function ingestStabilityPingSample(rawSample)'), `${label} must process incoming samples through ingestStabilityPingSample`);
+    assert.ok(html.includes('createStabilityMovingAverageProcessor(MOVING_AVG_WINDOW)'), `${label} must instantiate stateful moving average processor`);
+    assert.ok(html.includes('function syncCanvasGeometryIfNeeded()'), `${label} must cache canvas geometry and read before DOM writes`);
+    assert.ok(html.includes('if (hasWorkerPreSmoothed)'), `${label} drawChart must use zero-allocation fast path when samples are pre-smoothed`);
+    assert.ok(html.includes('ctx.quadraticCurveTo(lastPx, lastPy, (lastPx + pX) * 0.5, (lastPy + pY) * 0.5)'), `${label} drawChart must render 4K moving-average curve with smooth midpoint quadratic interpolation`);
+    assert.ok(html.includes('var cachedPingGrad = null;'), `${label} drawChart must cache linear gradient across frames`);
+    assert.ok(html.includes('scheduleStabilityFrame({ ui: true, chart: hadNewPingSamples || data.testState >= 4 })'), `${label} must decouple UI updates from chart redraws via dirty flags`);
+  }
+});
+
+test('Complete 4K Visual Identity Audit: valid CSS syntax, RTL/LTR logical properties, unified 4K color tokens, GPU trace optimization, and 2K/4K UHD scaling', async () => {
+  const fs = await import('node:fs');
+  const indexCss = fs.readFileSync(new URL('../frontend/styling/index.css', import.meta.url), 'utf8');
+  const dialogCss = fs.readFileSync(new URL('../frontend/styling/dialog.css', import.meta.url), 'utf8');
+  const serverSelectorCss = fs.readFileSync(new URL('../frontend/styling/server-selector.css', import.meta.url), 'utf8');
+  const mainCss = fs.readFileSync(new URL('../frontend/styling/main.css', import.meta.url), 'utf8');
+  const resultsCss = fs.readFileSync(new URL('../frontend/styling/results.css', import.meta.url), 'utf8');
+  const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
+  const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
+  const gamingHtml = fs.readFileSync(new URL('../gaming.html', import.meta.url), 'utf8');
+  const frontendGamingHtml = fs.readFileSync(new URL('../frontend/gaming.html', import.meta.url), 'utf8');
+
+  // 1. Valid CSS syntax & no duplicate body.terrax-page-leaving in index.css
+  assert.ok(!indexCss.includes('dir-adjusted('), 'index.css must not contain invalid dir-adjusted() CSS function');
+  assert.equal((indexCss.match(/body\.terrax-page-leaving\s*\{/g) || []).length, 1, 'index.css must define body.terrax-page-leaving exactly once');
+  assert.ok(indexCss.includes('@media screen and (min-width: 2200px)'), 'index.css must include 2K/4K UHD proportional scaling');
+
+  // 2. RTL/LTR logical properties in dialog.css, server-selector.css, main.css, results.css
+  assert.ok(dialogCss.includes('inset-inline-end: 2rem;'), 'dialog.css close button must use logical inset-inline-end');
+  assert.ok(dialogCss.includes('text-align: start;'), 'dialog.css must use logical text-align: start');
+  assert.ok(serverSelectorCss.includes('padding-inline-end: 4.4rem;'), 'server-selector.css must use logical padding-inline-end');
+  assert.ok(serverSelectorCss.includes('inset-inline-end: 1.8rem;'), 'server-selector.css chevron must use logical inset-inline-end');
+  assert.ok(mainCss.includes('text-align: start;'), 'main.css .conn-text-block must use logical text-align: start');
+  assert.ok(resultsCss.includes('text-align: start;'), 'results.css .stat-card-info must use logical text-align: start');
+
+  // 3. Dead .terrax-yan-card CSS removed from stability.html & frontend/stability.html, 2K/4K UHD scaling added
+  assert.ok(!stabilityHtml.includes('.terrax-yan-card {'), 'stability.html must not contain dead .terrax-yan-card CSS rules');
+  assert.ok(!frontendStabilityHtml.includes('.terrax-yan-card {'), 'frontend/stability.html must not contain dead .terrax-yan-card CSS rules');
+  assert.ok(stabilityHtml.includes('@media screen and (min-width: 2200px)'), 'stability.html must include 2K/4K UHD proportional scaling');
+
+  // 4. Unified 4K color tokens and GPU-optimized SVG background traces in gaming.html & frontend/gaming.html
+  for (const [label, html] of [['gaming.html', gamingHtml], ['frontend/gaming.html', frontendGamingHtml]]) {
+    assert.ok(html.includes('--bg-primary: #050D19;'), `${label} must use unified #050D19 4K deep background token`);
+    assert.ok(html.includes('--cyber-cyan: #53D8FF;'), `${label} must use unified #53D8FF 4K cyan token`);
+    assert.ok(html.includes('--holo-purple: #B98BFF;'), `${label} must use unified #B98BFF 4K purple token`);
+    assert.ok(html.includes('--status-green: #9BEA42;'), `${label} must use unified #9BEA42 4K green token`);
+    assert.ok(!html.includes('filter: drop-shadow(0 0 7px var(--cyber-cyan))'), `${label} must not use GPU-expensive drop-shadow on continuous background trace animations`);
+    assert.ok(html.includes('@media screen and (min-width: 2200px)'), `${label} must include 2K/4K UHD proportional scaling`);
+  }
+});
 
 
 

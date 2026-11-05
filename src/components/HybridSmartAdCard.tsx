@@ -64,6 +64,7 @@ export interface HybridSmartAdCardProps {
   adsenseClientId?: string;
   adsenseSlotId?: string;
   adsenseFormat?: 'auto' | 'autorelaxed' | 'fluid';
+  adsenseLayoutKey?: string;
   isTesting: boolean;
   refreshTrigger?: number;
   isStabilityTab?: boolean;
@@ -107,6 +108,7 @@ export const HybridSmartAdCard: React.FC<HybridSmartAdCardProps> = ({
   adsenseClientId = ADSENSE_CONFIG.PUBLISHER_ID,
   adsenseSlotId,
   adsenseFormat = 'auto',
+  adsenseLayoutKey,
   isTesting,
   refreshTrigger = 0,
   isStabilityTab = false,
@@ -133,12 +135,27 @@ export const HybridSmartAdCard: React.FC<HybridSmartAdCardProps> = ({
     isTestingRef.current = isTesting;
   }, [isTesting]);
 
-  // Official Google AdSense unit initialization (Protected by Smart Ad Lock & Duplicate Push Guard)
+  // Official Google AdSense unit initialization (Protected by Smart Ad Lock, Width Guard & Duplicate Push Guard)
   useEffect(() => {
     if (isTesting || !hasValidAdSenseUnit || typeof window === 'undefined') return;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     const insEl = adsenseInsRef.current;
     if (!insEl) return;
+    if (typeof insEl.closest === 'function' && insEl.closest('dialog:not([open]), .hidden, [hidden]')) {
+      insEl.setAttribute('data-adsbygoogle-status', 'reserved');
+      return;
+    }
+    const measuredWidth =
+      insEl.offsetWidth ||
+      insEl.parentElement?.offsetWidth ||
+      Math.round(insEl.getBoundingClientRect?.().width || 0);
+    if (window.innerWidth > 0 && measuredWidth < 120) {
+      insEl.setAttribute('data-adsbygoogle-status', 'reserved');
+      return;
+    }
+    if (insEl.getAttribute('data-adsbygoogle-status') === 'reserved') {
+      insEl.removeAttribute('data-adsbygoogle-status');
+    }
     if (
       insEl.getAttribute('data-terrax-pushed') === 'true' ||
       insEl.getAttribute('data-adsbygoogle-status')
@@ -153,9 +170,9 @@ export const HybridSmartAdCard: React.FC<HybridSmartAdCardProps> = ({
       setAdMode('adsense-active');
       setAdStatus('ready');
     } catch {
-      // Fallback gracefully if blocked
+      // Fallback gracefully if blocked or width unavailable
     }
-  }, [adsenseClientId, resolvedSlotId, hasValidAdSenseUnit, isTesting]);
+  }, [adsenseClientId, resolvedSlotId, hasValidAdSenseUnit, isTesting, refreshTrigger]);
 
   // Automatic ad rotation every 30s when idle (strictly paused during active tests and when AdSense unit is active)
   useEffect(() => {
@@ -332,7 +349,10 @@ export const HybridSmartAdCard: React.FC<HybridSmartAdCardProps> = ({
               data-ad-client={normalizeAdSenseClientId(adsenseClientId)}
               data-ad-slot={resolvedSlotId}
               data-ad-format={adsenseFormat}
-              data-full-width-responsive={adsenseFormat !== 'autorelaxed' ? 'true' : undefined}
+              data-ad-layout-key={adsenseLayoutKey || undefined}
+              data-full-width-responsive={
+                adsenseFormat !== 'autorelaxed' && adsenseFormat !== 'fluid' ? 'true' : undefined
+              }
             />
           </div>
         )}
@@ -390,6 +410,13 @@ export const HybridSmartAdCard: React.FC<HybridSmartAdCardProps> = ({
           </a>
         )}
       </div>
+      <span
+        className="terrax-ad-disclosure-label"
+        data-label-ar="اعلان"
+        data-label-en="Sponsored"
+      >
+        {lang === 'en' ? 'Sponsored' : 'اعلان • Sponsored'}
+      </span>
     </aside>
   );
 };

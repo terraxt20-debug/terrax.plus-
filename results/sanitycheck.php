@@ -12,6 +12,9 @@ $na="<span class='na'>N/A</span>";
 
 <html>
 <head>
+<meta name="google-adsense-account" content="ca-pub-1225026489802055">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1225026489802055"
+     crossorigin="anonymous"></script>
 <title>Speed Test installation sanity check</title>
 <style>
 	table,th,td { border: 1px solid;}

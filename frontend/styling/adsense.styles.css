@@ -1,42 +1,114 @@
 /**
- * Terrax Plus (تيراكس بلاس) — Google AdSense Responsive CSS
+ * Terrax Plus (تيراكس بلاس) — Google AdSense Responsive CSS (Zero-CLS Architecture)
  *
  * Guarantees:
- * 1. Zero Blank Space: Completely collapses (display: none !important; height: 0 !important;)
- *    when an ad unit is unfilled, rejected, unconfigured, or blocked.
- * 2. Auto-Reveal: Smoothly displays ONLY when Google AdSense or sponsor inventory is confirmed filled.
- * 3. Smart Ad Lock: Visual isolation during active tests (.smart-ad-locked).
- * 4. 4K Dark Glassmorphism: Consistent with Terrax Plus cyber visual identity.
- * 5. Full RTL Arabic support and responsive layout stability (Zero CLS).
+ * 1. Zero Blank Space (Zero-CLS): Completely collapses (height: 0 !important; display: none !important
+ *    when unfilled) whenever an ad unit is unfilled, rejected, unconfigured, empty, or blocked.
+ * 2. Safe Width Calculation: Preserves measurable horizontal width prior to AdSense evaluation
+ *    so adsbygoogle.push({}) never throws "No slot size for availableWidth=0", while keeping
+ *    vertical height, margin, padding, and border at 0px.
+ * 3. Auto-Reveal: Smoothly displays ONLY when Google AdSense confirms data-ad-status="filled".
+ * 4. Smart Ad Lock: Visual & pointer isolation during active tests (.smart-ad-locked).
+ * 5. 4K Dark Glassmorphism: Consistent with Terrax Plus cyber visual identity & RTL Arabic layout.
  */
 
+/* Base Zero-CLS Collapsed State: 0px vertical space while preserving width for AdSense slot measurement */
 .terrax-adsense-container,
 .terrax-smart-ad-slot,
 .terrax-smart-banner {
+  display: block !important;
+  width: 100% !important;
+  max-width: 72.8rem !important;
+  min-width: min(250px, 100%) !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  border: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+  contain: layout style !important;
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              max-height 0.4s ease;
+}
+
+/* Inner AdSense <ins> & body wrapper: 0px height when empty or not yet filled */
+.terrax-smart-ad-body,
+.terrax-adsense-mount,
+ins.adsbygoogle {
+  display: block;
+  width: 100%;
+  min-width: min(250px, 100%);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+ins.adsbygoogle:empty {
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Explicit Zero-CLS Collapse when Google AdSense marks the unit as unfilled */
+ins.adsbygoogle[data-ad-status="unfilled"],
+.terrax-adsense-container:has(ins.adsbygoogle[data-ad-status="unfilled"]),
+.terrax-smart-ad-slot:has(ins.adsbygoogle[data-ad-status="unfilled"]),
+.terrax-smart-banner:has(ins.adsbygoogle[data-ad-status="unfilled"]) {
   display: none !important;
   height: 0 !important;
   min-height: 0 !important;
   max-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
+  border: none !important;
   overflow: hidden !important;
   opacity: 0 !important;
-  border: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
-  box-sizing: border-box !important;
-  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              max-height 0.4s ease;
 }
 
-/* Appears ONLY when ad is filled */
-.terrax-adsense-container[data-ad-filled="true"],
-.terrax-adsense-container[data-ad-status="filled"],
-.terrax-smart-ad-slot[data-ad-filled="true"],
-.terrax-smart-ad-slot[data-ad-status="filled"],
-.terrax-smart-banner[data-ad-filled="true"],
-.terrax-smart-banner[data-ad-status="filled"] {
+.terrax-adsense-container[data-ad-status="unfilled"]:not([data-ad-filled="true"]),
+.terrax-smart-ad-slot[data-ad-status="unfilled"]:not([data-ad-filled="true"]),
+.terrax-smart-banner[data-ad-status="unfilled"]:not([data-ad-filled="true"]),
+.terrax-adsense-container[data-ad-filled="false"],
+.terrax-smart-ad-slot[data-ad-filled="false"],
+.terrax-smart-banner[data-ad-filled="false"] {
+  display: block !important;
+  width: 100% !important;
+  min-width: min(250px, 100%) !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Appears ONLY when an ad is genuinely filled */
+.terrax-adsense-container[data-ad-filled="true"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])),
+.terrax-adsense-container[data-ad-status="filled"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])),
+.terrax-smart-ad-slot[data-ad-filled="true"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])),
+.terrax-smart-ad-slot[data-ad-status="filled"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])),
+.terrax-smart-banner[data-ad-filled="true"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])),
+.terrax-smart-banner[data-ad-status="filled"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])),
+.terrax-adsense-container:has(ins.adsbygoogle[data-ad-status="filled"]),
+.terrax-smart-ad-slot:has(ins.adsbygoogle[data-ad-status="filled"]),
+.terrax-smart-banner:has(ins.adsbygoogle[data-ad-status="filled"]) {
   display: flex !important;
   flex-direction: column !important;
   height: auto !important;
@@ -56,18 +128,6 @@
   width: 100% !important;
   max-width: 72.8rem !important;
   min-width: 0 !important;
-}
-
-/* Explicit collapse on unfilled status from Google AdSense */
-ins.adsbygoogle[data-ad-status="unfilled"],
-.terrax-adsense-container[data-ad-status="unfilled"],
-.terrax-smart-ad-slot[data-ad-status="unfilled"],
-.terrax-smart-banner[data-ad-status="unfilled"] {
-  display: none !important;
-  height: 0 !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
 }
 
 /* Smart Ad Lock: Isolate ad unit during active speed test runs */
@@ -105,13 +165,51 @@ ins.adsbygoogle[data-ad-status="unfilled"],
   pointer-events: none !important;
 }
 
-/* Inner mount container for AdSense <ins> */
-.terrax-adsense-mount {
-  width: 100%;
-  min-height: 90px;
-  display: block;
-  overflow: hidden;
-  box-sizing: border-box;
+/* Subtle 'اعلان • Sponsored' disclosure label below the ad slot:
+   Collapsed by default (Zero-CLS) and revealed ONLY when the ad slot is genuinely filled */
+.terrax-ad-disclosure-label {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: rgba(203, 213, 225, 0.68);
+  text-align: center;
+  user-select: none;
+}
+
+.terrax-adsense-container[data-ad-filled="true"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])) .terrax-ad-disclosure-label,
+.terrax-adsense-container[data-ad-status="filled"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])) .terrax-ad-disclosure-label,
+.terrax-smart-ad-slot[data-ad-filled="true"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])) .terrax-ad-disclosure-label,
+.terrax-smart-ad-slot[data-ad-status="filled"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])) .terrax-ad-disclosure-label,
+.terrax-smart-banner[data-ad-filled="true"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])) .terrax-ad-disclosure-label,
+.terrax-smart-banner[data-ad-status="filled"]:not(:has(ins.adsbygoogle[data-ad-status="unfilled"])) .terrax-ad-disclosure-label,
+.terrax-adsense-container:has(ins.adsbygoogle[data-ad-status="filled"]) .terrax-ad-disclosure-label,
+.terrax-smart-ad-slot:has(ins.adsbygoogle[data-ad-status="filled"]) .terrax-ad-disclosure-label,
+.terrax-smart-banner:has(ins.adsbygoogle[data-ad-status="filled"]) .terrax-ad-disclosure-label {
+  display: block !important;
+  height: auto !important;
+  max-height: 2rem !important;
+  margin: 0.35rem auto 0 !important;
+  padding: 0 !important;
+  font-size: 0.72rem !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.04em !important;
+  color: rgba(203, 213, 225, 0.68) !important;
+  text-align: center !important;
+  opacity: 0.85 !important;
+  visibility: visible !important;
+  pointer-events: none !important;
 }
 
 /* Responsive Matrix */
@@ -123,12 +221,6 @@ ins.adsbygoogle[data-ad-status="unfilled"],
     padding: 0.65rem 0.9rem !important;
     border-radius: 0.95rem !important;
   }
-  .sponsor-title {
-    font-size: 0.96rem;
-  }
-  .sponsor-desc {
-    font-size: 0.85rem;
-  }
 }
 
 @media screen and (max-width: 350px) {
@@ -137,12 +229,6 @@ ins.adsbygoogle[data-ad-status="unfilled"],
   .terrax-smart-banner[data-ad-filled="true"] {
     margin: 0.5rem auto !important;
     padding: 0.5rem 0.65rem !important;
-  }
-  .terrax-adsense-header,
-  .terrax-smart-ad-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
   }
 }
 

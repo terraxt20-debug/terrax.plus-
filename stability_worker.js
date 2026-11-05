@@ -15,11 +15,15 @@ let packetLoss = 0; // failed request percentage
 let elapsed = 0;
 let progress = 0;
 
-let pingData = []; // all ping data points {t: elapsedMs, ping: ms, lost: bool}
+let pingData = []; // all ping data points {t: elapsedMs, ping: ms, jitter: ms, lost: bool, smoothedPing: ms, smoothedJitter: ms, windowCount: number}
 let lastReportedIndex = 0; // for delta delivery
 let totalSamples = 0;
 let failedSamples = 0;
 let pingSum = 0;
+let pingMaWindow = [];
+let jitterMaWindow = [];
+let pingMaSum = 0;
+let jitterMaSum = 0;
 
 let settings = {
   url_ping: "backend/empty.php",
@@ -28,14 +32,36 @@ let settings = {
   ping_interval: 200, // minimum ms between pings to limit sample rate
   ping_timeout: 5000,
   ping_allowPerformanceApi: true,
+  moving_avg_window: 5,
   mpot: false
 };
 
 let xhr = null;
+let pingTimer = null;
 let startTime = 0;
 let prevInstspd = 0;
 let aborted = false;
 let warmupDone = false;
+
+function clearScheduledPing() {
+  if (pingTimer !== null) {
+    clearTimeout(pingTimer);
+    pingTimer = null;
+  }
+}
+
+function abortActiveProbe() {
+  if (xhr) {
+    try {
+      xhr.onreadystatechange = null;
+      xhr.onload = null;
+      xhr.onerror = null;
+      xhr.ontimeout = null;
+      xhr.abort();
+    } catch (e) {}
+    xhr = null;
+  }
+}
 
 function nowMs() {
   return typeof performance !== "undefined" && typeof performance.now === "function"
@@ -48,7 +74,8 @@ function url_sep(url) {
 }
 
 this.addEventListener("message", function (e) {
-  const params = e.data.split(" ");
+  const rawMsg = typeof e.data === "string" ? e.data : String(e.data || "");
+  const params = rawMsg.split(" ");
   if (params[0] === "status") {
     // return current state with delta ping data
     const newData = pingData.slice(lastReportedIndex);
@@ -76,7 +103,7 @@ this.addEventListener("message", function (e) {
     try {
       let s = {};
       try {
-        const ss = e.data.substring(6);
+        const ss = rawMsg.substring(6);
         if (ss) s = JSON.parse(ss);
       } catch (e) {
         console.warn("Error parsing settings JSON");
@@ -90,6 +117,10 @@ this.addEventListener("message", function (e) {
     // start the stability test
     aborted = false;
     warmupDone = false;
+    pingMaWindow = [];
+    jitterMaWindow = [];
+    pingMaSum = 0;
+    jitterMaSum = 0;
     startTime = nowMs();
     testState = 1;
     doPing();
@@ -98,11 +129,16 @@ this.addEventListener("message", function (e) {
     if (testState >= 4) return;
     aborted = true;
     testState = 5;
-    if (xhr) {
-      try {
-        xhr.abort();
-      } catch (e) {}
-    }
+    clearScheduledPing();
+    abortActiveProbe();
+  }
+  if (params[0] === "offline_blip") {
+    if (aborted || testState !== 1) return;
+    clearScheduledPing();
+    abortActiveProbe();
+    warmupDone = true;
+    recordLoss();
+    schedulePing(0);
   }
 });
 
@@ -133,39 +169,73 @@ function recordPing(instspd) {
   // failed request percentage
   packetLoss = totalSamples > 0 ? parseFloat(((failedSamples / totalSamples) * 100).toFixed(2)) : 0;
 
-  // record data point
+  // record data point with O(1) incremental moving average offloaded to worker
   const now = nowMs();
   elapsed = (now - startTime) / 1000;
+  const rawPingVal = parseFloat(instspd.toFixed(2));
+  const rawJitterVal = parseFloat(jitter.toFixed(2));
+  const winLimit = Math.max(1, Math.min(30, Math.round(Number(settings.moving_avg_window) || 5)));
+
+  pingMaWindow.push(rawPingVal);
+  pingMaSum += rawPingVal;
+  if (pingMaWindow.length > winLimit) {
+    pingMaSum -= pingMaWindow.shift();
+  }
+
+  jitterMaWindow.push(rawJitterVal);
+  jitterMaSum += rawJitterVal;
+  if (jitterMaWindow.length > winLimit) {
+    jitterMaSum -= jitterMaWindow.shift();
+  }
+
+  const count = pingMaWindow.length;
   pingData.push({
     t: elapsed,
-    ping: parseFloat(instspd.toFixed(2)),
-    jitter: parseFloat(jitter.toFixed(2)),
-    lost: false
+    ping: rawPingVal,
+    jitter: rawJitterVal,
+    lost: false,
+    smoothedPing: parseFloat((pingMaSum / count).toFixed(2)),
+    smoothedJitter: parseFloat((jitterMaSum / jitterMaWindow.length).toFixed(2)),
+    windowCount: count
   });
 }
 
 function recordLoss() {
+  if (aborted || testState >= 4) return;
   const now = nowMs();
   totalSamples++;
   failedSamples++;
   packetLoss = parseFloat(((failedSamples / totalSamples) * 100).toFixed(2));
+  if (prevInstspd > 0) {
+    const lossSpike = Math.min(250, Math.max(12, prevInstspd * 0.35));
+    jitter = jitter > 0 ? parseFloat((jitter * 0.75 + lossSpike * 0.25).toFixed(2)) : parseFloat(lossSpike.toFixed(2));
+  }
+  // Reset moving average window on packet loss so disconnection boundaries stay sharp
+  pingMaWindow.length = 0;
+  jitterMaWindow.length = 0;
+  pingMaSum = 0;
+  jitterMaSum = 0;
   elapsed = (now - startTime) / 1000;
   pingData.push({
     t: elapsed,
     ping: 0,
     jitter: parseFloat(jitter.toFixed(2)),
-    lost: true
+    lost: true,
+    smoothedPing: 0,
+    smoothedJitter: 0,
+    windowCount: 0
   });
 }
 
 // pace pings to avoid excessive sample rates on low-latency links
 function schedulePing(rtt) {
-  const delay = Math.max(0, settings.ping_interval - rtt);
-  if (delay > 0) {
-    setTimeout(doPing, delay);
-  } else {
+  if (aborted || testState >= 4) return;
+  clearScheduledPing();
+  const delay = Math.max(20, settings.ping_interval - (Number(rtt) || 0));
+  pingTimer = setTimeout(function () {
+    pingTimer = null;
     doPing();
-  }
+  }, delay);
 }
 
 function doPing() {
@@ -178,6 +248,7 @@ function doPing() {
   if (elapsed >= settings.duration) {
     testState = 4;
     progress = 1;
+    clearScheduledPing();
     return;
   }
 
@@ -187,10 +258,12 @@ function doPing() {
     return;
   }
 
+  abortActiveProbe();
   const pingUrl =
     settings.url_ping + url_sep(settings.url_ping) + (settings.mpot ? "cors=true&" : "") + "r=" + Math.random();
   let prevT = 0;
   let headersReceivedT = null;
+  let probeSettled = false;
   const currentXhr = new XMLHttpRequest();
   xhr = currentXhr;
   currentXhr.onreadystatechange = function () {
@@ -199,11 +272,13 @@ function doPing() {
     }
   };
   currentXhr.onload = function () {
-    if (aborted || testState >= 4) return;
+    if (probeSettled || aborted || testState >= 4) return;
     if (typeof currentXhr.status === "number" && currentXhr.status >= 400) {
       if (typeof currentXhr.onerror === "function") currentXhr.onerror();
       return;
     }
+    probeSettled = true;
+    xhr = null;
     const endT = headersReceivedT !== null ? headersReceivedT : nowMs();
     let instspd = endT - prevT;
 
@@ -261,18 +336,30 @@ function doPing() {
     schedulePing(instspd);
   };
   currentXhr.onerror = function () {
-    if (aborted || testState >= 4) return;
+    if (probeSettled || aborted || testState >= 4) return;
+    probeSettled = true;
+    xhr = null;
     warmupDone = true;
     recordLoss();
     schedulePing(0);
   };
   currentXhr.ontimeout = currentXhr.onerror;
-  currentXhr.open("GET", pingUrl, true);
   try {
-    currentXhr.timeout = settings.ping_timeout;
-  } catch (e) {}
-  prevT = nowMs();
-  currentXhr.send();
+    currentXhr.open("GET", pingUrl, true);
+    try {
+      currentXhr.timeout = settings.ping_timeout;
+    } catch (e) {}
+    prevT = nowMs();
+    currentXhr.send();
+  } catch (e) {
+    if (!probeSettled && !aborted && testState < 4) {
+      probeSettled = true;
+      xhr = null;
+      warmupDone = true;
+      recordLoss();
+      schedulePing(0);
+    }
+  }
 }
 
 // ping an external host using fetch with no-cors (opaque response, but timing still works)

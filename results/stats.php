@@ -13,6 +13,9 @@ header('Pragma: no-cache');
 <!DOCTYPE html>
 <html>
     <head>
+        <meta name="google-adsense-account" content="ca-pub-1225026489802055">
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1225026489802055"
+     crossorigin="anonymous"></script>
         <title>LibreSpeed - Stats</title>
         <style type="text/css">
             html,body{

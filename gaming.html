@@ -3,6 +3,9 @@
 
 <head>
   <meta charset="UTF-8" />
+  <meta name="google-adsense-account" content="ca-pub-1225026489802055">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1225026489802055"
+     crossorigin="anonymous"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <meta name="description"
     content="اختبار سرعة الإنترنت للألعاب — منصة تيراكس بلاس (Terrax Plus) لقياس زمن الاستجابة (Ping) والتذبذب (Jitter) وسرعتي التنزيل والرفع للألعاب التنافسية والبث المباشر بهوية 4K زجاجية." />
@@ -99,17 +102,17 @@
   <title>Terrax Plus — اختبار سرعة الإنترنت للألعاب | Gaming Speed Test 4K</title>
   <style>
     :root {
-      --bg-primary: #0c1f3f;
-      --bg-secondary: #132d58;
-      --glass-panel: #19386b;
-      --cyber-cyan: #27DDF8;
-      --electric-blue: #378DFF;
-      --holo-purple: #C477FF;
-      --status-green: #78E7A0;
-      --status-yellow: #F5C46B;
-      --status-red: #FF647C;
-      --text-primary: #FFFFFF;
-      --text-secondary: #C4D6ED;
+      --bg-primary: #050D19;
+      --bg-secondary: #071222;
+      --glass-panel: #102446;
+      --cyber-cyan: #53D8FF;
+      --electric-blue: #469EFF;
+      --holo-purple: #B98BFF;
+      --status-green: #9BEA42;
+      --status-yellow: #E8BB67;
+      --status-red: #FF6B8B;
+      --text-primary: #D5E7F7;
+      --text-secondary: #8CA8C8;
       --font-sans-ar: "Cairo", "Inter", system-ui, -apple-system, sans-serif;
       --font-ar: "Cairo", "Inter", system-ui, -apple-system, sans-serif;
       --font-num: "Inter", "Cairo", system-ui, -apple-system, sans-serif;
@@ -246,7 +249,7 @@
       fill: none;
       stroke-dasharray: 220 900;
       animation: traceFlow 6.5s linear infinite;
-      filter: drop-shadow(0 0 7px var(--cyber-cyan));
+      will-change: stroke-dashoffset, opacity;
     }
 
     .trace-pulse-purple {
@@ -255,12 +258,19 @@
       fill: none;
       stroke-dasharray: 220 900;
       animation: traceFlow 8s linear infinite reverse;
-      filter: drop-shadow(0 0 7px var(--holo-purple));
+      will-change: stroke-dashoffset, opacity;
     }
 
     @keyframes traceFlow {
       0% { stroke-dashoffset: 1120; }
       100% { stroke-dashoffset: 0; }
+    }
+
+    /* 2K QHD & 4K UHD Ultra-High-Resolution Proportional Scaling */
+    @media screen and (min-width: 2200px) {
+      html {
+        font-size: clamp(68%, 0.48vw, 95%);
+      }
     }
 
     /* Main 4K Cyber Glass Shell */
@@ -2330,34 +2340,6 @@
       </div>
     </section>
 
-    <!-- Smart Auto-Collapsing High-Yield Gaming Ad Slot -->
-    <div class="terrax-smart-ad-slot terrax-smart-banner gaming-smart-ad-slot"
-         id="terrax-smart-ad-gaming-main"
-         data-terrax-smart-ad="gaming-main"
-         data-ad-status="unfilled"
-         data-ad-filled="false"
-         role="complementary">
-      <div class="terrax-smart-ad-header" hidden aria-hidden="true" style="display:none;">
-        <span class="terrax-ad-badge"></span>
-        <span class="terrax-ad-status-pill"></span>
-      </div>
-      <div class="terrax-smart-ad-body">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-1225026489802055"
-             data-ad-slot=""
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <div class="terrax-native-sponsor-card" hidden aria-hidden="true" style="display:none;">
-          <div class="sponsor-brand-row">
-            <span class="sponsor-icon-glow"></span>
-            <strong class="sponsor-title"></strong>
-          </div>
-          <p class="sponsor-desc"></p>
-        </div>
-      </div>
-    </div>
-
     <!-- Bottom 5-Tab Cyber Glass Navigation Bar (RTL Order: السرعة -> الاستهلاك -> الاستقرار -> اختبار الألعاب -> الإعدادات) -->
     <nav class="terrax-bottom-nav" aria-label="التنقل الرئيسي" data-layer="bottom-navigation">
       <a href="index-modern.html" class="nav-dock-item" data-nav="speed" id="nav-speed-btn" onclick="return navigateFromGaming(event, 'speed')">
@@ -3011,22 +2993,34 @@
 
     function recordCompletedGamingRun(data) {
       try {
+        var math = window.TerraxTelemetryMath;
         var pm = getConsolidatedPingMetrics();
         var mfEval = evaluateMultiFactorGaming(pm.currentPing || pm.avgPing, pm.jitter, pm.packetLoss, pm.totalSamples, true);
         var server = gamingState.speedtest.getSelectedServer();
-        var entry = {
-          timestamp: new Date().toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+        var nowDate = new Date();
+        var rawRun = {
+          runId: "gaming_" + nowDate.getTime() + "_" + Math.random().toString(36).slice(2, 7),
+          epochMs: nowDate.getTime(),
+          timestamp: nowDate.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
           serverName: (server && server.name) ? server.name : "اليمن",
           dlMbps: Number(data.dlStatus) || 0,
           ulMbps: Number(data.ulStatus) || 0,
           pingMs: Number((pm.currentPing || pm.avgPing || 0).toFixed(2)),
+          jitterMs: Number((pm.jitter || 0).toFixed(2)),
           stabilityPercent: mfEval.scorePercent,
           megabytesUsed: Math.max(0.5, Number((gamingState.currentTestBytes / (1024 * 1024)).toFixed(1)))
         };
         var raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-        var list = raw ? JSON.parse(raw) : [];
-        list.unshift(entry);
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list.slice(0, 25)));
+        var list = [];
+        try {
+          list = raw ? JSON.parse(raw) : [];
+        } catch (parseErr) {
+          list = [];
+        }
+        var updatedList = (math && typeof math.appendTestHistoryEntry === "function")
+          ? math.appendTestHistoryEntry(list, rawRun, 25, nowDate)
+          : [rawRun].concat(Array.isArray(list) ? list : []).slice(0, 25);
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedList));
       } catch (e) {}
     }
 
@@ -3169,15 +3163,19 @@
           ? math.smoothNumericValue(gamingState.ulDisplayMbps, data ? data.ulStatus : 0, dtRender, snapUl)
           : (Number(data && data.ulStatus) || 0);
 
-        var dlFmt = math.formatSpeedReading(snapDl ? (data ? data.dlStatus : 0) : gamingState.dlDisplayMbps, true);
-        var ulFmt = math.formatSpeedReading(snapUl ? (data ? data.ulStatus : 0) : gamingState.ulDisplayMbps, true);
+        var allowGbps = true;
+        try {
+          var savedGbps = localStorage.getItem("terrax_auto_gbps_v1");
+          if (savedGbps === "0" || savedGbps === "false") allowGbps = false;
+        } catch (e) {}
+
+        var dlFmt = math.formatSpeedReading(snapDl ? (data ? data.dlStatus : 0) : gamingState.dlDisplayMbps, allowGbps);
+        var ulFmt = math.formatSpeedReading(snapUl ? (data ? data.ulStatus : 0) : gamingState.ulDisplayMbps, allowGbps);
         if (dlEl) {
           if (dlEl.textContent !== dlFmt.displayNumber) {
             dlEl.textContent = dlFmt.displayNumber;
             if (!reducedMotion && gamingState.state === 2 && Number(data && data.testState) === 1 && nowRender - gamingState.lastDlTickTime >= 180) {
               gamingState.lastDlTickTime = nowRender;
-              dlEl.classList.remove("num-scaling");
-              void dlEl.offsetWidth;
               dlEl.classList.add("num-scaling");
             }
           }
@@ -3188,8 +3186,6 @@
             ulEl.textContent = ulFmt.displayNumber;
             if (!reducedMotion && gamingState.state === 2 && Number(data && data.testState) === 3 && nowRender - gamingState.lastUlTickTime >= 180) {
               gamingState.lastUlTickTime = nowRender;
-              ulEl.classList.remove("num-scaling");
-              void ulEl.offsetWidth;
               ulEl.classList.add("num-scaling");
             }
           }
@@ -3447,17 +3443,27 @@
       var plotW = Math.max(10, cw - padX * 2);
       var plotH = Math.max(10, ch - padY * 2);
 
-      // Draw Jitter curve (Purple) from real measured samples
+      var math = window.TerraxTelemetryMath;
+      var smoothedSamples =
+        math && typeof math.computeStabilityMovingAverage === "function"
+          ? math.computeStabilityMovingAverage(samples, 5)
+          : samples;
+
+      // Draw Jitter curve (Purple) from Moving-Average Window
       ctx.save();
       ctx.beginPath();
       var startedJ = false;
-      for (var j = 0; j < samples.length; j++) {
-        if (samples[j].lost) {
+      for (var j = 0; j < smoothedSamples.length; j++) {
+        if (smoothedSamples[j].lost) {
           startedJ = false;
           continue;
         }
-        var jx = padX + (samples.length === 1 ? plotW / 2 : (j / (samples.length - 1)) * plotW);
-        var jy = padY + plotH - (Math.min(maxPing, samples[j].jitter) / maxPing) * plotH;
+        var jVal =
+          smoothedSamples[j].smoothedJitter !== undefined
+            ? smoothedSamples[j].smoothedJitter
+            : smoothedSamples[j].jitter;
+        var jx = padX + (smoothedSamples.length === 1 ? plotW / 2 : (j / (smoothedSamples.length - 1)) * plotW);
+        var jy = padY + plotH - (Math.min(maxPing, jVal) / maxPing) * plotH;
         if (!startedJ) {
           ctx.moveTo(jx, jy);
           startedJ = true;
@@ -3467,16 +3473,18 @@
       }
       ctx.strokeStyle = "#C477FF";
       ctx.lineWidth = 2 * dp;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
       ctx.stroke();
       ctx.restore();
 
-      // Draw Ping curve (Cyan) from real measured samples + Packet Loss markers
+      // Draw Ping curve (Cyan) from Moving-Average Window + Packet Loss markers
       ctx.save();
       ctx.beginPath();
       var startedP = false;
-      for (var k = 0; k < samples.length; k++) {
-        var px = padX + (samples.length === 1 ? plotW / 2 : (k / (samples.length - 1)) * plotW);
-        if (samples[k].lost) {
+      for (var k = 0; k < smoothedSamples.length; k++) {
+        var px = padX + (smoothedSamples.length === 1 ? plotW / 2 : (k / (smoothedSamples.length - 1)) * plotW);
+        if (smoothedSamples[k].lost) {
           startedP = false;
           ctx.save();
           ctx.strokeStyle = "rgba(255, 100, 124, 0.75)";
@@ -3488,7 +3496,11 @@
           ctx.restore();
           continue;
         }
-        var py = padY + plotH - (Math.min(maxPing, samples[k].ping) / maxPing) * plotH;
+        var pVal =
+          smoothedSamples[k].smoothedPing !== undefined
+            ? smoothedSamples[k].smoothedPing
+            : smoothedSamples[k].ping;
+        var py = padY + plotH - (Math.min(maxPing, pVal) / maxPing) * plotH;
         if (!startedP) {
           ctx.moveTo(px, py);
           startedP = true;
@@ -3498,8 +3510,32 @@
       }
       ctx.strokeStyle = "#27DDF8";
       ctx.lineWidth = 2.6 * dp;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
       ctx.stroke();
       ctx.restore();
+    }
+
+    var activeGameQueryController = null;
+    function cleanupGamingPageResources() {
+      stopPingProbeWorker();
+      if (gamingGaugeThrottler) {
+        try {
+          gamingGaugeThrottler.cancel();
+        } catch (e) {}
+      }
+      if (activeGameQueryController) {
+        try {
+          activeGameQueryController.abort();
+        } catch (e) {}
+        activeGameQueryController = null;
+      }
+      if (gamingState.speedtest && (gamingState.state === 2 || gamingState.speedtest.getState() === 3)) {
+        try {
+          gamingState.userAborted = true;
+          gamingState.speedtest.abort();
+        } catch (e) {}
+      }
     }
 
     function hookUpGamingInteractions() {
@@ -3534,13 +3570,10 @@
       });
 
       window.addEventListener("resize", drawWaveform);
-      window.addEventListener("pagehide", function () {
-        stopPingProbeWorker();
-        if (gamingState.state === 2 && gamingState.speedtest) {
-          try {
-            gamingState.speedtest.abort();
-          } catch (e) {}
-        }
+      window.addEventListener("pagehide", cleanupGamingPageResources);
+      window.addEventListener("beforeunload", cleanupGamingPageResources);
+      window.addEventListener("pageshow", function () {
+        isNavigatingFromGaming = false;
       });
     }
 
@@ -3556,13 +3589,7 @@
         }
         e.currentTarget.classList.add("active");
       }
-      stopPingProbeWorker();
-      if (gamingState.state === 2 && gamingState.speedtest) {
-        try {
-          gamingState.userAborted = true;
-          gamingState.speedtest.abort();
-        } catch (err) {}
-      }
+      cleanupGamingPageResources();
       var speedPage = IS_FRONTEND_SUBDIR ? "index.html" : "index-modern.html";
       var targetUrl = speedPage;
       if (target === "speed") {
@@ -3592,14 +3619,24 @@
           statusText.textContent = "يرجى إدخال عنوان الخادم بصيغة IP:Port (مثال 185.25.180.1:27015).";
           return;
         }
+        if (activeGameQueryController) {
+          try {
+            activeGameQueryController.abort();
+          } catch (e) {}
+        }
+        activeGameQueryController = typeof AbortController === "function" ? new AbortController() : null;
         statusText.textContent = "جاري الاستعلام الآمن عبر الخادم...";
-        fetch(ROOT_PREFIX + "backend/gamequery.php", {
+        var fetchOpts = {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             servers: [{ game_id: gameId, servers: [addr] }]
           })
-        })
+        };
+        if (activeGameQueryController) {
+          fetchOpts.signal = activeGameQueryController.signal;
+        }
+        fetch(ROOT_PREFIX + "backend/gamequery.php", fetchOpts)
           .then(function (r) { return r.json(); })
           .then(function (data) {
             if (data && Array.isArray(data.results) && data.results.length > 0) {
@@ -3612,7 +3649,8 @@
               statusText.textContent = data.messageAr;
             }
           })
-          .catch(function () {
+          .catch(function (err) {
+            if (err && err.name === "AbortError") return;
             statusText.textContent = "تعذر الاتصال بنقطة استعلام الخادم المحلية.";
           });
       });

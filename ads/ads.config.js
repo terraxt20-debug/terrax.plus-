@@ -26,6 +26,9 @@ const getEnvVar = (key, fallback = '') => {
  * Official Publisher Configuration Placeholders
  */
 export const DEFAULT_PUBLISHER_ID = 'ca-pub-1225026489802055';
+export const DEFAULT_SLOT_ID = '7159014601';
+export const DEFAULT_INFEED_SLOT_ID = '4744429241';
+export const DEFAULT_INFEED_LAYOUT_KEY = '-gw-3+1f-3d+2z';
 export const PUBLISHER_PLACEHOLDER = 'ca-pub-XXXXXXXXXXXXXXXX';
 export const SLOT_ID_PLACEHOLDER = '0000000000';
 
@@ -51,7 +54,7 @@ export const ADSENSE_CONFIG = {
     home: {
       placementIdentifier: 'terrax-ad-home',
       slotKey: 'speed-main',
-      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_HOME', SLOT_ID_PLACEHOLDER),
+      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_HOME', DEFAULT_SLOT_ID),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,
@@ -61,7 +64,7 @@ export const ADSENSE_CONFIG = {
     speedTest: {
       placementIdentifier: 'terrax-ad-speedtest',
       slotKey: 'speed-results',
-      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_SPEEDTEST', SLOT_ID_PLACEHOLDER),
+      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_SPEEDTEST', DEFAULT_SLOT_ID),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,
@@ -71,7 +74,7 @@ export const ADSENSE_CONFIG = {
     stability: {
       placementIdentifier: 'terrax-ad-stability',
       slotKey: 'stability-main',
-      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_STABILITY', SLOT_ID_PLACEHOLDER),
+      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_STABILITY', DEFAULT_SLOT_ID),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,
@@ -81,7 +84,7 @@ export const ADSENSE_CONFIG = {
     consumption: {
       placementIdentifier: 'terrax-ad-consumption',
       slotKey: 'usage-main',
-      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_CONSUMPTION', SLOT_ID_PLACEHOLDER),
+      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_CONSUMPTION', DEFAULT_SLOT_ID),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,
@@ -91,7 +94,7 @@ export const ADSENSE_CONFIG = {
     servers: {
       placementIdentifier: 'terrax-ad-servers',
       slotKey: 'servers-main',
-      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_SERVERS', SLOT_ID_PLACEHOLDER),
+      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_SERVERS', DEFAULT_SLOT_ID),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,
@@ -101,7 +104,7 @@ export const ADSENSE_CONFIG = {
     additionalContent: {
       placementIdentifier: 'terrax-ad-additional-content',
       slotKey: 'gaming-main',
-      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_ADDITIONAL', SLOT_ID_PLACEHOLDER),
+      adSlotId: getEnvVar('VITE_ADSENSE_SLOT_ADDITIONAL', DEFAULT_SLOT_ID),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,

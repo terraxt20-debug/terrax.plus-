@@ -96,7 +96,8 @@
     "usage-main": "",
     "servers-main": "",
     "settings-main": "",
-    "multiplex-main": ""
+    "multiplex-main": "",
+    "infeed-main": ""
   };
 
   var EEA_UK_CH_TIMEZONES = [
@@ -110,6 +111,9 @@
 
   var autoRotationTimer = null;
   var dialogObserver = null;
+  var viewportAdObserver = null;
+  var VIEWPORT_OBSERVER_ROOT_MARGIN = "120px 0px";
+  var VIEWPORT_OBSERVER_THRESHOLD = 0;
   var lifecycleBound = false;
 
   var engineState = {
@@ -516,7 +520,24 @@
     }
 
     var incomingSlots = cfg.slots || cfg.SLOTS || {};
+    var domSlotFallback = "";
+    if (!customConfig && typeof document !== "undefined") {
+      var domInsEl = document.querySelector("ins.adsbygoogle[data-ad-slot]");
+      if (domInsEl) {
+        var candidateDomSlot = String(domInsEl.getAttribute("data-ad-slot") || "").trim();
+        if (isValidAdSenseSlotId(candidateDomSlot)) {
+          domSlotFallback = candidateDomSlot;
+        }
+      }
+    }
     var nextSlots = Object.assign({}, DEFAULT_ADSENSE_SLOTS, engineState.adsenseSlots);
+    if (domSlotFallback) {
+      for (var dKey in nextSlots) {
+        if (Object.prototype.hasOwnProperty.call(nextSlots, dKey) && !nextSlots[dKey]) {
+          nextSlots[dKey] = domSlotFallback;
+        }
+      }
+    }
     for (var key in incomingSlots) {
       if (Object.prototype.hasOwnProperty.call(incomingSlots, key)) {
         var rawSlot = String(incomingSlots[key] || "").trim();
@@ -603,9 +624,43 @@
   }
 
   /**
+   * Check whether an element or its ancestors are inside a closed <dialog> or hidden wrapper,
+   * or have 0 available width in a live browser layout.
+   */
+  function hasMeasurableAdSlotWidth(el) {
+    if (!el || typeof document === "undefined") return false;
+    try {
+      if (typeof el.closest === "function") {
+        if (el.closest("dialog:not([open]), .hidden, [hidden]")) {
+          return false;
+        }
+      }
+      var hasBrowserLayout =
+        typeof root !== "undefined" &&
+        typeof root.innerWidth === "number" &&
+        root.innerWidth > 0 &&
+        document.documentElement &&
+        document.documentElement.clientWidth > 0;
+      if (!hasBrowserLayout) {
+        return true;
+      }
+      var w = Number(el.offsetWidth || el.clientWidth || 0);
+      if (!w && el.parentElement) {
+        w = Number(el.parentElement.offsetWidth || el.parentElement.clientWidth || 0);
+      }
+      if (!w && typeof el.getBoundingClientRect === "function") {
+        w = Number(el.getBoundingClientRect().width || 0);
+      }
+      return w >= 120;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  /**
    * Mount and initialize an official Google AdSense <ins class="adsbygoogle"> unit inside a card
    * when both a valid Publisher ID and a valid Slot ID are configured.
-   * Strictly prevents duplicate .push({}) calls on the same <ins> element and handles unfilled inventory gracefully.
+   * Strictly prevents duplicate .push({}) calls on the same <ins> element and guards against availableWidth=0.
    */
   function mountOrPushAdSenseUnit(card, slotKey) {
     if (!card || typeof document === "undefined") return false;
@@ -613,11 +668,15 @@
       return false;
     }
 
+    var existingCardIns = card.querySelector("ins.adsbygoogle");
     var clientId = normalizeAdSenseClientId(
-      card.getAttribute("data-adsense-client") || engineState.adsensePublisherId
+      card.getAttribute("data-adsense-client") ||
+        (existingCardIns && existingCardIns.getAttribute("data-ad-client")) ||
+        engineState.adsensePublisherId
     );
     var slotId = String(
       card.getAttribute("data-adsense-slot") ||
+        (existingCardIns && existingCardIns.getAttribute("data-ad-slot")) ||
         engineState.adsenseSlots[slotKey] ||
         ""
     ).trim();
@@ -626,56 +685,107 @@
       return false;
     }
 
-    var bodyEl = card.querySelector(".terrax-yan-body") || card;
-    var adsenseMount = bodyEl.querySelector(".terrax-adsense-mount");
-    if (!adsenseMount) {
-      adsenseMount = document.createElement("div");
-      adsenseMount.className = "terrax-adsense-mount";
-      adsenseMount.style.cssText =
-        "width:100%;min-height:90px;display:block;overflow:hidden;";
-      bodyEl.insertBefore(adsenseMount, bodyEl.firstChild);
-    }
+    var bodyEl =
+      card.querySelector(".terrax-yan-body") ||
+      card.querySelector(".terrax-smart-ad-body") ||
+      card;
+    var insEl = existingCardIns;
+    var adsenseMount = bodyEl.querySelector(".terrax-adsense-mount") || bodyEl;
 
-    var existingIns = adsenseMount.querySelector("ins.adsbygoogle");
     if (
-      existingIns &&
-      existingIns.getAttribute("data-ad-client") === clientId &&
-      existingIns.getAttribute("data-ad-slot") === slotId &&
-      (existingIns.getAttribute("data-terrax-pushed") === "true" ||
-        existingIns.getAttribute("data-adsbygoogle-status"))
+      insEl &&
+      insEl.getAttribute("data-ad-client") === clientId &&
+      insEl.getAttribute("data-ad-slot") === slotId
     ) {
-      // Prevent duplicate push on an already-initialized AdSense <ins> unit
-      return true;
-    }
-
-    adsenseMount.innerHTML = "";
-    var insEl = document.createElement("ins");
-    insEl.className = "adsbygoogle";
-    insEl.style.display = "block";
-    insEl.setAttribute("data-ad-client", clientId);
-    insEl.setAttribute("data-ad-slot", slotId);
-
-    var requestedFormat = card.getAttribute("data-adsense-format") || "auto";
-    insEl.setAttribute("data-ad-format", requestedFormat);
-    if (requestedFormat !== "autorelaxed") {
-      insEl.setAttribute("data-full-width-responsive", "true");
-    }
-
-    adsenseMount.appendChild(insEl);
-    ensureGoogleAdSenseScriptLoaded(clientId);
-
-    try {
-      if (typeof root !== "undefined") {
-        root.adsbygoogle = root.adsbygoogle || [];
+      if (insEl.getAttribute("data-adsbygoogle-status") === "reserved") {
+        if (hasMeasurableAdSlotWidth(insEl) || hasMeasurableAdSlotWidth(card)) {
+          insEl.removeAttribute("data-adsbygoogle-status");
+          insEl.removeAttribute("data-terrax-pushed");
+        } else {
+          return false;
+        }
+      }
+      var statusAttr = insEl.getAttribute("data-adsbygoogle-status");
+      if (
+        insEl.getAttribute("data-terrax-pushed") === "true" ||
+        (statusAttr && statusAttr !== "reserved")
+      ) {
         insEl.setAttribute("data-terrax-pushed", "true");
-        root.adsbygoogle.push({});
         card.setAttribute("data-adsense-active", "true");
         card.setAttribute("data-adsense-client", clientId);
         card.setAttribute("data-adsense-slot", slotId);
+      } else {
+        if (!hasMeasurableAdSlotWidth(insEl) && !hasMeasurableAdSlotWidth(card)) {
+          insEl.setAttribute("data-adsbygoogle-status", "reserved");
+          return false;
+        }
+        ensureGoogleAdSenseScriptLoaded(clientId);
+        try {
+          if (typeof root !== "undefined") {
+            root.adsbygoogle = root.adsbygoogle || [];
+            insEl.setAttribute("data-terrax-pushed", "true");
+            root.adsbygoogle.push({});
+            card.setAttribute("data-adsense-active", "true");
+            card.setAttribute("data-adsense-client", clientId);
+            card.setAttribute("data-adsense-slot", slotId);
+          }
+        } catch (err) {
+          card.setAttribute("data-adsense-active", "fallback");
+          return false;
+        }
       }
-    } catch (err) {
-      card.setAttribute("data-adsense-active", "fallback");
-      return false;
+    } else {
+      if (!bodyEl.querySelector(".terrax-adsense-mount")) {
+        adsenseMount = document.createElement("div");
+        adsenseMount.className = "terrax-adsense-mount";
+        adsenseMount.style.cssText =
+          "width:100%;min-height:90px;display:block;overflow:hidden;";
+        bodyEl.insertBefore(adsenseMount, bodyEl.firstChild);
+      }
+      adsenseMount.innerHTML = "";
+      insEl = document.createElement("ins");
+      insEl.className = "adsbygoogle";
+      insEl.style.display = "block";
+      insEl.style.width = "100%";
+      insEl.setAttribute("data-ad-client", clientId);
+      insEl.setAttribute("data-ad-slot", slotId);
+
+      var requestedFormat =
+        card.getAttribute("data-adsense-format") ||
+        (existingCardIns && existingCardIns.getAttribute("data-ad-format")) ||
+        "auto";
+      var requestedLayoutKey =
+        card.getAttribute("data-adsense-layout-key") ||
+        (existingCardIns && existingCardIns.getAttribute("data-ad-layout-key")) ||
+        "";
+      insEl.setAttribute("data-ad-format", requestedFormat);
+      if (requestedLayoutKey) {
+        insEl.setAttribute("data-ad-layout-key", requestedLayoutKey);
+      }
+      if (requestedFormat !== "autorelaxed" && requestedFormat !== "fluid") {
+        insEl.setAttribute("data-full-width-responsive", "true");
+      }
+
+      adsenseMount.appendChild(insEl);
+      if (!hasMeasurableAdSlotWidth(insEl) && !hasMeasurableAdSlotWidth(card)) {
+        insEl.setAttribute("data-adsbygoogle-status", "reserved");
+        return false;
+      }
+      ensureGoogleAdSenseScriptLoaded(clientId);
+
+      try {
+        if (typeof root !== "undefined") {
+          root.adsbygoogle = root.adsbygoogle || [];
+          insEl.setAttribute("data-terrax-pushed", "true");
+          root.adsbygoogle.push({});
+          card.setAttribute("data-adsense-active", "true");
+          card.setAttribute("data-adsense-client", clientId);
+          card.setAttribute("data-adsense-slot", slotId);
+        }
+      } catch (err) {
+        card.setAttribute("data-adsense-active", "fallback");
+        return false;
+      }
     }
 
     // Observe data-ad-status ("filled" vs "unfilled") to handle unavailable inventory with Zero-CLS
@@ -684,7 +794,6 @@
       var statusObserver = new MutationObserver(function () {
         var adStatus = insEl.getAttribute("data-ad-status");
         if (adStatus === "unfilled") {
-          adsenseMount.style.display = "none";
           card.setAttribute("data-adsense-status", "unfilled");
           card.setAttribute("data-ad-status", "unfilled");
           card.setAttribute("data-ad-filled", "false");
@@ -920,6 +1029,19 @@
     }
 
     bindZeroPopupGuard(fallbackEl);
+
+    var disclosureEl = card.querySelector(".terrax-ad-disclosure-label");
+    if (!disclosureEl) {
+      disclosureEl = document.createElement("span");
+      disclosureEl.className = "terrax-ad-disclosure-label";
+      disclosureEl.setAttribute("data-label-ar", "اعلان");
+      disclosureEl.setAttribute("data-label-en", "Sponsored");
+      disclosureEl.textContent = getCurrentLang() === "en" ? "Sponsored" : "اعلان • Sponsored";
+      card.appendChild(disclosureEl);
+    } else if (!disclosureEl.textContent) {
+      disclosureEl.textContent = getCurrentLang() === "en" ? "Sponsored" : "اعلان • Sponsored";
+    }
+
     return fallbackEl;
   }
 
@@ -1018,7 +1140,10 @@
           : !canLoadAdsUnderConsent()
             ? "consent-paused"
             : "ready";
-    if (status === "ready" || status === "loading") {
+    var insEl = card.querySelector("ins.adsbygoogle");
+    var isAdSenseFilled = Boolean(insEl && insEl.getAttribute("data-ad-status") === "filled");
+    var isRtbFilled = card.getAttribute("data-yan-mode") === "rtb-active";
+    if (isAdSenseFilled || isRtbFilled) {
       card.setAttribute("data-ad-filled", "true");
       card.setAttribute("data-ad-status", "filled");
       card.classList.add("ad-filled");
@@ -1121,10 +1246,17 @@
         bindZeroPopupGuard(fallbackEl);
       }
 
-      if (!isTesting && canLoadAdsUnderConsent() && !isBrowserOffline()) {
+      var cardInsEl = card.querySelector("ins.adsbygoogle");
+      var cardAdSenseFilled = Boolean(cardInsEl && cardInsEl.getAttribute("data-ad-status") === "filled");
+      var cardRtbFilled = card.getAttribute("data-yan-mode") === "rtb-active";
+      if (!isTesting && canLoadAdsUnderConsent() && !isBrowserOffline() && (cardAdSenseFilled || cardRtbFilled)) {
         card.setAttribute("data-ad-filled", "true");
         card.setAttribute("data-ad-status", "filled");
         card.classList.add("ad-filled");
+      } else {
+        card.setAttribute("data-ad-filled", "false");
+        card.setAttribute("data-ad-status", "unfilled");
+        card.classList.remove("ad-filled");
       }
 
       updateCardStatusIndicator(
@@ -1178,8 +1310,88 @@
   }
 
   /**
+   * Initialize the IntersectionObserver that defers ad loading until an ad slot enters the viewport.
+   * Improves initial page load performance and prevents offscreen ad resource consumption.
+   */
+  function setupViewportAdObserver() {
+    if (viewportAdObserver) {
+      return viewportAdObserver;
+    }
+    if (typeof IntersectionObserver !== "function") {
+      return null;
+    }
+
+    viewportAdObserver = new IntersectionObserver(
+      function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          var entry = entries[i];
+          var card = entry && entry.target;
+          if (!card) continue;
+
+          if (entry.isIntersecting || entry.intersectionRatio > 0) {
+            card.setAttribute("data-in-viewport", "true");
+            card.setAttribute("data-viewport-entered", "true");
+
+            if (engineState.isTesting) {
+              engineState.pendingAdLoadAfterTest = true;
+              continue;
+            }
+
+            var pendingReason = card._pendingLoadReason || "viewport-intersect";
+            card._pendingLoadReason = null;
+            if (card.getAttribute("data-ad-initialized") !== "true" || pendingReason !== "initial-load") {
+              renderCardUnit(card, pendingReason);
+            }
+          } else {
+            card.setAttribute("data-in-viewport", "false");
+          }
+        }
+      },
+      {
+        root: null,
+        rootMargin: VIEWPORT_OBSERVER_ROOT_MARGIN,
+        threshold: VIEWPORT_OBSERVER_THRESHOLD
+      }
+    );
+
+    return viewportAdObserver;
+  }
+
+  /**
+   * Register an ad card with the IntersectionObserver so it only begins loading when entering the viewport.
+   * Falls back to immediate rendering only in environments where IntersectionObserver is unavailable.
+   */
+  function observeAdCardInViewport(card, reason) {
+    if (!card) return false;
+    ensureSmartlinkDomInCard(card);
+    card._pendingLoadReason = String(reason || "initial-load");
+
+    var observer = setupViewportAdObserver();
+    if (!observer) {
+      // Fallback for environments without IntersectionObserver (e.g. legacy browsers or Node unit tests)
+      card.setAttribute("data-in-viewport", "true");
+      card.setAttribute("data-ad-lazy", "loaded");
+      return renderCardUnit(card, reason);
+    }
+
+    if (!card._terraxViewportObserved) {
+      card._terraxViewportObserved = true;
+      card.setAttribute("data-ad-lazy", "pending-viewport");
+      observer.observe(card);
+    }
+
+    // Only load immediately if the IntersectionObserver has already confirmed this slot is in the viewport
+    if (card.getAttribute("data-in-viewport") === "true") {
+      return renderCardUnit(card, reason);
+    }
+
+    return false;
+  }
+
+  /**
    * Render or refresh a single Hybrid Google AdSense / Yandex RTB / Automatic Embedded Ad card
    * ONLY when Smart Ad Lock is NOT in RUNNING state (engineState.isTesting === false)
+   * and ONLY when the ad slot has entered the viewport via IntersectionObserver.
    */
   function renderCardUnit(card, reason) {
     if (!card || engineState.isTesting) {
@@ -1189,6 +1401,16 @@
       return false;
     }
 
+    // Enforce viewport lazy-loading via IntersectionObserver before starting any network ad requests
+    if (
+      typeof IntersectionObserver === "function" &&
+      card.getAttribute("data-in-viewport") !== "true" &&
+      reason !== "viewport-intersect"
+    ) {
+      return observeAdCardInViewport(card, reason);
+    }
+
+    card.setAttribute("data-ad-lazy", "loaded");
     ensureYandexQueue();
     ensureSmartlinkDomInCard(card);
 
@@ -1239,13 +1461,24 @@
       card._yanCheckTimer = null;
     }
 
-    // Create a clean container ID for Yandex RTB render/refresh cycle
+    // Create a clean container ID for Yandex RTB render/refresh cycle without wiping static AdSense <ins> units
     var renderContainerId =
       "yandex_rtb_" +
       slotKey.replace(/[^a-zA-Z0-9_-]/g, "_") +
       "_" +
       engineState.refreshCount;
-    mountEl.innerHTML = "";
+    var oldRtbTargets = mountEl.querySelectorAll(".terrax-yan-rtb-target");
+    for (var rIdx = 0; rIdx < oldRtbTargets.length; rIdx++) {
+      if (oldRtbTargets[rIdx].parentNode) {
+        oldRtbTargets[rIdx].parentNode.removeChild(oldRtbTargets[rIdx]);
+      }
+    }
+    if (
+      !mountEl.querySelector("ins.adsbygoogle") &&
+      !mountEl.querySelector(".terrax-native-sponsor-card")
+    ) {
+      mountEl.innerHTML = "";
+    }
     var rtbDiv = document.createElement("div");
     rtbDiv.id = renderContainerId;
     rtbDiv.className = "terrax-yan-rtb-target";
@@ -1437,7 +1670,7 @@
 
     var cards = getAdCards();
     for (var i = 0; i < cards.length; i++) {
-      renderCardUnit(cards[i], engineState.lastRefreshReason);
+      observeAdCardInViewport(cards[i], engineState.lastRefreshReason);
     }
     return true;
   }
@@ -1507,9 +1740,17 @@
       clearInterval(autoRotationTimer);
       autoRotationTimer = null;
     }
+    if (viewportAdObserver) {
+      try {
+        viewportAdObserver.disconnect();
+      } catch (e) {}
+      viewportAdObserver = null;
+    }
     var cards = getAdCards();
     for (var i = 0; i < cards.length; i++) {
       var card = cards[i];
+      card._terraxViewportObserved = false;
+      card._pendingLoadReason = null;
       if (card._yanFallbackTimer) {
         clearTimeout(card._yanFallbackTimer);
         card._yanFallbackTimer = null;
@@ -1523,13 +1764,15 @@
         frame.parentNode.removeChild(frame);
       }
       card.removeAttribute("data-ad-initialized");
+      card.removeAttribute("data-in-viewport");
+      card.removeAttribute("data-ad-lazy");
     }
     engineState.activeSlots = {};
   }
 
   /**
    * Observe <dialog> elements (such as #usage-dialog, #settings-dialog, #privacy) so ads and consent controls inside modals
-   * automatically initialize and render as soon as the dialog opens.
+   * automatically register with the viewport IntersectionObserver as soon as the dialog opens.
    */
   function setupDialogAutoAdObserver() {
     if (
@@ -1552,7 +1795,7 @@
         ) {
           var dialogSlots = m.target.querySelectorAll("[data-terrax-smart-ad], [data-terrax-yan-slot]");
           for (var j = 0; j < dialogSlots.length; j++) {
-            renderCardUnit(dialogSlots[j], "dialog-open");
+            observeAdCardInViewport(dialogSlots[j], "dialog-open");
           }
         }
       }
@@ -1588,7 +1831,7 @@
         var cards = getAdCards();
         for (var i = 0; i < cards.length; i++) {
           if (cards[i].getAttribute("data-ad-initialized") !== "true") {
-            renderCardUnit(cards[i], "pageshow-restore");
+            observeAdCardInViewport(cards[i], "pageshow-restore");
           }
         }
       }
@@ -1629,6 +1872,7 @@
     configureAdSense();
     ensureYandexQueue();
     bindLifecycleEvents();
+    setupViewportAdObserver();
     setupDialogAutoAdObserver();
     bindConsentUiControls();
     syncAdCardsVisualState();
@@ -1661,6 +1905,8 @@
     ensureGoogleAdSenseVerificationMeta: ensureGoogleAdSenseVerificationMeta,
     ensureGoogleAdSenseScriptLoaded: ensureGoogleAdSenseScriptLoaded,
     mountOrPushAdSenseUnit: mountOrPushAdSenseUnit,
+    setupViewportAdObserver: setupViewportAdObserver,
+    observeAdCardInViewport: observeAdCardInViewport,
     setEngineTestState: setEngineTestState,
     onTestError: onTestError,
     setConsentChoice: setConsentChoice,

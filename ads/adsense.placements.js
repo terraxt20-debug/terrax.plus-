@@ -86,6 +86,32 @@ export function getAllPlacements() {
  * @param {boolean} [options.isTesting]
  * @returns {boolean} Whether mounting was initiated
  */
+function hasMeasurableWidth(el) {
+  if (!el || typeof document === 'undefined') return false;
+  try {
+    if (typeof el.closest === 'function' && el.closest('dialog:not([open]), .hidden, [hidden]')) {
+      return false;
+    }
+    const hasBrowserLayout =
+      typeof window !== 'undefined' &&
+      typeof window.innerWidth === 'number' &&
+      window.innerWidth > 0 &&
+      document.documentElement &&
+      document.documentElement.clientWidth > 0;
+    if (!hasBrowserLayout) return true;
+    let w = Number(el.offsetWidth || el.clientWidth || 0);
+    if (!w && el.parentElement) {
+      w = Number(el.parentElement.offsetWidth || el.parentElement.clientWidth || 0);
+    }
+    if (!w && typeof el.getBoundingClientRect === 'function') {
+      w = Number(el.getBoundingClientRect().width || 0);
+    }
+    return w >= 120;
+  } catch {
+    return true;
+  }
+}
+
 export function mountAdSenseUnit(container, placementKey, options = {}) {
   if (!container || typeof document === 'undefined') return false;
   const isTesting = options.isTesting ?? false;
@@ -114,10 +140,19 @@ export function mountAdSenseUnit(container, placementKey, options = {}) {
   // Check if an existing <ins> unit is already mounted inside this container
   let insEl = container.querySelector('ins.adsbygoogle');
   if (insEl) {
+    if (insEl.getAttribute('data-adsbygoogle-status') === 'reserved') {
+      if (hasMeasurableWidth(insEl) || hasMeasurableWidth(container)) {
+        insEl.removeAttribute('data-adsbygoogle-status');
+        insEl.removeAttribute('data-terrax-pushed');
+      } else {
+        return false;
+      }
+    }
+    const statusAttr = insEl.getAttribute('data-adsbygoogle-status');
     if (
       insEl.getAttribute('data-ad-client') === publisherId &&
       insEl.getAttribute('data-ad-slot') === slotId &&
-      (insEl.getAttribute('data-terrax-pushed') === 'true' || insEl.getAttribute('data-adsbygoogle-status'))
+      (insEl.getAttribute('data-terrax-pushed') === 'true' || (statusAttr && statusAttr !== 'reserved'))
     ) {
       return true; // already successfully initialized
     }
@@ -125,18 +160,37 @@ export function mountAdSenseUnit(container, placementKey, options = {}) {
     insEl = document.createElement('ins');
     insEl.className = 'adsbygoogle';
     insEl.style.display = 'block';
+    insEl.style.width = '100%';
     insEl.setAttribute('data-ad-client', publisherId);
     insEl.setAttribute('data-ad-slot', slotId);
     insEl.setAttribute('data-ad-format', placement.adFormat || 'auto');
-    if (placement.fullWidthResponsive) {
+    if (placement.adLayoutKey) {
+      insEl.setAttribute('data-ad-layout-key', placement.adLayoutKey);
+    }
+    if (placement.fullWidthResponsive && placement.adFormat !== 'fluid') {
       insEl.setAttribute('data-full-width-responsive', 'true');
     }
     container.innerHTML = '';
     container.appendChild(insEl);
   }
 
+  let disclosureEl = container.querySelector('.terrax-ad-disclosure-label');
+  if (!disclosureEl) {
+    disclosureEl = document.createElement('span');
+    disclosureEl.className = 'terrax-ad-disclosure-label';
+    disclosureEl.setAttribute('data-label-ar', 'اعلان');
+    disclosureEl.setAttribute('data-label-en', 'Sponsored');
+    disclosureEl.textContent = 'اعلان • Sponsored';
+    container.appendChild(disclosureEl);
+  }
+
   // Observe Google AdSense inventory delivery (filled vs unfilled)
   observeAdSenseStatus(insEl, container);
+
+  if (!hasMeasurableWidth(insEl) && !hasMeasurableWidth(container)) {
+    insEl.setAttribute('data-adsbygoogle-status', 'reserved');
+    return false;
+  }
 
   try {
     if (typeof window !== 'undefined') {
@@ -164,16 +218,25 @@ function observeAdSenseStatus(insEl, container) {
 
   const observer = new MutationObserver(() => {
     const status = insEl.getAttribute('data-ad-status');
+    const disclosureEl = container.querySelector('.terrax-ad-disclosure-label');
     if (status === 'filled') {
       container.setAttribute('data-ad-filled', 'true');
       container.setAttribute('data-ad-status', 'filled');
       container.classList.add('ad-filled');
       container.style.display = 'flex';
+      if (disclosureEl) {
+        disclosureEl.removeAttribute('hidden');
+        disclosureEl.setAttribute('aria-hidden', 'false');
+      }
     } else if (status === 'unfilled') {
       container.setAttribute('data-ad-filled', 'false');
       container.setAttribute('data-ad-status', 'unfilled');
       container.classList.remove('ad-filled');
-      container.style.display = 'none';
+      container.style.display = 'block';
+      if (disclosureEl) {
+        disclosureEl.setAttribute('hidden', 'hidden');
+        disclosureEl.setAttribute('aria-hidden', 'true');
+      }
     }
   });
 

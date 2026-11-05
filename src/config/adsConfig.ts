@@ -55,6 +55,9 @@ export function isValidAdSenseSlotId(slotId?: string | null): boolean {
 }
 
 export const DEFAULT_ADSENSE_PUBLISHER_ID = 'ca-pub-1225026489802055';
+export const DEFAULT_ADSENSE_SLOT_ID = '7159014601';
+export const DEFAULT_ADSENSE_INFEED_SLOT_ID = '4744429241';
+export const DEFAULT_ADSENSE_INFEED_LAYOUT_KEY = '-gw-3+1f-3d+2z';
 
 export const ADSENSE_CONFIG = {
   PUBLISHER_ID: normalizeAdSenseClientId(env.VITE_ADSENSE_PUBLISHER_ID || DEFAULT_ADSENSE_PUBLISHER_ID),
@@ -62,21 +65,23 @@ export const ADSENSE_CONFIG = {
   AUTO_ADS_ENABLED: String(env.VITE_ADSENSE_AUTO_ADS_ENABLED ?? 'true').toLowerCase() !== 'false',
   CMP_ENABLED: String(env.VITE_ADSENSE_CMP_ENABLED ?? 'true').toLowerCase() !== 'false',
   SCRIPT_LOADING_MODE: 'async' as const,
+  INFEED_LAYOUT_KEY: DEFAULT_ADSENSE_INFEED_LAYOUT_KEY,
   SLOTS: {
-    'speed-main': String(env.VITE_ADSENSE_SLOT_SPEED_MAIN || '').trim(),
-    'speed-results': String(env.VITE_ADSENSE_SLOT_SPEED_RESULTS || '').trim(),
-    'stability-main': String(env.VITE_ADSENSE_SLOT_STABILITY_MAIN || '').trim(),
-    'gaming-main': String(env.VITE_ADSENSE_SLOT_GAMING_MAIN || '').trim(),
-    'usage-main': String(env.VITE_ADSENSE_SLOT_USAGE_MAIN || '').trim(),
-    'servers-main': String(env.VITE_ADSENSE_SLOT_SERVERS_MAIN || '').trim(),
-    'settings-main': String(env.VITE_ADSENSE_SLOT_SETTINGS_MAIN || '').trim(),
-    'multiplex-main': String(env.VITE_ADSENSE_SLOT_MULTIPLEX || '').trim(),
+    'speed-main': String(env.VITE_ADSENSE_SLOT_SPEED_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
+    'speed-results': String(env.VITE_ADSENSE_SLOT_SPEED_RESULTS || DEFAULT_ADSENSE_SLOT_ID).trim(),
+    'stability-main': String(env.VITE_ADSENSE_SLOT_STABILITY_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
+    'gaming-main': String(env.VITE_ADSENSE_SLOT_GAMING_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
+    'usage-main': String(env.VITE_ADSENSE_SLOT_USAGE_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
+    'servers-main': String(env.VITE_ADSENSE_SLOT_SERVERS_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
+    'settings-main': String(env.VITE_ADSENSE_SLOT_SETTINGS_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
+    'multiplex-main': String(env.VITE_ADSENSE_SLOT_MULTIPLEX || DEFAULT_ADSENSE_SLOT_ID).trim(),
+    'infeed-main': String(env.VITE_ADSENSE_SLOT_INFEED || DEFAULT_ADSENSE_INFEED_SLOT_ID).trim(),
   },
   PLACEMENTS: {
     home: {
       placementIdentifier: 'terrax-ad-home',
       slotKey: 'speed-main',
-      adSlotId: String(env.VITE_ADSENSE_SLOT_SPEED_MAIN || '').trim(),
+      adSlotId: String(env.VITE_ADSENSE_SLOT_SPEED_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,
@@ -84,7 +89,7 @@ export const ADSENSE_CONFIG = {
     speedTest: {
       placementIdentifier: 'terrax-ad-speedtest',
       slotKey: 'speed-results',
-      adSlotId: String(env.VITE_ADSENSE_SLOT_SPEED_RESULTS || '').trim(),
+      adSlotId: String(env.VITE_ADSENSE_SLOT_SPEED_RESULTS || DEFAULT_ADSENSE_SLOT_ID).trim(),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,
@@ -92,7 +97,7 @@ export const ADSENSE_CONFIG = {
     stability: {
       placementIdentifier: 'terrax-ad-stability',
       slotKey: 'stability-main',
-      adSlotId: String(env.VITE_ADSENSE_SLOT_STABILITY_MAIN || '').trim(),
+      adSlotId: String(env.VITE_ADSENSE_SLOT_STABILITY_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,
@@ -100,7 +105,7 @@ export const ADSENSE_CONFIG = {
     consumption: {
       placementIdentifier: 'terrax-ad-consumption',
       slotKey: 'usage-main',
-      adSlotId: String(env.VITE_ADSENSE_SLOT_USAGE_MAIN || '').trim(),
+      adSlotId: String(env.VITE_ADSENSE_SLOT_USAGE_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,
@@ -108,7 +113,7 @@ export const ADSENSE_CONFIG = {
     servers: {
       placementIdentifier: 'terrax-ad-servers',
       slotKey: 'servers-main',
-      adSlotId: String(env.VITE_ADSENSE_SLOT_SERVERS_MAIN || '').trim(),
+      adSlotId: String(env.VITE_ADSENSE_SLOT_SERVERS_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,
@@ -116,7 +121,7 @@ export const ADSENSE_CONFIG = {
     additionalContent: {
       placementIdentifier: 'terrax-ad-additional-content',
       slotKey: 'gaming-main',
-      adSlotId: String(env.VITE_ADSENSE_SLOT_GAMING_MAIN || '').trim(),
+      adSlotId: String(env.VITE_ADSENSE_SLOT_GAMING_MAIN || DEFAULT_ADSENSE_SLOT_ID).trim(),
       adFormat: 'auto',
       fullWidthResponsive: true,
       enabled: true,

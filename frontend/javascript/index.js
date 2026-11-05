@@ -86,6 +86,7 @@ const FINISHED = 3;
 
 const HISTORY_STORAGE_KEY = "terrax_librespeed_history_v1";
 const LANGUAGE_STORAGE_KEY = "terrax_ui_lang_v1";
+const AUTO_GBPS_STORAGE_KEY = "terrax_auto_gbps_v1";
 
 const UI_TRANSLATIONS = {
   ar: {
@@ -818,12 +819,55 @@ function attachButtonMicroInteractions() {
 }
 
 /**
+ * Cancel any in-flight pre-test warm-up fetch or start timeout to prevent race conditions
+ */
+function cancelPendingTestWarmup() {
+  if (testState._warmupTimeoutId) {
+    clearTimeout(testState._warmupTimeoutId);
+    testState._warmupTimeoutId = null;
+  }
+  if (testState._warmupAbortController) {
+    try {
+      testState._warmupAbortController.abort();
+    } catch (e) {}
+    testState._warmupAbortController = null;
+  }
+}
+
+/**
+ * Clean up all active timers, animation loops, and network workers when leaving the Speed page
+ * to guarantee 100% process isolation and zero memory leaks when switching to Stability or Gaming.
+ */
+function cleanupSpeedPageResources() {
+  testState._startRunToken = (testState._startRunToken || 0) + 1;
+  cancelPendingTestWarmup();
+  cancelStatCardsCountUp();
+  cancelUsageTestsCountUp(false);
+  if (testState._progressHideTimeoutId) {
+    clearTimeout(testState._progressHideTimeoutId);
+    testState._progressHideTimeoutId = null;
+  }
+  if (testState.speedtest && testState.speedtest.getState() === 3) {
+    testState.userAborted = true;
+    try {
+      testState.speedtest.abort();
+    } catch (e) {}
+  }
+  if (testState.state === RUNNING) {
+    testState.state = READY;
+  }
+  globalThis.TerraxSmartAdEngine?.setTestingState(false);
+}
+globalThis.cleanupSpeedPageResources = cleanupSpeedPageResources;
+
+/**
  * Smooth 4K cross-page navigation helper with zero artificial delay and BFCache resilience
  */
 let isNavigatingToPage = false;
 function smoothNavigateToPage(targetUrl) {
   if (isNavigatingToPage || !targetUrl) return;
   isNavigatingToPage = true;
+  cleanupSpeedPageResources();
   if (document.body) {
     document.body.classList.add("terrax-page-leaving");
   }
@@ -834,7 +878,13 @@ function smoothNavigateToPage(targetUrl) {
   }, 2500);
 }
 
-// BFCache and pageshow resilience to prevent page freeze or leaving opacity deadlock
+// BFCache, pagehide, and pageshow resilience to prevent page freeze or background CPU leaks
+window.addEventListener("pagehide", () => {
+  cleanupSpeedPageResources();
+});
+window.addEventListener("beforeunload", () => {
+  cleanupSpeedPageResources();
+});
 window.addEventListener("pageshow", () => {
   isNavigatingToPage = false;
   document.body?.classList.remove("terrax-page-leaving");
@@ -1107,11 +1157,23 @@ function hookUpButtons() {
     });
   }
 
-  // Auto-Gbps toggle inside settings dialog
+  // Auto-Gbps toggle inside settings dialog (persisted across all pages)
   const autoGbpsToggle = document.querySelector("#toggle-auto-gbps");
   if (autoGbpsToggle) {
+    try {
+      const savedAutoGbps = localStorage.getItem(AUTO_GBPS_STORAGE_KEY);
+      if (savedAutoGbps === "0" || savedAutoGbps === "false") {
+        testState.autoGbps = false;
+      } else if (savedAutoGbps === "1" || savedAutoGbps === "true") {
+        testState.autoGbps = true;
+      }
+    } catch (e) {}
+    autoGbpsToggle.checked = Boolean(testState.autoGbps);
     autoGbpsToggle.addEventListener("change", () => {
       testState.autoGbps = Boolean(autoGbpsToggle.checked);
+      try {
+        localStorage.setItem(AUTO_GBPS_STORAGE_KEY, testState.autoGbps ? "1" : "0");
+      } catch (e) {}
       testState.testDataDirty = true;
     });
   }
@@ -1190,6 +1252,13 @@ function hookUpButtons() {
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
         modal.close();
+        if (typeof e.clientX === "number" && typeof e.clientY === "number" && (e.clientX > 0 || e.clientY > 0)) {
+          const hitEl = document.elementFromPoint(e.clientX, e.clientY);
+          const navBtn = hitEl?.closest?.(".nav-dock-item");
+          if (navBtn && typeof navBtn.click === "function") {
+            navBtn.click();
+          }
+        }
       }
     });
   });
@@ -1335,20 +1404,34 @@ function hookUpButtons() {
 
 /**
  * Event listener for clicks on the main start button
+ * Calibrated with monotonic _startRunToken and abortable warm-up controller
+ * to prevent race conditions from repeated/rapid button clicks.
  */
 function startButtonClickHandler() {
   if (testState.speedtest?.getState() === 3) {
+    testState._startRunToken = (testState._startRunToken || 0) + 1;
+    cancelPendingTestWarmup();
     testState.userAborted = true;
     cancelStatCardsCountUp();
     globalThis.TerraxSmartAdEngine?.setTestingState(false);
+    syncConnectionCardState(false, false);
     testState.speedtest.abort();
     return;
   }
 
   switch (testState.state) {
     case READY:
-    case FINISHED:
+    case FINISHED: {
+      testState._startRunToken = (testState._startRunToken || 0) + 1;
+      const activeRunToken = testState._startRunToken;
+      cancelPendingTestWarmup();
       cancelStatCardsCountUp();
+      if (testState._progressHideTimeoutId) {
+        clearTimeout(testState._progressHideTimeoutId);
+        testState._progressHideTimeoutId = null;
+      }
+      testState._progressHideScheduled = false;
+      testState._progressFinishedShown = false;
       testState.userAborted = false;
       testState._maxProgressPct = 0;
       testState.dlSamples = [];
@@ -1365,6 +1448,7 @@ function startButtonClickHandler() {
       testState.lastRenderTimestamp = performance.now();
       testState.testData = null;
       testState.testDataDirty = true;
+      getStatCardsRafController()?.reset("--", "Mbps");
 
       if (!testState.speedtest) {
         createSpeedtest();
@@ -1389,8 +1473,18 @@ function startButtonClickHandler() {
           : null;
         if (pingEndpoint) {
           const t0 = performance.now();
-          fetch(pingEndpoint, { cache: "no-store" })
+          const warmupController =
+            typeof AbortController === "function" ? new AbortController() : null;
+          testState._warmupAbortController = warmupController;
+          const fetchOpts = { cache: "no-store" };
+          if (warmupController) {
+            fetchOpts.signal = warmupController.signal;
+          }
+          fetch(pingEndpoint, fetchOpts)
             .then(() => {
+              if (testState._startRunToken !== activeRunToken || testState.state !== RUNNING) {
+                return;
+              }
               const latency = performance.now() - t0;
               // Reasonable threshold: <= 250ms; keep minimum warm RTT
               if (latency > 0 && latency <= 250 && testState.speedtest?.getState() !== 3) {
@@ -1403,8 +1497,19 @@ function startButtonClickHandler() {
             })
             .catch(() => {})
             .finally(() => {
-              setTimeout(() => {
-                if (testState.state === RUNNING && testState.speedtest?.getState() !== 3) {
+              if (testState._warmupAbortController === warmupController) {
+                testState._warmupAbortController = null;
+              }
+              if (testState._startRunToken !== activeRunToken || testState.state !== RUNNING) {
+                return;
+              }
+              testState._warmupTimeoutId = setTimeout(() => {
+                testState._warmupTimeoutId = null;
+                if (
+                  testState._startRunToken === activeRunToken &&
+                  testState.state === RUNNING &&
+                  testState.speedtest?.getState() !== 3
+                ) {
                   testState.speedtest?.start();
                 }
               }, 20);
@@ -1413,9 +1518,14 @@ function startButtonClickHandler() {
         }
       }
 
-      testState.speedtest?.start();
+      if (testState._startRunToken === activeRunToken && testState.state === RUNNING) {
+        testState.speedtest?.start();
+      }
       return;
+    }
     case RUNNING:
+      testState._startRunToken = (testState._startRunToken || 0) + 1;
+      cancelPendingTestWarmup();
       testState.userAborted = true;
       cancelStatCardsCountUp();
       globalThis.TerraxSmartAdEngine?.setTestingState(false);
@@ -1424,6 +1534,8 @@ function startButtonClickHandler() {
         testState.speedtest.abort();
       } else {
         testState.state = READY;
+        testState.testData = null;
+        testState.testDataDirty = true;
       }
       // testState.state is updated by `onend` handler of speedtest
       return;

@@ -1,6 +1,9 @@
 /* Main "بدء اختبار جديد" Cyber Glass CTA Button & Secondary Action Buttons */
 
 .cta-button-container {
+  position: relative;
+  z-index: 30;
+  pointer-events: auto;
   width: 100%;
   max-width: 78rem;
   display: flex;
@@ -8,10 +11,13 @@
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
-  margin: 0.2rem auto 0;
+  margin: 0.35rem auto 0.2rem;
 }
 
 .cta-button-row {
+  position: relative;
+  z-index: 31;
+  pointer-events: auto;
   width: 100%;
   display: flex;
   flex-wrap: wrap;
@@ -24,14 +30,17 @@ button#start-button,
 button#copy-link,
 button#close-privacy,
 button.small {
-  height: 5rem;
+  position: relative;
+  z-index: 32;
+  pointer-events: auto;
+  height: 5.2rem;
   min-width: min(28rem, 100%);
   max-width: 100%;
   padding: 0 clamp(1.4rem, 3.5vw, 3.6rem);
   border-radius: 1.6rem;
-  border: 1.5px solid rgba(103, 232, 249, 0.68);
+  border: 1.5px solid rgba(103, 232, 249, 0.72);
   font-family: var(--font-sans-ar);
-  font-size: clamp(1.45rem, 1.85vw, 1.85rem);
+  font-size: clamp(1.5rem, 1.9vw, 1.9rem);
   font-weight: 800;
   letter-spacing: 0;
   color: #f8fafc;
@@ -45,15 +54,15 @@ button.small {
   overflow: hidden;
   text-overflow: ellipsis;
   box-shadow:
-    0 10px 30px rgba(6, 182, 212, 0.32),
-    0 0 22px rgba(56, 189, 248, 0.35),
-    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+    0 12px 32px rgba(6, 182, 212, 0.36),
+    0 0 24px rgba(56, 189, 248, 0.38),
+    inset 0 1px 1px rgba(255, 255, 255, 0.38);
   transform: scale(1) translate3d(0, 0, 0);
   background: linear-gradient(
     90deg,
-    rgba(8, 47, 73, 0.92) 0%,
-    rgba(2, 132, 199, 0.88) 50%,
-    rgba(8, 47, 73, 0.92) 100%
+    rgba(8, 47, 73, 0.94) 0%,
+    rgba(2, 132, 199, 0.9) 50%,
+    rgba(8, 47, 73, 0.94) 100%
   );
   background-size: 200% 100%;
   transition:

@@ -52,7 +52,7 @@ main > p.tagline.sr-only-heading,
 /* Connection Info & Server Selector Row */
 .connection-server-row {
   position: relative;
-  z-index: 40;
+  z-index: 45;
   width: 100%;
   max-width: 78rem;
   min-width: 0;
@@ -62,6 +62,7 @@ main > p.tagline.sr-only-heading,
   align-items: stretch;
   margin: 0 auto;
   contain: layout style;
+  pointer-events: auto;
 }
 
 .connection-info-pill {
@@ -69,26 +70,28 @@ main > p.tagline.sr-only-heading,
   overflow: hidden;
   min-width: 0;
   max-width: 100%;
+  height: 100%;
+  box-sizing: border-box;
   contain: layout style paint;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 1.2rem;
-  padding: 0.7rem clamp(1rem, 1.6vw, 1.6rem);
+  padding: 0.75rem clamp(1.1rem, 1.8vw, 1.8rem);
   background:
     repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.035) 0px, rgba(56, 189, 248, 0.035) 1px, transparent 1px, transparent 32px),
     linear-gradient(
       135deg,
       rgba(22, 52, 102, 0.34) 0%,
-      rgba(15, 37, 76, 0.40) 100%
+      rgba(15, 37, 76, 0.42) 100%
     );
-  border: 1px solid rgba(56, 189, 248, 0.46);
-  border-radius: 1.5rem;
+  border: 1px solid rgba(56, 189, 248, 0.48);
+  border-radius: 1.6rem;
   box-shadow:
-    0 8px 22px rgba(8, 22, 48, 0.28),
+    0 10px 26px rgba(8, 22, 48, 0.3),
     inset 0 1px 0 rgba(224, 242, 254, 0.32);
-  min-height: 5.2rem;
+  min-height: 5.6rem;
   transition:
     border-color var(--motion-normal, 240ms cubic-bezier(0.22, 1, 0.36, 1)),
     box-shadow var(--motion-normal, 240ms cubic-bezier(0.22, 1, 0.36, 1));
@@ -98,19 +101,25 @@ main > p.tagline.sr-only-heading,
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  text-align: right;
+  text-align: start;
   gap: 0.15rem;
   min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .conn-label {
   font-size: 1.25rem;
   font-weight: 600;
   color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .conn-value {
-  font-size: 1.58rem;
+  font-size: clamp(1.38rem, 1.65vw, 1.58rem);
   font-weight: 800;
   color: #f8fafc;
   white-space: nowrap;
@@ -172,9 +181,6 @@ main > p.tagline.sr-only-heading,
   background: rgba(14, 116, 144, 0.32);
   animation: connIconPulse 1.5s var(--ease-4k-spring, cubic-bezier(0.22, 1, 0.36, 1)) infinite;
 }
-
-.connection-info-pill.is-testing .conn-chip-icon svg {
-  }
 
 .connection-info-pill.is-testing .conn-diamond-dot {
   animation: connDiamondDotPulse 1.5s ease-in-out infinite;
@@ -256,12 +262,12 @@ main > p.tagline.sr-only-heading,
 
 /* Privacy / IP Info Notice — Fixed Reserved Height to Prevent Vertical Header/Shell Shift */
 main p#privacy-warning {
-  margin: 0;
+  margin: 0.15rem auto 0;
   font-size: 1.2rem;
-  line-height: 1.65rem;
+  line-height: 1.55rem;
   font-weight: 500;
   color: var(--secondary-text-color);
-  min-height: 3.4rem;
+  min-height: 2.2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -282,30 +288,52 @@ main p#privacy-warning.hidden {
 }
 
 main a {
-  font-size: 1.35rem;
+  position: relative;
+  z-index: 25;
+  pointer-events: auto;
+  font-size: 1.32rem;
   font-weight: 700;
   color: var(--dl-neon-primary);
   text-underline-offset: 0.3rem;
-  transition: color var(--motion-fast);
+  transition:
+    color var(--motion-fast),
+    border-color var(--motion-fast),
+    background-color var(--motion-fast);
 }
 
-main a:hover {
+main a#choose-privacy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.32rem 1.35rem;
+  margin: 0.1rem auto 0.25rem;
+  border-radius: 999px;
+  background: rgba(15, 37, 76, 0.45);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+main a:hover,
+main a#choose-privacy:hover {
   color: var(--dl-neon-bright);
+  border-color: rgba(103, 232, 249, 0.62);
+  background: rgba(22, 52, 102, 0.58);
 }
 
 @media screen and (max-width: 768px) {
   main.terrax-inner-stage {
     padding: 1.2rem 1rem 1.4rem;
-    gap: 1.4rem;
+    gap: 1.1rem;
   }
 
   .connection-server-row {
     grid-template-columns: 1fr;
-    gap: 1.2rem;
+    gap: 1rem;
   }
 
   .connection-info-pill {
-    min-height: 6.4rem;
-    padding: 1.2rem 1.6rem;
+    min-height: 5.8rem;
+    padding: 1rem 1.5rem;
   }
 }

@@ -3,6 +3,9 @@
 
 <head>
   <meta charset="UTF-8" />
+  <meta name="google-adsense-account" content="ca-pub-1225026489802055">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1225026489802055"
+     crossorigin="anonymous"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <meta name="description"
     content="اختبار استقرار الإنترنت للألعاب — منصة تيراكس بلاس (Terrax Plus) لمراقبة زمن الاستجابة (Ping) والتذبذب (Jitter) وفقدان الحزم (Packet Loss) بهوية 4K زجاجية." />
@@ -879,17 +882,22 @@
       justify-content: space-between;
       min-height: 10.6rem;
       min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      contain: layout style;
       padding: 1rem 1.3rem;
-      border-radius: 1.8rem;
-      background: linear-gradient(
-        155deg,
-        rgba(20, 48, 96, 0.32) 0%,
-        rgba(14, 34, 72, 0.38) 100%
-      );
-      border: 1.2px solid rgba(39, 221, 248, 0.44);
+      border-radius: 1.6rem;
+      background:
+        repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.035) 0px, rgba(56, 189, 248, 0.035) 1px, transparent 1px, transparent 32px),
+        linear-gradient(
+          155deg,
+          rgba(20, 48, 96, 0.34) 0%,
+          rgba(14, 34, 72, 0.42) 100%
+        );
+      border: 1px solid rgba(56, 189, 248, 0.48);
       box-shadow:
-        0 10px 26px rgba(8, 22, 48, 0.28),
-        inset 0 1px 1px rgba(240, 246, 255, 0.24);
+        0 10px 26px rgba(8, 22, 48, 0.3),
+        inset 0 1px 0 rgba(224, 242, 254, 0.32);
       overflow: hidden;
       transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
     }
@@ -908,7 +916,7 @@
       border-color: rgba(196, 119, 255, 0.52);
       background:
         radial-gradient(circle at 15% 15%, rgba(196, 119, 255, 0.18), transparent 55%),
-        linear-gradient(155deg, rgba(20, 48, 96, 0.32) 0%, rgba(14, 34, 72, 0.38) 100%);
+        linear-gradient(155deg, rgba(20, 48, 96, 0.34) 0%, rgba(14, 34, 72, 0.42) 100%);
     }
 
     .stability-info-card.card-jitter:hover {
@@ -920,26 +928,26 @@
 
     /* Card 2: Packet Loss (Cyan Border Accent) */
     .stability-info-card.card-loss {
-      border-color: rgba(39, 221, 248, 0.52);
+      border-color: rgba(56, 189, 248, 0.52);
       background:
         radial-gradient(circle at 15% 15%, rgba(39, 221, 248, 0.16), transparent 55%),
-        linear-gradient(155deg, rgba(20, 48, 96, 0.32) 0%, rgba(14, 34, 72, 0.38) 100%);
+        linear-gradient(155deg, rgba(20, 48, 96, 0.34) 0%, rgba(14, 34, 72, 0.42) 100%);
     }
 
     /* Card 3: Stability Assessment */
     .stability-info-card.card-assessment {
-      border-color: rgba(55, 141, 255, 0.52);
+      border-color: rgba(56, 189, 248, 0.52);
       background:
         radial-gradient(circle at 15% 15%, rgba(120, 231, 160, 0.15), transparent 55%),
-        linear-gradient(155deg, rgba(20, 48, 96, 0.32) 0%, rgba(14, 34, 72, 0.38) 100%);
+        linear-gradient(155deg, rgba(20, 48, 96, 0.34) 0%, rgba(14, 34, 72, 0.42) 100%);
     }
 
     /* Card 4: Duration */
     .stability-info-card.card-duration {
-      border-color: rgba(39, 221, 248, 0.48);
+      border-color: rgba(56, 189, 248, 0.48);
       background:
         radial-gradient(circle at 15% 15%, rgba(55, 141, 255, 0.18), transparent 55%),
-        linear-gradient(155deg, rgba(20, 48, 96, 0.32) 0%, rgba(14, 34, 72, 0.38) 100%);
+        linear-gradient(155deg, rgba(20, 48, 96, 0.34) 0%, rgba(14, 34, 72, 0.42) 100%);
     }
 
     .card-top-row {
@@ -947,27 +955,39 @@
       align-items: flex-start;
       justify-content: space-between;
       gap: 0.8rem;
+      min-width: 0;
     }
 
     .card-titles {
       display: flex;
       flex-direction: column;
       gap: 0.15rem;
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
     }
 
     .card-title-ar {
       font-size: 1.45rem;
       font-weight: 800;
       color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
 
     .card-term-en {
       font-family: var(--font-num);
-      font-size: 1.05rem;
+      font-size: 1.02rem;
       font-weight: 700;
       letter-spacing: 0.06em;
       color: var(--text-secondary);
       text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
 
     .card-icon-box {
@@ -999,17 +1019,20 @@
       display: flex;
       align-items: baseline;
       gap: 0.55rem;
-      margin: 0.6rem 0 0.3rem;
+      margin: 0.55rem 0 0.25rem;
+      min-width: 0;
+      white-space: nowrap;
     }
 
     .card-metric-value {
       font-family: var(--font-num);
-      font-size: 2.8rem;
+      font-size: clamp(2.2rem, 2.6vw, 2.75rem);
       font-weight: 900;
       font-variant-numeric: tabular-nums;
       font-feature-settings: "tnum" 1, "zero" 1;
       color: #FFFFFF;
       line-height: 1.1;
+      white-space: nowrap;
       text-shadow: 0 0 14px rgba(39, 221, 248, 0.72), 0 1px 3px rgba(8, 22, 48, 0.75);
     }
 
@@ -1028,17 +1051,46 @@
 
     .card-metric-unit {
       font-family: var(--font-num);
-      font-size: 1.25rem;
+      font-size: 1.22rem;
       font-weight: 700;
       color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .assessment-status-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.6rem;
+      margin: 0.45rem 0 0.25rem;
+      min-width: 0;
+    }
+
+    .card-stability-score {
+      font-family: var(--font-num);
+      font-variant-numeric: tabular-nums;
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: var(--cyber-cyan);
+      padding: 0.12rem 0.65rem;
+      border-radius: 999px;
+      background: rgba(14, 116, 144, 0.28);
+      border: 1px solid rgba(56, 189, 248, 0.42);
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .card-Assessment-badge {
-      font-size: 1.65rem;
+      font-size: clamp(1.35rem, 1.55vw, 1.58rem);
       font-weight: 800;
       line-height: 1.25;
-      margin: 0.45rem 0 0.25rem;
+      margin: 0;
       color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+      flex: 1;
     }
 
     .card-Assessment-badge.none::after {
@@ -1070,6 +1122,10 @@
       font-size: 1.12rem;
       color: var(--text-secondary);
       line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
 
     /* Phase 9: Prominent Start Stability Test Button & Action Area */
@@ -1354,140 +1410,11 @@
       opacity: 1;
     }
 
-    /* Smart State-Driven Yandex RTB & Technical Sponsor Glassmorphic Card */
-    .terrax-yan-card {
-      position: relative;
-      width: 100%;
-      max-width: 72.8rem;
-      min-height: 95px;
-      margin: 0.25rem auto;
-      padding: 0.9rem 1.35rem;
-      border-radius: 14px;
-      background: rgba(11, 27, 50, 0.70);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(0, 210, 255, 0.25);
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 10px 28px rgba(2, 8, 23, 0.42),
-        0 0 18px rgba(0, 210, 255, 0.08);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 0.7rem;
-      box-sizing: border-box;
-      overflow: hidden;
-      transition: border-color 0.28s ease, box-shadow 0.28s ease;
-    }
-    .terrax-yan-card.terrax-yan-isolated {
-      border-color: rgba(34, 197, 94, 0.42);
-    }
-    .terrax-yan-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.6rem;
-      padding-bottom: 0.4rem;
-      border-bottom: 1px solid rgba(0, 210, 255, 0.14);
-    }
-    .terrax-yan-brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.55rem;
-    }
-    .terrax-yan-dot {
-      width: 0.75rem;
-      height: 0.75rem;
-      border-radius: 50%;
-      background: #00d2ff;
-      box-shadow: 0 0 10px #00d2ff, 0 0 4px #67e8f9;
-      flex-shrink: 0;
-    }
-    .terrax-yan-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #bae6fd;
-    }
-    .terrax-yan-isolation-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.2rem 0.75rem;
-      border-radius: 999px;
-      background: rgba(20, 83, 45, 0.58);
-      border: 1px solid rgba(74, 222, 128, 0.45);
-      color: #86efac;
-      font-size: 1.05rem;
-      font-weight: 700;
-    }
-    .terrax-yan-isolation-badge[hidden] {
-      display: none !important;
-    }
-    .terrax-yan-body,
-    .terrax-yan-rtb-mount {
-      width: 100%;
-      min-height: 52px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .terrax-yan-sponsor-fallback {
-      width: 100%;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 0.5rem 0.85rem;
-      border-radius: 10px;
-      background: linear-gradient(90deg, rgba(14, 36, 70, 0.65) 0%, rgba(8, 22, 46, 0.5) 100%);
-      border: 1px solid rgba(0, 210, 255, 0.18);
-      text-decoration: none;
-      color: #f8fafc;
-    }
-    .terrax-yan-sponsor-content {
-      display: flex;
-      flex-direction: column;
-      gap: 0.18rem;
-      flex: 1 1 16rem;
-      min-width: min(18rem, 100%);
-    }
-    .terrax-yan-sponsor-headline {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .terrax-yan-sponsor-badge {
-      font-family: var(--font-num);
-      font-size: 0.96rem;
-      font-weight: 800;
-      color: #00d2ff;
-      background: rgba(0, 210, 255, 0.12);
-      border: 1px solid rgba(0, 210, 255, 0.32);
-      padding: 0.08rem 0.5rem;
-      border-radius: 6px;
-    }
-    .terrax-yan-sponsor-title {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: #f0f9ff;
-    }
-    .terrax-yan-sponsor-desc {
-      font-size: 1.06rem;
-      color: #94a3b8;
-      margin: 0;
-    }
-    .terrax-yan-sponsor-cta {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: #67e8f9;
-      padding: 0.32rem 0.8rem;
-      border-radius: 8px;
-      background: rgba(0, 210, 255, 0.12);
-      border: 1px solid rgba(0, 210, 255, 0.28);
-      white-space: nowrap;
+    /* 2K QHD & 4K UHD Ultra-High-Resolution Proportional Scaling */
+    @media screen and (min-width: 2200px) {
+      html {
+        font-size: clamp(68%, 0.48vw, 95%);
+      }
     }
 
     /* Responsive Breakpoints */
@@ -1899,7 +1826,10 @@
             </svg>
           </div>
         </div>
-        <div class="card-Assessment-badge none" id="rating">--</div>
+        <div class="assessment-status-row">
+          <div class="card-Assessment-badge none" id="rating">--</div>
+          <span class="card-stability-score" id="statStabilityPct" dir="ltr">--%</span>
+        </div>
         <p class="card-footer-note" id="ratingCriteria">
           المعيار: Ping &lt; 35ms • Jitter &lt; 5ms • Loss 0%
         </p>
@@ -1960,33 +1890,7 @@
           <span id="stabilityPctLabel" dir="ltr">0%</span>
         </div>
       </div>
-    <!-- Smart Auto-Collapsing High-Yield Stability Ad Slot -->
-    <div class="terrax-smart-ad-slot terrax-smart-banner stability-smart-ad-slot"
-         id="terrax-smart-ad-stability-main"
-         data-terrax-smart-ad="stability-main"
-         data-ad-status="unfilled"
-         data-ad-filled="false"
-         role="complementary">
-      <div class="terrax-smart-ad-header" hidden aria-hidden="true" style="display:none;">
-        <span class="terrax-ad-badge"></span>
-        <span class="terrax-ad-status-pill"></span>
-      </div>
-      <div class="terrax-smart-ad-body">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-1225026489802055"
-             data-ad-slot=""
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <div class="terrax-native-sponsor-card" hidden aria-hidden="true" style="display:none;">
-          <div class="sponsor-brand-row">
-            <span class="sponsor-icon-glow"></span>
-            <strong class="sponsor-title"></strong>
-          </div>
-          <p class="sponsor-desc"></p>
-        </div>
-      </div>
-    </div>
+    </section>
 
     <!-- Phase 10: Bottom 5-Tab Navigation Bar (RTL Order: السرعة -> الاستهلاك -> الاستقرار -> الخوادم -> الإعدادات) -->
     <nav class="terrax-bottom-nav" aria-label="التنقل الرئيسي" data-layer="bottom-navigation">
@@ -2071,6 +1975,7 @@
 
     // Chart constants
     var VISIBLE_SECONDS = 60;
+    var MOVING_AVG_WINDOW = 5;
     var CHART_PADDING_LEFT = 48;
     var CHART_PADDING_RIGHT = 18;
     var CHART_PADDING_TOP = 26;
@@ -2249,6 +2154,14 @@
               I("server").appendChild(opt);
             }
             selectedServer = best;
+            if (typeof sessionStorage !== "undefined") {
+              try {
+                var aliveList = SPEEDTEST_SERVERS.filter(function (srv) { return srv && srv.pingT >= 0; });
+                if (aliveList.length > 0) {
+                  sessionStorage.setItem("terrax_verified_servers_cache_v1", JSON.stringify({ ts: Date.now(), servers: aliveList }));
+                }
+              } catch (saveErr) {}
+            }
             serverDiscoveryPending = false;
             localServerReady = selectedServer !== null || I("server").options.length > 0;
             I("server").disabled = !localServerReady;
@@ -2264,44 +2177,6 @@
           });
         };
         nextServerProbe();
-        for (var i = 0; false; i++) {
-          (function (idx) {
-            pingServer(SPEEDTEST_SERVERS[idx], function (server, rtt) {
-              SPEEDTEST_SERVERS[idx].pingT = rtt;
-              if (rtt >= 0 && (best === null || rtt < best.pingT)) best = SPEEDTEST_SERVERS[idx];
-              completed++;
-              if (completed === SPEEDTEST_SERVERS.length) {
-                var yemenServer = SPEEDTEST_SERVERS.find(function (srv) {
-                  return srv && srv.pingT >= 0 && srv.name === "اليمن";
-                });
-                if (yemenServer) best = yemenServer;
-                I("server").innerHTML = "";
-                for (var j = 0; j < SPEEDTEST_SERVERS.length; j++) {
-                  if (SPEEDTEST_SERVERS[j].pingT < 0) continue;
-                  var opt = document.createElement("option");
-                  opt.value = j;
-                  opt.textContent = SPEEDTEST_SERVERS[j].name;
-                  if (SPEEDTEST_SERVERS[j] === best) opt.selected = true;
-                  I("server").appendChild(opt);
-                }
-                selectedServer = best;
-                if (typeof sessionStorage !== "undefined") {
-                  try {
-                    var aliveList = SPEEDTEST_SERVERS.filter(function (srv) { return srv && srv.pingT >= 0; });
-                    if (aliveList.length > 0) {
-                      sessionStorage.setItem("terrax_verified_servers_cache_v1", JSON.stringify({ ts: Date.now(), servers: aliveList }));
-                    }
-                  } catch (saveErr) {}
-                }
-                serverDiscoveryPending = false;
-                localServerReady = selectedServer !== null || I("server").options.length > 0;
-                I("server").disabled = !localServerReady;
-                updateStartButtonState();
-                updateActiveTargetLabel();
-              }
-            });
-          })(i);
-        }
       }
     }
 
@@ -2312,11 +2187,23 @@
       }
       var url = baseUrl + (baseUrl.match(/\?/) ? "&" : "?") + "cors=true&r=" + Math.random();
       var xhr = new XMLHttpRequest();
-      var t = new Date().getTime();
+      var settled = false;
+      var headersReceivedT = null;
+      var startT = typeof performance !== "undefined" ? performance.now() : Date.now();
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 2 && headersReceivedT === null) {
+          headersReceivedT = typeof performance !== "undefined" ? performance.now() : Date.now();
+        }
+      };
       xhr.onload = function () {
-        callback(server, new Date().getTime() - t);
+        if (settled) return;
+        settled = true;
+        var endT = headersReceivedT !== null ? headersReceivedT : (typeof performance !== "undefined" ? performance.now() : Date.now());
+        callback(server, Math.max(0, endT - startT));
       };
       xhr.onerror = function () {
+        if (settled) return;
+        settled = true;
         callback(server, -1);
       };
       xhr.open("GET", url);
@@ -2324,6 +2211,7 @@
         xhr.timeout = 2000;
         xhr.ontimeout = xhr.onerror;
       } catch (e) {}
+      startT = typeof performance !== "undefined" ? performance.now() : Date.now();
       xhr.send();
     }
 
@@ -2338,26 +2226,49 @@
       return !!I("targetSelect").value || localServerReady;
     }
 
+    function cleanupStabilityPageResources() {
+      running = false;
+      serverDiscoveryPending = false;
+      if (stabilityRafId) {
+        cancelAnimationFrame(stabilityRafId);
+        stabilityRafId = 0;
+      }
+      if (updater) {
+        clearInterval(updater);
+        updater = null;
+      }
+      if (worker) {
+        try {
+          worker.postMessage("abort");
+          worker.terminate();
+        } catch (err) {}
+        worker = null;
+      }
+      if (audioCtx && typeof audioCtx.close === "function" && audioCtx.state !== "closed") {
+        try {
+          audioCtx.close();
+        } catch (err) {}
+        audioCtx = null;
+      }
+      if (window.TerraxSmartAdEngine && typeof window.TerraxSmartAdEngine.setTestingState === "function") {
+        window.TerraxSmartAdEngine.setTestingState(false);
+      }
+    }
+    window.cleanupStabilityPageResources = cleanupStabilityPageResources;
+
     var isNavigatingFromStability = false;
     function navigateToSpeedTab(e, tabName) {
       if (e && e.preventDefault) e.preventDefault();
       if (isNavigatingFromStability) return false;
       isNavigatingFromStability = true;
       if (e && e.currentTarget && e.currentTarget.parentElement) {
-        var navItems = e.currentTarget.parentElement.querySelectorAll(".nav-item");
+        var navItems = e.currentTarget.parentElement.querySelectorAll(".nav-dock-item, .nav-item");
         for (var i = 0; i < navItems.length; i++) {
           navItems[i].classList.remove("active");
         }
         e.currentTarget.classList.add("active");
       }
-      if (running) {
-        if (worker) {
-          try {
-            worker.postMessage("abort");
-          } catch (err) {}
-        }
-        stopTest(true);
-      }
+      cleanupStabilityPageResources();
       var targetUrl;
       if (tabName === "gaming") {
         targetUrl = "gaming.html";
@@ -2430,11 +2341,38 @@
       }
     }
 
+    var liveMaProcessor = null;
+    var displayedYMax = 50;
+
+    function ingestStabilityPingSample(rawSample) {
+      if (!rawSample) return null;
+      if (liveMaProcessor && typeof liveMaProcessor.pushSample === "function") {
+        var processed = liveMaProcessor.pushSample(rawSample);
+        if (typeof rawSample.smoothedPing === "number" && Number.isFinite(rawSample.smoothedPing)) {
+          processed.smoothedPing = rawSample.smoothedPing;
+        }
+        if (typeof rawSample.smoothedJitter === "number" && Number.isFinite(rawSample.smoothedJitter)) {
+          processed.smoothedJitter = rawSample.smoothedJitter;
+        }
+        return processed;
+      }
+      return rawSample;
+    }
+
     function startTest() {
       if (!canStartTest() || running) return;
 
       allPingData = [];
       latestData = null;
+      displayedYMax = 50;
+      if (
+        window.TerraxTelemetryMath &&
+        typeof window.TerraxTelemetryMath.createStabilityMovingAverageProcessor === "function"
+      ) {
+        liveMaProcessor = window.TerraxTelemetryMath.createStabilityMovingAverageProcessor(MOVING_AVG_WINDOW);
+      } else {
+        liveMaProcessor = null;
+      }
       resetUI();
       if (window.TerraxSmartAdEngine) {
         window.TerraxSmartAdEngine.resetStabilityMilestones();
@@ -2458,6 +2396,7 @@
       var workerSettings = {
         duration: durationSec,
         ping_allowPerformanceApi: true,
+        moving_avg_window: MOVING_AVG_WINDOW,
         url_ping_external: externalTarget,
         url_ping: ROOT_PREFIX + "backend/empty.php"
       };
@@ -2481,9 +2420,18 @@
           window.TerraxSmartAdEngine.onStabilityElapsedTick(data.elapsed);
         }
 
+        var hadNewPingSamples = false;
         if (data.pingData && data.pingData.length > 0) {
+          hadNewPingSamples = true;
           for (var i = 0; i < data.pingData.length; i++) {
-            allPingData.push(data.pingData[i]);
+            var smoothedSample = ingestStabilityPingSample(data.pingData[i]);
+            if (smoothedSample) {
+              allPingData.push(smoothedSample);
+            }
+          }
+          // Cap rolling history buffer to prevent unbounded memory growth on long runs
+          if (allPingData.length > 3600) {
+            allPingData.splice(0, allPingData.length - 3600);
           }
         }
 
@@ -2495,14 +2443,14 @@
           hasCompletedAtLeastOnce = true;
           stopTest(data.testState === 5);
         }
-        scheduleStabilityFrame();
+        scheduleStabilityFrame({ ui: true, chart: hadNewPingSamples || data.testState >= 4 });
       };
 
       updater = setInterval(function () {
         if (worker) worker.postMessage("status");
       }, 200);
       worker.postMessage("start " + JSON.stringify(workerSettings));
-      scheduleStabilityFrame();
+      scheduleStabilityFrame({ ui: true, chart: true });
     }
 
     function stopTest(wasAborted) {
@@ -2520,13 +2468,13 @@
         if (wasAborted) {
           badge.className = "live-connection-badge warning";
           badgeText.textContent = "تم إيقاف الفحص";
-          I("stabilityPhaseLabel").textContent = "تم إيقاف اختبار الاستقرار من قِبل المستخدم";
+          setTextIfChanged("stabilityPhaseLabel", "تم إيقاف اختبار الاستقرار من قِبل المستخدم");
         } else {
           badge.className = "live-connection-badge";
           badgeText.textContent = "اكتمل الفحص";
-          I("stabilityPhaseLabel").textContent = "اكتمل اختبار استقرار الألعاب بنجاح";
-          I("stabilityProgressFill").style.width = "100%";
-          I("stabilityPctLabel").textContent = "100%";
+          setTextIfChanged("stabilityPhaseLabel", "اكتمل اختبار استقرار الألعاب بنجاح");
+          setWidthIfChanged("stabilityProgressFill", "100%");
+          setTextIfChanged("stabilityPctLabel", "100%");
         }
       }
 
@@ -2547,7 +2495,7 @@
         }, 400);
       }
 
-      // Visual Toast Notification: Test completion or disconnection
+      // Visual Toast Notification: Test completion or user stop
       if (!wasAborted) {
         if (window.TerraxSmartAdEngine) {
           window.TerraxSmartAdEngine.onStabilityElapsedTick(60);
@@ -2557,12 +2505,6 @@
           type: "success",
           title: "اكتمل فحص الاستقرار بنجاح",
           message: "تم تسجيل كافة عينات زمن الاستجابة والتذبذب ونسبة الاستقرار بنجاح.",
-        });
-      } else if (wasAborted && (!userExplicitlyStopped || !navigator.onLine)) {
-        showTerraxToast({
-          type: "error",
-          title: "انقطع الاتصال أثناء الفحص",
-          message: "تعذر إكمال فحص الاستقرار نظراً لتعثر الاتصال بالخادم. يرجى التحقق من الشبكة.",
         });
       }
     }
@@ -2575,27 +2517,60 @@
       }
       allPingData = [];
       latestData = null;
+      displayedYMax = 50;
+      if (liveMaProcessor && typeof liveMaProcessor.reset === "function") {
+        liveMaProcessor.reset();
+      }
       hasCompletedAtLeastOnce = false;
       resetUI();
       updateStartButtonState();
-      scheduleStabilityFrame();
+      scheduleStabilityFrame({ ui: true, chart: true });
+    }
+
+    // Dirty-checking cache to prevent unnecessary DOM mutations on every 200ms frame
+    var uiRenderCache = {};
+    function setTextIfChanged(id, nextText) {
+      var str = nextText === undefined || nextText === null ? "" : String(nextText);
+      if (uiRenderCache["t_" + id] === str) return;
+      var el = I(id);
+      if (!el) return;
+      uiRenderCache["t_" + id] = str;
+      el.textContent = str;
+    }
+    function setClassIfChanged(id, nextClass) {
+      var str = String(nextClass || "");
+      if (uiRenderCache["c_" + id] === str) return;
+      var el = I(id);
+      if (!el) return;
+      uiRenderCache["c_" + id] = str;
+      el.className = str;
+    }
+    function setWidthIfChanged(id, nextWidth) {
+      var str = String(nextWidth || "0%");
+      if (uiRenderCache["w_" + id] === str) return;
+      var el = I(id);
+      if (!el) return;
+      uiRenderCache["w_" + id] = str;
+      el.style.width = str;
     }
 
     function resetUI() {
-      I("statCurrent").textContent = "";
-      I("statAvg").textContent = "";
-      I("statMin").textContent = "";
-      I("statMax").textContent = "";
-      I("statJitter").textContent = "";
-      I("statLoss").textContent = "";
-      I("statElapsed").textContent = "";
-      I("statSamplesCount").textContent = "0 / 0";
-      I("rating").textContent = "--";
-      I("rating").className = "card-Assessment-badge none";
-      I("ratingCriteria").textContent = "المعيار: Ping < 35ms • Jitter < 5ms • Loss 0%";
-      I("stabilityProgressFill").style.width = "0%";
-      I("stabilityPctLabel").textContent = "0%";
-      I("stabilityPhaseLabel").textContent = "جاهز لبدء فحص استقرار الألعاب";
+      uiRenderCache = {};
+      setTextIfChanged("statCurrent", "");
+      setTextIfChanged("statAvg", "");
+      setTextIfChanged("statMin", "");
+      setTextIfChanged("statMax", "");
+      setTextIfChanged("statJitter", "");
+      setTextIfChanged("statLoss", "");
+      setTextIfChanged("statElapsed", "");
+      setTextIfChanged("statSamplesCount", "0 / 0");
+      setTextIfChanged("rating", "--");
+      setClassIfChanged("rating", "card-Assessment-badge none");
+      setTextIfChanged("statStabilityPct", "--%");
+      setTextIfChanged("ratingCriteria", "المعيار: Ping < 35ms • Jitter < 5ms • Loss 0%");
+      setWidthIfChanged("stabilityProgressFill", "0%");
+      setTextIfChanged("stabilityPctLabel", "0%");
+      setTextIfChanged("stabilityPhaseLabel", "جاهز لبدء فحص استقرار الألعاب");
       I("chartEmptyOverlay")?.classList.remove("hidden");
       var badge = I("connectionStatusBadge");
       var badgeText = I("connectionStatusText");
@@ -2606,22 +2581,30 @@
     function updateUI() {
       if (!latestData) return;
       var d = latestData;
-      I("statCurrent").textContent = fmt(d.currentPing);
-      I("statAvg").textContent = fmt(d.avgPing);
-      I("statMin").textContent = d.minPing > 0 ? fmt(d.minPing) : "--";
-      I("statMax").textContent = fmt(d.maxPing);
-      I("statJitter").textContent = fmt(d.jitter);
-      I("statLoss").textContent = d.totalSamples > 0 ? d.packetLoss.toFixed(1) : "--";
-      I("statElapsed").textContent = fmtTime(d.elapsed);
-      I("statSamplesCount").textContent = (d.failedSamples || 0) + " / " + (d.totalSamples || 0);
+      setTextIfChanged("statCurrent", fmt(d.currentPing));
+      setTextIfChanged("statAvg", fmt(d.avgPing));
+      setTextIfChanged("statMin", d.minPing > 0 ? fmt(d.minPing) : "--");
+      setTextIfChanged("statMax", fmt(d.maxPing));
+      setTextIfChanged("statJitter", fmt(d.jitter));
+      setTextIfChanged("statLoss", d.totalSamples > 0 ? d.packetLoss.toFixed(1) : "--");
+      setTextIfChanged("statElapsed", fmtTime(d.elapsed));
+      setTextIfChanged("statSamplesCount", (d.failedSamples || 0) + " / " + (d.totalSamples || 0));
 
       var pct = Math.min(100, Math.max(0, Math.round((Number(d.progress) || 0) * 100)));
       if (running) {
-        I("stabilityProgressFill").style.width = pct + "%";
-        I("stabilityPctLabel").textContent = pct + "%";
-        I("stabilityProgressBar")?.setAttribute("aria-valuenow", String(pct));
-        I("stabilityPhaseLabel").textContent =
-          "جاري قياس استقرار الاستجابة والتذبذب (" + (d.totalSamples || 0) + " عينة)...";
+        setWidthIfChanged("stabilityProgressFill", pct + "%");
+        setTextIfChanged("stabilityPctLabel", pct + "%");
+        var barEl = I("stabilityProgressBar");
+        var pctStr = String(pct);
+        if (barEl && uiRenderCache["a_bar"] !== pctStr) {
+          uiRenderCache["a_bar"] = pctStr;
+          barEl.setAttribute("aria-valuenow", pctStr);
+        }
+        var phaseStr =
+          typeof navigator !== "undefined" && navigator.onLine === false
+            ? "انقطاع لحظي في الاتصال — يتم تسجيل فقدان الحزم وانخفاض الاستقرار (" + (d.failedSamples || 0) + " مفقودة)..."
+            : "جاري قياس استقرار الاستجابة والتذبذب (" + (d.totalSamples || 0) + " عينة)...";
+        setTextIfChanged("stabilityPhaseLabel", phaseStr);
       }
 
       var math = window.TerraxTelemetryMath;
@@ -2632,9 +2615,15 @@
           d.packetLoss,
           d.totalSamples
         );
-        I("rating").textContent = evalResult.titleAr;
-        I("rating").className = "card-Assessment-badge " + evalResult.grade;
-        I("ratingCriteria").textContent = evalResult.criteriaAr;
+        setTextIfChanged("rating", evalResult.titleAr);
+        setClassIfChanged("rating", "card-Assessment-badge " + evalResult.grade);
+        setTextIfChanged(
+          "statStabilityPct",
+          evalResult.scorePercent !== null && evalResult.scorePercent !== undefined
+            ? evalResult.scorePercent + "%"
+            : "--%"
+        );
+        setTextIfChanged("ratingCriteria", evalResult.criteriaAr);
       }
     }
 
@@ -2649,16 +2638,38 @@
       return steps;
     }
 
+    var cachedCanvasCssW = 0;
+    var cachedCanvasCssH = 0;
+    var cachedCanvasDp = 1;
+    var canvasGeometryDirty = true;
+    var cachedPingGrad = null;
+    var cachedPingGradPadT = -1;
+    var cachedPingGradPlotH = -1;
+
+    function syncCanvasGeometryIfNeeded() {
+      if (!canvasGeometryDirty && cachedCanvasCssW > 0 && cachedCanvasCssH > 0) return;
+      var canvas = I("pingChart");
+      if (!canvas) return;
+      cachedCanvasDp = window.devicePixelRatio || 1;
+      cachedCanvasCssW = canvas.clientWidth;
+      cachedCanvasCssH = canvas.clientHeight;
+      canvasGeometryDirty = false;
+    }
+
     function drawChart() {
       var canvas = I("pingChart");
       if (!canvas) return;
+      if (canvasGeometryDirty || cachedCanvasCssW <= 0 || cachedCanvasCssH <= 0) {
+        syncCanvasGeometryIfNeeded();
+      }
       var ctx = canvas.getContext("2d");
-      var dp = window.devicePixelRatio || 1;
-      var cw = canvas.clientWidth * dp;
-      var ch = canvas.clientHeight * dp;
+      var dp = cachedCanvasDp || window.devicePixelRatio || 1;
+      var cw = Math.round(cachedCanvasCssW * dp);
+      var ch = Math.round(cachedCanvasCssH * dp);
       if (canvas.width !== cw || canvas.height !== ch) {
         canvas.width = cw;
         canvas.height = ch;
+        cachedPingGrad = null;
       }
       ctx.clearRect(0, 0, cw, ch);
 
@@ -2699,11 +2710,26 @@
       }
       visStart = lo;
 
-      var yMax = 50;
+      var targetYMax = 50;
+      var visEnd = visStart;
+      var hasWorkerPreSmoothed = true;
       for (var i = visStart; i < data.length && data[i].t <= timeEnd; i++) {
-        if (!data[i].lost && data[i].ping > yMax) yMax = data[i].ping;
+        visEnd = i + 1;
+        if (data[i].smoothedPing === undefined) hasWorkerPreSmoothed = false;
+        if (!data[i].lost) {
+          var candidatePing = data[i].smoothedPing !== undefined
+            ? Math.max(data[i].smoothedPing, data[i].ping * 0.92)
+            : data[i].ping;
+          if (candidatePing > targetYMax) targetYMax = candidatePing;
+        }
       }
-      yMax = Math.ceil((yMax * 1.2) / 10) * 10;
+      targetYMax = Math.ceil((targetYMax * 1.2) / 10) * 10;
+      if (targetYMax >= displayedYMax || data.length <= 2) {
+        displayedYMax = targetYMax;
+      } else {
+        displayedYMax = Math.max(targetYMax, Math.round((displayedYMax * 0.85 + targetYMax * 0.15) / 5) * 5);
+      }
+      var yMax = displayedYMax;
 
       var fontSize = 11 * dp;
       ctx.font = "600 " + fontSize + "px Inter, sans-serif";
@@ -2763,69 +2789,170 @@
         ctx.restore();
       }
 
-      if (data.length < 1) return;
+      if (data.length < 1 || visEnd <= visStart) return;
 
-      var visible = [];
-      for (var j = visStart; j < data.length && data[j].t <= timeEnd; j++) {
-        visible.push(data[j]);
+      var visible;
+      if (hasWorkerPreSmoothed) {
+        // Fast path: samples already carry O(1) smoothedPing & smoothedJitter computed in stability_worker.js / ingest
+        visible = data.slice(visStart, visEnd);
+      } else {
+        var windowStart = Math.max(0, visStart - (MOVING_AVG_WINDOW - 1));
+        var windowSlice = [];
+        for (var j = windowStart; j < data.length && data[j].t <= timeEnd; j++) {
+          windowSlice.push(data[j]);
+        }
+        var leadCount = visStart - windowStart;
+        if (windowSlice.length - leadCount < 1) return;
+
+        var math = window.TerraxTelemetryMath;
+        var smoothedSlice;
+        if (math && typeof math.computeStabilityMovingAverage === "function") {
+          smoothedSlice = math.computeStabilityMovingAverage(windowSlice, MOVING_AVG_WINDOW);
+        } else {
+          smoothedSlice = [];
+          var pWin = [];
+          var jWin = [];
+          for (var w = 0; w < windowSlice.length; w++) {
+            var sItem = windowSlice[w];
+            if (sItem.lost) {
+              pWin.length = 0;
+              jWin.length = 0;
+              smoothedSlice.push({ t: sItem.t, ping: 0, jitter: 0, lost: true, smoothedPing: 0, smoothedJitter: 0 });
+            } else {
+              pWin.push(Number(sItem.ping) || 0);
+              if (pWin.length > MOVING_AVG_WINDOW) pWin.shift();
+              jWin.push(typeof sItem.jitter === "number" ? sItem.jitter : 0);
+              if (jWin.length > MOVING_AVG_WINDOW) jWin.shift();
+              var pSum = 0, jSum = 0;
+              for (var pi = 0; pi < pWin.length; pi++) pSum += pWin[pi];
+              for (var ji = 0; ji < jWin.length; ji++) jSum += jWin[ji];
+              smoothedSlice.push({
+                t: sItem.t,
+                ping: sItem.ping,
+                jitter: sItem.jitter,
+                lost: false,
+                smoothedPing: pSum / pWin.length,
+                smoothedJitter: jSum / jWin.length
+              });
+            }
+          }
+        }
+        visible = smoothedSlice.slice(leadCount);
       }
       if (visible.length < 1) return;
 
-      // 1. Draw Translucent Cyan Gradient Fill under Ping Curve
-      var pingGrad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
-      pingGrad.addColorStop(0, "rgba(39, 221, 248, 0.28)");
-      pingGrad.addColorStop(1, "rgba(39, 221, 248, 0.01)");
+      // 1. Draw Translucent Cyan Gradient Fill under Moving-Average Ping Curve (cached across frames)
+      if (!cachedPingGrad || cachedPingGradPadT !== padT || cachedPingGradPlotH !== plotH) {
+        cachedPingGrad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
+        cachedPingGrad.addColorStop(0, "rgba(39, 221, 248, 0.28)");
+        cachedPingGrad.addColorStop(1, "rgba(39, 221, 248, 0.01)");
+        cachedPingGradPadT = padT;
+        cachedPingGradPlotH = plotH;
+      }
+      var pingGrad = cachedPingGrad;
 
       ctx.beginPath();
       var startedFill = false;
+      var prevFillX = padL;
+      var prevFillY = padT + plotH;
       var lastValidPx = padL;
       for (var k = 0; k < visible.length; k++) {
-        if (visible[k].lost) continue;
+        if (visible[k].lost) {
+          if (startedFill) {
+            ctx.lineTo(prevFillX, prevFillY);
+            ctx.lineTo(lastValidPx, padT + plotH);
+            startedFill = false;
+          }
+          continue;
+        }
+        var fillPingVal =
+          visible[k].smoothedPing !== undefined ? visible[k].smoothedPing : visible[k].ping;
         var px = padL + ((visible[k].t - timeStart) / timeSpan) * plotW;
-        var py = padT + plotH - (visible[k].ping / yMax) * plotH;
+        var py = padT + plotH - (fillPingVal / yMax) * plotH;
         if (!startedFill) {
           ctx.moveTo(px, padT + plotH);
           ctx.lineTo(px, py);
           startedFill = true;
         } else {
-          ctx.lineTo(px, py);
+          ctx.quadraticCurveTo(prevFillX, prevFillY, (prevFillX + px) * 0.5, (prevFillY + py) * 0.5);
         }
+        prevFillX = px;
+        prevFillY = py;
         lastValidPx = px;
       }
       if (startedFill) {
+        ctx.lineTo(prevFillX, prevFillY);
         ctx.lineTo(lastValidPx, padT + plotH);
-        ctx.closePath();
-        ctx.fillStyle = pingGrad;
-        ctx.fill();
       }
+      ctx.closePath();
+      ctx.fillStyle = pingGrad;
+      ctx.fill();
 
-      // 2. Draw Purple Jitter Line (#C477FF) from real per-sample jitter
+      // 1b. Subtle Raw RTT Micro-Trace behind Moving-Average Curve for 4K Telemetry Depth
+      ctx.save();
+      ctx.beginPath();
+      var startedRawPing = false;
+      for (var rw = 0; rw < visible.length; rw++) {
+        if (visible[rw].lost) {
+          startedRawPing = false;
+          continue;
+        }
+        var rX = padL + ((visible[rw].t - timeStart) / timeSpan) * plotW;
+        var rY = padT + plotH - (visible[rw].ping / yMax) * plotH;
+        if (!startedRawPing) {
+          ctx.moveTo(rX, rY);
+          startedRawPing = true;
+        } else {
+          ctx.lineTo(rX, rY);
+        }
+      }
+      ctx.strokeStyle = "rgba(39, 221, 248, 0.22)";
+      ctx.lineWidth = 1.1 * dp;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.stroke();
+      ctx.restore();
+
+      // 2. Draw Purple Jitter Line (#C477FF) from Moving-Average Jitter Window with 4K Midpoint Quadratic Smoothing
       ctx.save();
       ctx.beginPath();
       var startedJitter = false;
+      var prevJx = 0,
+        prevJy = 0;
       for (var m = 0; m < visible.length; m++) {
         if (visible[m].lost || typeof visible[m].jitter !== "number") {
-          startedJitter = false;
+          if (startedJitter) {
+            ctx.lineTo(prevJx, prevJy);
+            startedJitter = false;
+          }
           continue;
         }
+        var jitterPlotVal =
+          visible[m].smoothedJitter !== undefined ? visible[m].smoothedJitter : visible[m].jitter;
         var jx = padL + ((visible[m].t - timeStart) / timeSpan) * plotW;
-        var jy = padT + plotH - (Math.min(yMax, visible[m].jitter) / yMax) * plotH;
+        var jy = padT + plotH - (Math.min(yMax, jitterPlotVal) / yMax) * plotH;
         if (!startedJitter) {
           ctx.moveTo(jx, jy);
           startedJitter = true;
         } else {
-          ctx.lineTo(jx, jy);
+          ctx.quadraticCurveTo(prevJx, prevJy, (prevJx + jx) * 0.5, (prevJy + jy) * 0.5);
         }
+        prevJx = jx;
+        prevJy = jy;
+      }
+      if (startedJitter) {
+        ctx.lineTo(prevJx, prevJy);
       }
       ctx.strokeStyle = jitterColor;
       ctx.lineWidth = 1.9 * dp;
       ctx.lineJoin = "round";
+      ctx.lineCap = "round";
       ctx.shadowColor = "rgba(196, 119, 255, 0.65)";
       ctx.shadowBlur = 8 * dp;
       ctx.stroke();
       ctx.restore();
 
-      // 3. Draw Cyan Ping Line (#27DDF8) with Discontinuity on Packet Loss
+      // 3. Draw Primary 4K Cyan Ping Line (#27DDF8) using Moving-Average Window & Quadratic Spline with Discontinuity on Packet Loss
       ctx.save();
       ctx.beginPath();
       var startedPing = false;
@@ -2833,23 +2960,32 @@
         lastPy = 0;
       for (var n = 0; n < visible.length; n++) {
         if (visible[n].lost) {
-          startedPing = false;
+          if (startedPing) {
+            ctx.lineTo(lastPx, lastPy);
+            startedPing = false;
+          }
           continue;
         }
+        var pingPlotVal =
+          visible[n].smoothedPing !== undefined ? visible[n].smoothedPing : visible[n].ping;
         var pX = padL + ((visible[n].t - timeStart) / timeSpan) * plotW;
-        var pY = padT + plotH - (visible[n].ping / yMax) * plotH;
+        var pY = padT + plotH - (pingPlotVal / yMax) * plotH;
         if (!startedPing) {
           ctx.moveTo(pX, pY);
           startedPing = true;
         } else {
-          ctx.lineTo(pX, pY);
+          ctx.quadraticCurveTo(lastPx, lastPy, (lastPx + pX) * 0.5, (lastPy + pY) * 0.5);
         }
         lastPx = pX;
         lastPy = pY;
       }
+      if (startedPing) {
+        ctx.lineTo(lastPx, lastPy);
+      }
       ctx.strokeStyle = pingColor;
       ctx.lineWidth = 2.4 * dp;
       ctx.lineJoin = "round";
+      ctx.lineCap = "round";
       ctx.shadowColor = "rgba(39, 221, 248, 0.8)";
       ctx.shadowBlur = 10 * dp;
       ctx.stroke();
@@ -3019,60 +3155,122 @@
       });
     }
 
-    // Network connectivity monitoring for stability test
+    // Network connectivity monitoring for stability test:
+    // Record instantaneous disconnections as Packet Loss / Stability Drop rather than crashing or aborting the test
     window.addEventListener("offline", function () {
+      var badge = I("connectionStatusBadge");
+      var badgeText = I("connectionStatusText");
       if (running) {
-        userExplicitlyStopped = false;
-        if (worker) worker.postMessage("abort");
-        stopTest(true);
+        if (badge) badge.className = "live-connection-badge warning";
+        if (badgeText) badgeText.textContent = "انقطاع لحظي — جاري تسجيل فقدان الحزم";
+        setTextIfChanged(
+          "stabilityPhaseLabel",
+          "انقطاع لحظي في الاتصال — يتم تسجيل فقدان الحزم وانخفاض الاستقرار..."
+        );
+        if (worker) {
+          try {
+            worker.postMessage("offline_blip");
+            worker.postMessage("status");
+          } catch (e) {}
+        }
         showTerraxToast({
           type: "error",
-          title: "انقطع الاتصال بالإنترنت",
-          message: "تم فقدان الاتصال بالشبكة أثناء فحص الاستقرار. يرجى التحقق من الشبكة.",
+          title: "انقطاع لحظي في الإنترنت",
+          message: "يتم تسجيل الانقطاع كفقدان حزم (Packet Loss) وتحديث مؤشر الاستقرار تلقائياً دون إيقاف الفحص.",
         });
+      } else {
+        if (badge) badge.className = "live-connection-badge warning";
+        if (badgeText) badgeText.textContent = "غير متصل بالإنترنت";
       }
     });
 
     window.addEventListener("online", function () {
+      var badge = I("connectionStatusBadge");
+      var badgeText = I("connectionStatusText");
+      if (running) {
+        if (badge) badge.className = "live-connection-badge running";
+        if (badgeText) badgeText.textContent = "جاري المراقبة الحية...";
+      } else {
+        if (badge) badge.className = "live-connection-badge";
+        if (badgeText) badgeText.textContent = "جاهز للفحص";
+      }
       showTerraxToast({
         type: "info",
         title: "تمت استعادة الاتصال",
-        message: "أنت متصل بالإنترنت الآن، وجاهز لبدء فحص الاستقرار.",
+        message: running
+          ? "عاد الاتصال بالإنترنت ويستمر فحص الاستقرار الحقيقي."
+          : "أنت متصل بالإنترنت الآن، وجاهز لبدء فحص الاستقرار.",
       });
     });
 
-    // Clean up worker when user leaves page
+    // Clean up worker, intervals, RAF, and audio context when user leaves page
     window.addEventListener("pagehide", function () {
-      if (running && worker) {
-        try {
-          worker.postMessage("abort");
-          worker.terminate();
-        } catch (e) {}
-      }
-      if (updater) clearInterval(updater);
+      cleanupStabilityPageResources();
+    });
+    window.addEventListener("beforeunload", function () {
+      cleanupStabilityPageResources();
+    });
+    window.addEventListener("pageshow", function () {
+      isNavigatingFromStability = false;
     });
 
     var stabilityRafId = 0;
-    function scheduleStabilityFrame() {
+    var needsUiUpdate = true;
+    var needsChartRedraw = true;
+    function scheduleStabilityFrame(opts) {
+      if (!opts) {
+        needsUiUpdate = true;
+        needsChartRedraw = true;
+      } else {
+        if (opts.ui) needsUiUpdate = true;
+        if (opts.chart) needsChartRedraw = true;
+        if (opts.resize) {
+          canvasGeometryDirty = true;
+          needsChartRedraw = true;
+        }
+      }
       if (stabilityRafId || (typeof document !== "undefined" && document.visibilityState === "hidden")) return;
       stabilityRafId = requestAnimationFrame(frame);
     }
     function frame() {
       stabilityRafId = 0;
-      updateUI();
-      drawChart();
+      // Read layout geometry BEFORE DOM mutations in updateUI() to prevent forced synchronous reflow
+      if (canvasGeometryDirty) {
+        syncCanvasGeometryIfNeeded();
+      }
+      if (needsUiUpdate) {
+        needsUiUpdate = false;
+        updateUI();
+      }
+      if (needsChartRedraw) {
+        needsChartRedraw = false;
+        drawChart();
+      }
     }
-    window.addEventListener("resize", scheduleStabilityFrame, { passive: true });
+    window.addEventListener("resize", function () {
+      scheduleStabilityFrame({ resize: true });
+    }, { passive: true });
+    if (typeof ResizeObserver === "function") {
+      try {
+        var chartEl = I("pingChart");
+        if (chartEl) {
+          var chartResizeObserver = new ResizeObserver(function () {
+            scheduleStabilityFrame({ resize: true });
+          });
+          chartResizeObserver.observe(chartEl);
+        }
+      } catch (roErr) {}
+    }
     document.addEventListener("visibilitychange", function () {
       var hidden = document.visibilityState === "hidden";
       document.body.classList.toggle("terrax-page-hidden", hidden);
-      if (!hidden) scheduleStabilityFrame();
+      if (!hidden) scheduleStabilityFrame({ ui: true, chart: true, resize: true });
     });
-    scheduleStabilityFrame();
+    scheduleStabilityFrame({ ui: true, chart: true, resize: true });
 
     loadServers(function () {
       initServers();
-      scheduleStabilityFrame();
+      scheduleStabilityFrame({ ui: true, chart: true });
       attachButtonMicroInteractions();
     });
   </script>

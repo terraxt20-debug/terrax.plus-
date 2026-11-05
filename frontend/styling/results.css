@@ -707,6 +707,7 @@ div.gauge > .speed {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(0.85rem, 1.5vw, 1.4rem);
+  align-items: stretch;
   margin: 0 auto;
 }
 
@@ -715,6 +716,9 @@ div.gauge > .speed {
   overflow: hidden;
   min-width: 0;
   max-width: 100%;
+  min-height: 5.6rem;
+  height: 100%;
+  box-sizing: border-box;
   contain: layout style;
   display: flex;
   flex-direction: row;
@@ -729,7 +733,7 @@ div.gauge > .speed {
       rgba(22, 52, 102, 0.34) 0%,
       rgba(15, 37, 76, 0.42) 100%
     );
-  border: 1px solid rgba(56, 189, 248, 0.46);
+  border: 1px solid rgba(56, 189, 248, 0.48);
   border-radius: 1.6rem;
   box-shadow:
     0 10px 26px rgba(8, 22, 48, 0.3),
@@ -799,15 +803,20 @@ div.gauge > .speed {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  text-align: right;
+  text-align: start;
   min-width: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .stat-title-ar {
   font-size: clamp(1.32rem, 1.55vw, 1.5rem);
   font-weight: 700;
   color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .stat-title-en {
@@ -817,6 +826,10 @@ div.gauge > .speed {
   letter-spacing: 0.06em;
   color: #64748b;
   margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .stat-value-wrap {
@@ -825,6 +838,7 @@ div.gauge > .speed {
   gap: 0.45rem;
   min-width: 0;
   max-width: 100%;
+  white-space: nowrap;
   contain: layout style;
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
@@ -835,6 +849,7 @@ div.gauge > .speed {
   font-size: clamp(2.15rem, 2.8vw, 2.85rem);
   font-weight: 900;
   color: #ffffff;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "zero" 1;
   text-shadow: 0 0 12px rgba(251, 191, 36, 0.65), 0 1px 3px rgba(8, 22, 48, 0.75);
@@ -863,6 +878,7 @@ div.gauge > .speed {
   font-size: 1.3rem;
   font-weight: 700;
   color: var(--amber-accent);
+  white-space: nowrap;
 }
 
 .stat-card-icon {

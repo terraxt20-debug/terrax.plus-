@@ -225,6 +225,20 @@
     const jit = Number(jitterMs);
     const loss = Number(packetLossPct) || 0;
 
+    if (samples > 0 && loss > 0 && (!Number.isFinite(avg) || avg <= 0)) {
+      const lossScore = Math.round(Math.max(0, Math.min(99, 100 - loss * 12)));
+      return {
+        hasData: true,
+        grade: "bad",
+        statusColor: "#FF647C",
+        titleAr: "غير مستقر للألعاب",
+        titleEn: "Unstable Connection",
+        subtitleAr: "انقطاع لحظي أو فقدان حزم يؤثر على استقرار الخط",
+        criteriaAr: `فقدان حزم ${loss.toFixed(1)}% (${lossScore}% استقرار)`,
+        scorePercent: lossScore,
+      };
+    }
+
     if (samples <= 0 || !Number.isFinite(avg) || avg <= 0) {
       return {
         hasData: false,
@@ -1818,6 +1832,113 @@
     return 0;
   }
 
+  /**
+   * Creates a stateful O(1) moving average window processor for live stability test data ingestion.
+   * Smooths out high-frequency RTT and jitter volatility as delta samples arrive while
+   * strictly resetting the window on packet loss (lost: true).
+   *
+   * @param {number} [windowSize=5]
+   */
+  function createStabilityMovingAverageProcessor(windowSize = 5) {
+    const wSize = Math.max(1, Math.min(60, Math.floor(Number(windowSize) || 5)));
+    const pingWindow = [];
+    const jitterWindow = [];
+    let pingSum = 0;
+    let jitterSum = 0;
+
+    function reset() {
+      pingWindow.length = 0;
+      jitterWindow.length = 0;
+      pingSum = 0;
+      jitterSum = 0;
+    }
+
+    function pushSample(sample) {
+      const item = sample || {};
+      const tVal = Number(item.t) || 0;
+      const isLost = Boolean(item.lost);
+
+      if (isLost) {
+        reset();
+        return {
+          t: tVal,
+          ping: 0,
+          jitter: 0,
+          lost: true,
+          smoothedPing: 0,
+          smoothedJitter: 0,
+          windowCount: 0,
+        };
+      }
+
+      const rawPing = Math.max(0, Number(item.ping) || 0);
+      const rawJitter =
+        typeof item.jitter === 'number' && Number.isFinite(item.jitter)
+          ? Math.max(0, item.jitter)
+          : 0;
+
+      pingWindow.push(rawPing);
+      pingSum += rawPing;
+      if (pingWindow.length > wSize) {
+        pingSum -= pingWindow.shift();
+      }
+
+      jitterWindow.push(rawJitter);
+      jitterSum += rawJitter;
+      if (jitterWindow.length > wSize) {
+        jitterSum -= jitterWindow.shift();
+      }
+
+      const count = pingWindow.length;
+      const smoothedPing = Number((pingSum / count).toFixed(2));
+      const smoothedJitter = Number((jitterSum / jitterWindow.length).toFixed(2));
+
+      return {
+        t: tVal,
+        ping: rawPing,
+        jitter: rawJitter,
+        lost: false,
+        smoothedPing,
+        smoothedJitter,
+        windowCount: count,
+      };
+    }
+
+    function pushBatch(samples) {
+      if (!Array.isArray(samples) || samples.length === 0) return [];
+      const out = new Array(samples.length);
+      for (let i = 0; i < samples.length; i++) {
+        out[i] = pushSample(samples[i]);
+      }
+      return out;
+    }
+
+    return {
+      pushSample,
+      pushBatch,
+      reset,
+      getWindowSize: () => wSize,
+    };
+  }
+
+  /**
+   * Pure moving average window smoothing for real-time stability graph rendering.
+   * Reduces visual jitter during live updates while strictly preserving packet loss
+   * discontinuities (resets the moving window across lost packets so spikes/drops
+   * are never averaged across disconnection boundaries).
+   *
+   * @param {Array<{ t: number, ping?: number, jitter?: number, lost?: boolean }>} samples
+   * @param {number} [windowSize=5]
+   * @returns {Array<{ t: number, ping: number, jitter: number, lost: boolean, smoothedPing: number, smoothedJitter: number, windowCount: number }>}
+   */
+  function computeStabilityMovingAverage(samples, windowSize = 5) {
+    if (!Array.isArray(samples) || samples.length === 0) {
+      return [];
+    }
+    const processor = createStabilityMovingAverageProcessor(windowSize);
+    return processor.pushBatch(samples);
+  }
+
   return {
     formatSpeedReading,
     calculateRealMetrics,
@@ -1839,6 +1960,8 @@
     calculateScrollPercentage,
     calculateScrollRingDash,
     resolveScrollJumpTarget,
+    computeStabilityMovingAverage,
+    createStabilityMovingAverageProcessor,
   };
 });
 
