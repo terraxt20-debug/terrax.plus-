@@ -1828,5 +1828,86 @@ test('Complete 4K Visual Identity Audit: valid CSS syntax, RTL/LTR logical prope
   }
 });
 
+test('App.tsx event-driven 60fps requestAnimationFrame throttling and full smoothNumericValue 4K telemetry transitions', async () => {
+  const fs = await import('node:fs');
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const { computeRealTimeGaugeTelemetry, RUNNING, FINISHED } = await import('../src/App.tsx');
+
+  // 1. Verify st.onupdate coalesces updates via gaugeRafThrottlerRef.current.schedule(false)
+  assert.ok(appTsx.includes('gaugeRafThrottlerRef.current.schedule(false)'), 'App.tsx st.onupdate must schedule 60fps RAF throttler');
+  assert.ok(appTsx.includes('mathInit.createRafGaugeThrottler('), 'App.tsx must instantiate createRafGaugeThrottler');
+  assert.ok(appTsx.includes('stabDisplayRef.current'), 'App.tsx must interpolate stability gauge via smoothNumericValue');
+  assert.ok(appTsx.includes('pingDisplayRef.current'), 'App.tsx must interpolate ping readout via smoothNumericValue');
+  assert.ok(appTsx.includes('jitterDisplayRef.current'), 'App.tsx must interpolate jitter readout via smoothNumericValue');
+  assert.ok(appTsx.includes('dlProgressRef.current'), 'App.tsx must interpolate download progress arc via smoothNumericValue');
+  assert.ok(appTsx.includes('ulProgressRef.current'), 'App.tsx must interpolate upload progress arc via smoothNumericValue');
+  assert.ok(appTsx.includes('maxSpeedDisplayRef.current'), 'App.tsx must interpolate maxSpeed readout via smoothNumericValue');
+  assert.ok(appTsx.includes('avgSpeedDisplayRef.current'), 'App.tsx must interpolate avgSpeed readout via smoothNumericValue');
+
+  // 2. Verify computeRealTimeGaugeTelemetry applies smoothedTelemetry during RUNNING and snaps on FINISHED
+  const sampleData = {
+    testState: 1,
+    dlStatus: 500,
+    ulStatus: 200,
+    pingStatus: 24,
+    jitterStatus: 4,
+    dlProgress: 0.8,
+    ulProgress: 0.5,
+  };
+  const runningTel = computeRealTimeGaugeTelemetry(
+    sampleData,
+    [400, 480, 500],
+    [],
+    320,
+    0,
+    true,
+    'ar',
+    RUNNING,
+    {
+      stabilityDisplayPercent: 84.4,
+      pingDisplayMs: 18.5,
+      jitterDisplayMs: 2.5,
+      dlProgressRatio: 0.6,
+      ulProgressRatio: 0.25,
+      maxSpeedDisplayMbps: 410,
+      avgSpeedDisplayMbps: 350,
+    }
+  );
+  assert.equal(runningTel.dlDisplayNumber, '320');
+  assert.equal(runningTel.stabilityDisplay, '84');
+  assert.equal(runningTel.pingDisplay, '18.5');
+  assert.equal(runningTel.jitterDisplay, '2.50');
+  assert.equal(runningTel.dlProgressDeg, 108);
+  assert.equal(runningTel.maxSpeedDisplay, '410');
+  assert.equal(runningTel.avgSpeedDisplay, '350');
+
+  const finishedTel = computeRealTimeGaugeTelemetry(
+    sampleData,
+    [400, 480, 500],
+    [190, 200],
+    320,
+    100,
+    true,
+    'ar',
+    FINISHED,
+    {
+      stabilityDisplayPercent: 84.4,
+      pingDisplayMs: 18.5,
+      jitterDisplayMs: 2.5,
+      dlProgressRatio: 0.6,
+      ulProgressRatio: 0.25,
+      maxSpeedDisplayMbps: 410,
+      avgSpeedDisplayMbps: 350,
+    }
+  );
+  assert.equal(finishedTel.dlDisplayNumber, '500');
+  assert.equal(finishedTel.ulDisplayNumber, '200');
+  assert.equal(finishedTel.pingDisplay, '24.0');
+  assert.equal(finishedTel.jitterDisplay, '4.00');
+  assert.equal(finishedTel.dlProgressDeg, 144);
+  assert.equal(finishedTel.maxSpeedDisplay, '500');
+});
+
+
 
 

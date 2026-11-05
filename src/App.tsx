@@ -280,6 +280,16 @@ export function mbpsToRotation(speed: number | string, oscillate = false): numbe
   return Math.max(Math.min(rotation, maxRotation), minRotation);
 }
 
+export interface SmoothedTelemetryValues {
+  stabilityDisplayPercent?: number | null;
+  pingDisplayMs?: number;
+  jitterDisplayMs?: number;
+  dlProgressRatio?: number;
+  ulProgressRatio?: number;
+  maxSpeedDisplayMbps?: number | null;
+  avgSpeedDisplayMbps?: number | null;
+}
+
 /**
  * Compute real-time 4K gauge state directly from LibreSpeed worker telemetry data and collected samples.
  */
@@ -291,7 +301,8 @@ export function computeRealTimeGaugeTelemetry(
   ulDisplayMbps: number,
   autoGbps: boolean,
   lang: 'ar' | 'en',
-  uiState: number
+  uiState: number,
+  smoothedTelemetry?: SmoothedTelemetryValues
 ) {
   const math = globalThis.window?.TerraxTelemetryMath ?? (globalThis as unknown as {TerraxTelemetryMath?: TelemetryMathApi}).TerraxTelemetryMath;
   const isEnglish = lang === 'en';
@@ -348,18 +359,45 @@ export function computeRealTimeGaugeTelemetry(
     data.jitterStatus
   );
 
+  const effectiveMaxSpeedMbps =
+    uiState === RUNNING &&
+    smoothedTelemetry?.maxSpeedDisplayMbps !== undefined &&
+    smoothedTelemetry.maxSpeedDisplayMbps !== null &&
+    Number.isFinite(smoothedTelemetry.maxSpeedDisplayMbps) &&
+    smoothedTelemetry.maxSpeedDisplayMbps > 0
+      ? smoothedTelemetry.maxSpeedDisplayMbps
+      : metrics.maxSpeedMbps;
+
+  const effectiveAvgSpeedMbps =
+    uiState === RUNNING &&
+    smoothedTelemetry?.avgSpeedDisplayMbps !== undefined &&
+    smoothedTelemetry.avgSpeedDisplayMbps !== null &&
+    Number.isFinite(smoothedTelemetry.avgSpeedDisplayMbps) &&
+    smoothedTelemetry.avgSpeedDisplayMbps > 0
+      ? smoothedTelemetry.avgSpeedDisplayMbps
+      : metrics.avgSpeedMbps;
+
   const maxFmt =
-    metrics.maxSpeedMbps !== null
-      ? math.formatSpeedReading(metrics.maxSpeedMbps, autoGbps)
+    effectiveMaxSpeedMbps !== null
+      ? math.formatSpeedReading(effectiveMaxSpeedMbps, autoGbps)
       : null;
   const avgFmt =
-    metrics.avgSpeedMbps !== null
-      ? math.formatSpeedReading(metrics.avgSpeedMbps, autoGbps)
+    effectiveAvgSpeedMbps !== null
+      ? math.formatSpeedReading(effectiveAvgSpeedMbps, autoGbps)
       : null;
 
+  const effectiveStabilityPercent =
+    uiState === RUNNING &&
+    smoothedTelemetry?.stabilityDisplayPercent !== undefined &&
+    smoothedTelemetry.stabilityDisplayPercent !== null &&
+    Number.isFinite(smoothedTelemetry.stabilityDisplayPercent) &&
+    smoothedTelemetry.stabilityDisplayPercent > 0
+      ? smoothedTelemetry.stabilityDisplayPercent
+      : metrics.stabilityPercent;
+
   const stabRot =
-    metrics.stabilityPercent !== null
-      ? math.percentToRotation(metrics.stabilityPercent)
+    effectiveStabilityPercent !== null
+      ? math.percentToRotation(effectiveStabilityPercent)
       : 0;
   const stabArcLen = Math.max(0, Math.min(415, (stabRot / 180) * 415));
 
@@ -371,6 +409,38 @@ export function computeRealTimeGaugeTelemetry(
     if (n < 100) return n.toFixed(1);
     return n.toFixed(0);
   };
+
+  const dlProgressSource =
+    uiState === RUNNING &&
+    smoothedTelemetry?.dlProgressRatio !== undefined &&
+    Number.isFinite(smoothedTelemetry.dlProgressRatio) &&
+    smoothedTelemetry.dlProgressRatio > 0
+      ? smoothedTelemetry.dlProgressRatio
+      : Number(data.dlProgress) || 0;
+
+  const ulProgressSource =
+    uiState === RUNNING &&
+    smoothedTelemetry?.ulProgressRatio !== undefined &&
+    Number.isFinite(smoothedTelemetry.ulProgressRatio) &&
+    smoothedTelemetry.ulProgressRatio > 0
+      ? smoothedTelemetry.ulProgressRatio
+      : Number(data.ulProgress) || 0;
+
+  const pingSourceVal =
+    uiState === RUNNING &&
+    smoothedTelemetry?.pingDisplayMs !== undefined &&
+    Number.isFinite(smoothedTelemetry.pingDisplayMs) &&
+    smoothedTelemetry.pingDisplayMs > 0
+      ? smoothedTelemetry.pingDisplayMs
+      : data.pingStatus;
+
+  const jitterSourceVal =
+    uiState === RUNNING &&
+    smoothedTelemetry?.jitterDisplayMs !== undefined &&
+    Number.isFinite(smoothedTelemetry.jitterDisplayMs) &&
+    smoothedTelemetry.jitterDisplayMs > 0
+      ? smoothedTelemetry.jitterDisplayMs
+      : data.jitterStatus;
 
   const dlBadge =
     uiState === RUNNING && testStage === 1
@@ -397,16 +467,18 @@ export function computeRealTimeGaugeTelemetry(
     dlBadge,
     dlRotationDeg: dlRot,
     dlArcDash: `${dlArcLen.toFixed(1)} 680`,
-    dlProgressDeg: (Number(data.dlProgress) || 0) * 180,
+    dlProgressDeg: Math.max(0, Math.min(180, dlProgressSource * 180)),
     ulDisplayNumber: ulFmt.displayNumber,
     ulUnit: ulFmt.unitEn,
     ulUnitSub: isEnglish ? ulFmt.unitLabelEn || ulFmt.unitEn : ulFmt.unitAr,
     ulBadge,
     ulRotationDeg: ulRot,
     ulArcDash: `${ulArcLen.toFixed(1)} 560`,
-    ulProgressDeg: (Number(data.ulProgress) || 0) * 180,
+    ulProgressDeg: Math.max(0, Math.min(180, ulProgressSource * 180)),
     stabilityDisplay:
-      metrics.stabilityPercent !== null ? String(metrics.stabilityPercent) : '--',
+      effectiveStabilityPercent !== null
+        ? String(Math.round(effectiveStabilityPercent))
+        : '--',
     stabilityStatus: isEnglish
       ? metrics.stabilityLabelEn || metrics.stabilityLabelAr
       : metrics.stabilityLabelAr,
@@ -415,8 +487,8 @@ export function computeRealTimeGaugeTelemetry(
     maxSpeedUnit: maxFmt ? maxFmt.unitEn : 'Mbps',
     avgSpeedDisplay: avgFmt ? avgFmt.displayNumber : '--',
     avgSpeedUnit: avgFmt ? avgFmt.unitEn : 'Mbps',
-    pingDisplay: formatLatency(data.pingStatus),
-    jitterDisplay: formatLatency(data.jitterStatus),
+    pingDisplay: formatLatency(pingSourceVal),
+    jitterDisplay: formatLatency(jitterSourceVal),
     hasLatency: Boolean(data.pingStatus && data.jitterStatus),
   };
 }
@@ -476,6 +548,15 @@ export default function App() {
   const [testData, setTestData] = useState<LibreSpeedUpdateData | null>(null);
   const [dlDisplayMbps, setDlDisplayMbps] = useState<number>(0);
   const [ulDisplayMbps, setUlDisplayMbps] = useState<number>(0);
+  const [smoothedTelemetry, setSmoothedTelemetry] = useState<SmoothedTelemetryValues>({
+    stabilityDisplayPercent: null,
+    pingDisplayMs: 0,
+    jitterDisplayMs: 0,
+    dlProgressRatio: 0,
+    ulProgressRatio: 0,
+    maxSpeedDisplayMbps: null,
+    avgSpeedDisplayMbps: null,
+  });
   const [statCountUp, setStatCountUp] = useState<{
     maxDisplay: string;
     maxUnit: string;
@@ -494,13 +575,22 @@ export default function App() {
   const selectedServerRef = useRef<SpeedtestServer | null>(null);
   const langRef = useRef<'ar' | 'en'>(lang);
   const latestDataRef = useRef<LibreSpeedUpdateData | null>(null);
+  const testDataDirtyRef = useRef<boolean>(false);
   const dlDisplayRef = useRef<number>(0);
   const ulDisplayRef = useRef<number>(0);
+  const stabDisplayRef = useRef<number>(0);
+  const pingDisplayRef = useRef<number>(0);
+  const jitterDisplayRef = useRef<number>(0);
+  const dlProgressRef = useRef<number>(0);
+  const ulProgressRef = useRef<number>(0);
+  const maxSpeedDisplayRef = useRef<number>(0);
+  const avgSpeedDisplayRef = useRef<number>(0);
   const uiStateRef = useRef<number>(INITIALIZING);
   const isNavigatingRef = useRef<boolean>(false);
   const autoGbpsRef = useRef<boolean>(autoGbps);
   const statCountUpCancelRef = useRef<(() => void) | null>(null);
   const statCardsLoopRef = useRef<ReturnType<NonNullable<TelemetryMathApi['createStatCardsRafLoop']>> | null>(null);
+  const gaugeRafThrottlerRef = useRef<ReturnType<NonNullable<TelemetryMathApi['createRafGaugeThrottler']>> | null>(null);
 
   useEffect(() => {
     uiStateRef.current = uiState;
@@ -734,7 +824,16 @@ export default function App() {
           }
         }
         latestDataRef.current = data;
-        setTestData({...data});
+        testDataDirtyRef.current = true;
+        // Coalesce bursty worker updates via 60fps requestAnimationFrame throttler
+        if (gaugeRafThrottlerRef.current) {
+          gaugeRafThrottlerRef.current.schedule(false);
+        } else {
+          requestAnimationFrame(() => {
+            if (!mounted) return;
+            setTestData({...data});
+          });
+        }
       };
 
       st.onend = (aborted: boolean) => {
@@ -840,13 +939,20 @@ export default function App() {
           statCardsLoopRef.current?.reset('--', 'Mbps');
           setStatCountUp(null);
         }
-        if (latestDataRef.current) {
-          const finalDl = Number(latestDataRef.current.dlStatus) || 0;
-          const finalUl = Number(latestDataRef.current.ulStatus) || 0;
-          dlDisplayRef.current = finalDl;
-          ulDisplayRef.current = finalUl;
-          setDlDisplayMbps(finalDl);
-          setUlDisplayMbps(finalUl);
+        testDataDirtyRef.current = true;
+        if (gaugeRafThrottlerRef.current) {
+          gaugeRafThrottlerRef.current.schedule(true);
+        } else if (latestDataRef.current) {
+          requestAnimationFrame(() => {
+            if (!mounted || !latestDataRef.current) return;
+            const finalDl = Number(latestDataRef.current.dlStatus) || 0;
+            const finalUl = Number(latestDataRef.current.ulStatus) || 0;
+            dlDisplayRef.current = finalDl;
+            ulDisplayRef.current = finalUl;
+            setTestData({...latestDataRef.current});
+            setDlDisplayMbps(finalDl);
+            setUlDisplayMbps(finalUl);
+          });
         }
       };
 
@@ -921,12 +1027,12 @@ export default function App() {
     };
   }, [refreshYandexAdUnits]);
 
-  // 60fps requestAnimationFrame throttler for real-time 4K glass gauge numbers, SVG arcs, and synchronized stat cards
+  // Unified 60fps requestAnimationFrame gauge rendering loop for all 4K telemetry UI updates
   useEffect(() => {
-    let rafId = 0;
-    let lastFrameTime = 0;
     const TARGET_FPS = 60;
     const FRAME_INTERVAL_MS = 1000 / TARGET_FPS;
+    let fallbackRafId = 0;
+    let lastFrameTime = 0;
 
     const mathInit = window.TerraxTelemetryMath;
     if (mathInit?.createStatCardsRafLoop && !statCardsLoopRef.current) {
@@ -956,64 +1062,135 @@ export default function App() {
       });
     }
 
-    const tick = (now: number) => {
+    const renderGaugeFrame = (dt: number, now: number): boolean => {
       const math = window.TerraxTelemetryMath;
-      let shouldRender = true;
-      let dt = 1 / TARGET_FPS;
+      const data = latestDataRef.current;
+      let stillInterpolating = false;
 
-      if (math?.shouldRenderGaugeFrame) {
-        const gate = math.shouldRenderGaugeFrame(now, lastFrameTime, TARGET_FPS, false);
-        shouldRender = gate.shouldRender;
-        dt = gate.dtSeconds;
-        if (shouldRender) {
-          lastFrameTime = gate.nextLastFrameMs;
+      if (!data) {
+        if (testDataDirtyRef.current) {
+          testDataDirtyRef.current = false;
+          dlDisplayRef.current = 0;
+          ulDisplayRef.current = 0;
+          stabDisplayRef.current = 0;
+          pingDisplayRef.current = 0;
+          jitterDisplayRef.current = 0;
+          dlProgressRef.current = 0;
+          ulProgressRef.current = 0;
+          maxSpeedDisplayRef.current = 0;
+          avgSpeedDisplayRef.current = 0;
+          setDlDisplayMbps(0);
+          setUlDisplayMbps(0);
+          setSmoothedTelemetry({
+            stabilityDisplayPercent: null,
+            pingDisplayMs: 0,
+            jitterDisplayMs: 0,
+            dlProgressRatio: 0,
+            ulProgressRatio: 0,
+            maxSpeedDisplayMbps: null,
+            avgSpeedDisplayMbps: null,
+          });
+          setTestData(null);
         }
-      } else {
-        const elapsed = lastFrameTime > 0 ? now - lastFrameTime : FRAME_INTERVAL_MS;
-        if (lastFrameTime > 0 && elapsed < FRAME_INTERVAL_MS - 0.45) {
-          shouldRender = false;
-        } else {
-          dt = Math.min(0.05, Math.max(0.008, elapsed / 1000));
-          lastFrameTime = now;
-        }
-      }
+      } else if (math) {
+        const reducedMotion =
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const isRunning = uiStateRef.current === RUNNING;
+        const stage = Number(data.testState);
+        const snapAll = !isRunning || reducedMotion;
+        const snapDl = snapAll || stage !== 1;
+        const snapUl = snapAll || stage !== 3;
+        const snapPing = snapAll || stage !== 2;
 
-      if (shouldRender) {
-        const data = latestDataRef.current;
-        if (data && math && uiStateRef.current === RUNNING) {
-          const stage = Number(data.testState);
-          const snapDl = stage !== 1;
-          const snapUl = stage !== 3;
+        const targetDl = Number(data.dlStatus) || 0;
+        const targetUl = Number(data.ulStatus) || 0;
+        const targetPing = Number(data.pingStatus) || 0;
+        const targetJitter = Number(data.jitterStatus) || 0;
+        const targetDlProgress = Number(data.dlProgress) || 0;
+        const targetUlProgress = Number(data.ulProgress) || 0;
 
-          const nextDl = math.smoothNumericValue(
-            dlDisplayRef.current,
-            data.dlStatus ?? 0,
-            dt,
-            snapDl
+        const nextDl = math.smoothNumericValue(
+          dlDisplayRef.current,
+          targetDl,
+          dt,
+          snapDl
+        );
+        const nextUl = math.smoothNumericValue(
+          ulDisplayRef.current,
+          targetUl,
+          dt,
+          snapUl
+        );
+        const nextPing = math.smoothNumericValue(
+          pingDisplayRef.current,
+          targetPing,
+          dt,
+          snapPing
+        );
+        const nextJitter = math.smoothNumericValue(
+          jitterDisplayRef.current,
+          targetJitter,
+          dt,
+          snapPing
+        );
+        const nextDlProgress = math.smoothNumericValue(
+          dlProgressRef.current,
+          targetDlProgress,
+          dt,
+          snapDl
+        );
+        const nextUlProgress = math.smoothNumericValue(
+          ulProgressRef.current,
+          targetUlProgress,
+          dt,
+          snapUl
+        );
+
+        let nextStab = stabDisplayRef.current;
+        let nextMaxSpeed = maxSpeedDisplayRef.current;
+        let nextAvgSpeed = avgSpeedDisplayRef.current;
+
+        if (math.calculateRealMetrics) {
+          const liveMetrics = math.calculateRealMetrics(
+            dlSamplesRef.current,
+            ulSamplesRef.current,
+            data.pingStatus,
+            data.jitterStatus
           );
-          const nextUl = math.smoothNumericValue(
-            ulDisplayRef.current,
-            data.ulStatus ?? 0,
-            dt,
-            snapUl
-          );
+          const targetStab = liveMetrics.stabilityPercent ?? 0;
+          const targetMax = liveMetrics.maxSpeedMbps ?? 0;
+          const targetAvg = liveMetrics.avgSpeedMbps ?? 0;
 
-          if (Math.abs(nextDl - dlDisplayRef.current) > 0.01) {
-            dlDisplayRef.current = nextDl;
-            setDlDisplayMbps(nextDl);
-          }
-          if (Math.abs(nextUl - ulDisplayRef.current) > 0.01) {
-            ulDisplayRef.current = nextUl;
-            setUlDisplayMbps(nextUl);
-          }
+          nextStab =
+            targetStab > 0
+              ? math.smoothNumericValue(
+                  stabDisplayRef.current,
+                  targetStab,
+                  dt,
+                  snapAll
+                )
+              : 0;
+          nextMaxSpeed =
+            targetMax > 0
+              ? math.smoothNumericValue(
+                  maxSpeedDisplayRef.current,
+                  targetMax,
+                  dt,
+                  snapAll
+                )
+              : 0;
+          nextAvgSpeed =
+            targetAvg > 0
+              ? math.smoothNumericValue(
+                  avgSpeedDisplayRef.current,
+                  targetAvg,
+                  dt,
+                  snapAll
+                )
+              : 0;
 
-          if (statCardsLoopRef.current && math.calculateRealMetrics) {
-            const liveMetrics = math.calculateRealMetrics(
-              dlSamplesRef.current,
-              ulSamplesRef.current,
-              data.pingStatus,
-              data.jitterStatus
-            );
+          if (isRunning && statCardsLoopRef.current) {
             statCardsLoopRef.current.setLiveTargets(
               liveMetrics.maxSpeedMbps,
               liveMetrics.avgSpeedMbps,
@@ -1022,19 +1199,146 @@ export default function App() {
               false
             );
           }
+
+          if (
+            isRunning &&
+            ((targetStab > 0 && Math.abs(targetStab - nextStab) > 0.05) ||
+              (targetMax > 0 && Math.abs(targetMax - nextMaxSpeed) > 0.05) ||
+              (targetAvg > 0 && Math.abs(targetAvg - nextAvgSpeed) > 0.05))
+          ) {
+            stillInterpolating = true;
+          }
         }
 
-        if (statCardsLoopRef.current) {
-          statCardsLoopRef.current.syncFrame(now, dt);
+        if (
+          isRunning &&
+          (Math.abs(targetDl - nextDl) > 0.05 ||
+            Math.abs(targetUl - nextUl) > 0.05 ||
+            Math.abs(targetPing - nextPing) > 0.05 ||
+            Math.abs(targetJitter - nextJitter) > 0.05 ||
+            Math.abs(targetDlProgress - nextDlProgress) > 0.005 ||
+            Math.abs(targetUlProgress - nextUlProgress) > 0.005)
+        ) {
+          stillInterpolating = true;
+        }
+
+        if (Math.abs(nextDl - dlDisplayRef.current) > 0.01 || testDataDirtyRef.current) {
+          dlDisplayRef.current = nextDl;
+          setDlDisplayMbps(nextDl);
+        }
+        if (Math.abs(nextUl - ulDisplayRef.current) > 0.01 || testDataDirtyRef.current) {
+          ulDisplayRef.current = nextUl;
+          setUlDisplayMbps(nextUl);
+        }
+
+        const stabChanged = Math.abs(nextStab - stabDisplayRef.current) > 0.05;
+        const pingChanged = Math.abs(nextPing - pingDisplayRef.current) > 0.01;
+        const jitterChanged = Math.abs(nextJitter - jitterDisplayRef.current) > 0.01;
+        const dlProgChanged = Math.abs(nextDlProgress - dlProgressRef.current) > 0.002;
+        const ulProgChanged = Math.abs(nextUlProgress - ulProgressRef.current) > 0.002;
+        const maxChanged = Math.abs(nextMaxSpeed - maxSpeedDisplayRef.current) > 0.02;
+        const avgChanged = Math.abs(nextAvgSpeed - avgSpeedDisplayRef.current) > 0.02;
+
+        if (
+          stabChanged ||
+          pingChanged ||
+          jitterChanged ||
+          dlProgChanged ||
+          ulProgChanged ||
+          maxChanged ||
+          avgChanged ||
+          testDataDirtyRef.current
+        ) {
+          stabDisplayRef.current = nextStab;
+          pingDisplayRef.current = nextPing;
+          jitterDisplayRef.current = nextJitter;
+          dlProgressRef.current = nextDlProgress;
+          ulProgressRef.current = nextUlProgress;
+          maxSpeedDisplayRef.current = nextMaxSpeed;
+          avgSpeedDisplayRef.current = nextAvgSpeed;
+          setSmoothedTelemetry({
+            stabilityDisplayPercent: nextStab > 0 ? nextStab : null,
+            pingDisplayMs: nextPing,
+            jitterDisplayMs: nextJitter,
+            dlProgressRatio: nextDlProgress,
+            ulProgressRatio: nextUlProgress,
+            maxSpeedDisplayMbps: nextMaxSpeed > 0 ? nextMaxSpeed : null,
+            avgSpeedDisplayMbps: nextAvgSpeed > 0 ? nextAvgSpeed : null,
+          });
+        }
+
+        if (testDataDirtyRef.current) {
+          testDataDirtyRef.current = false;
+          setTestData({...data});
         }
       }
 
-      rafId = requestAnimationFrame(tick);
+      let statCardsActive = false;
+      if (statCardsLoopRef.current) {
+        statCardsActive = Boolean(statCardsLoopRef.current.syncFrame(now, dt));
+      }
+
+      return Boolean(
+        stillInterpolating ||
+          statCardsActive ||
+          testDataDirtyRef.current ||
+          uiStateRef.current === RUNNING
+      );
     };
 
-    rafId = requestAnimationFrame(tick);
+    if (mathInit?.createRafGaugeThrottler) {
+      gaugeRafThrottlerRef.current = mathInit.createRafGaugeThrottler(
+        renderGaugeFrame,
+        TARGET_FPS
+      );
+    } else {
+      const fallbackTick = (now: number) => {
+        fallbackRafId = 0;
+        const math = window.TerraxTelemetryMath;
+        let shouldRender = true;
+        let dt = 1 / TARGET_FPS;
+
+        if (math?.shouldRenderGaugeFrame) {
+          const gate = math.shouldRenderGaugeFrame(now, lastFrameTime, TARGET_FPS, false);
+          shouldRender = gate.shouldRender;
+          dt = gate.dtSeconds;
+          if (shouldRender) {
+            lastFrameTime = gate.nextLastFrameMs;
+          }
+        } else {
+          const elapsed = lastFrameTime > 0 ? now - lastFrameTime : FRAME_INTERVAL_MS;
+          if (lastFrameTime > 0 && elapsed < FRAME_INTERVAL_MS - 0.45) {
+            shouldRender = false;
+          } else {
+            dt = Math.min(0.05, Math.max(0.008, elapsed / 1000));
+            lastFrameTime = now;
+          }
+        }
+
+        const keepRunning = shouldRender ? renderGaugeFrame(dt, now) : true;
+        if (keepRunning && fallbackRafId === 0) {
+          fallbackRafId = requestAnimationFrame(fallbackTick);
+        }
+      };
+
+      gaugeRafThrottlerRef.current = {
+        schedule: () => {
+          if (fallbackRafId === 0) {
+            fallbackRafId = requestAnimationFrame(fallbackTick);
+          }
+        },
+        cancel: () => {
+          if (fallbackRafId !== 0) {
+            cancelAnimationFrame(fallbackRafId);
+            fallbackRafId = 0;
+          }
+        },
+        isPending: () => fallbackRafId !== 0,
+      };
+    }
+
     return () => {
-      cancelAnimationFrame(rafId);
+      gaugeRafThrottlerRef.current?.cancel();
       statCardsLoopRef.current?.cancel();
     };
   }, []);
@@ -1108,13 +1412,11 @@ export default function App() {
       currentTestBytesRef.current = 0;
       currentRunIdRef.current = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       historyRecordedForRunRef.current = false;
-      dlDisplayRef.current = 0;
-      ulDisplayRef.current = 0;
       latestDataRef.current = null;
-      setDlDisplayMbps(0);
-      setUlDisplayMbps(0);
-      setTestData(null);
+      testDataDirtyRef.current = true;
+      uiStateRef.current = RUNNING;
       setUiState(RUNNING);
+      gaugeRafThrottlerRef.current?.schedule(true);
 
       // Pre-test socket warm-up to verify latency to 'Yemen' server and prioritize if <= threshold
       const yemenCandidate = servers.find((s) => s.name === 'اليمن' || s.name === 'Yemen');
@@ -1195,6 +1497,7 @@ export default function App() {
           statCountUpCancelRef.current();
           statCountUpCancelRef.current = null;
         }
+        gaugeRafThrottlerRef.current?.cancel();
         try {
           if (speedtestRef.current?.getState() === 3) {
             speedtestRef.current.abort();
@@ -1218,7 +1521,8 @@ export default function App() {
     ulDisplayMbps,
     autoGbps,
     lang,
-    uiState
+    uiState,
+    smoothedTelemetry
   );
 
   const isEnglish = lang === 'en';
