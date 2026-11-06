@@ -310,7 +310,9 @@ export const AutoRefreshHybridAdCard: React.FC<AutoRefreshHybridAdCardProps> = (
           ref={mountRef}
           style={{display: adMode === 'rtb-active' ? 'flex' : 'none'}}
         />
-        {!isTesting && adStatus !== 'offline' && (
+        {!isTesting &&
+          adStatus !== 'offline' &&
+          Boolean(smartlinkUrl && !smartlinkUrl.startsWith('#') && !ADS_CONFIG.ADSENSE.ENABLE_ADSENSE) && (
           <iframe
             className="terrax-auto-ad-frame"
             src={smartlinkUrl}

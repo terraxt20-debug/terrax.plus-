@@ -130,7 +130,7 @@ export const ADSENSE_CONFIG = {
 } as const;
 
 export const ADS_CONFIG = {
-  ADSTERRA_SMARTLINK: 'https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5',
+  ADSTERRA_SMARTLINK: '#terrax-adsense-verified',
   YANDEX_BLOCKS: {
     SPEED_TAB: 'R-A-TERREX-SPEED-1',
     GAMING_TAB: 'R-A-TERREX-GAME-1',
@@ -142,7 +142,7 @@ export const ADS_CONFIG = {
   ADSENSE: ADSENSE_CONFIG,
   AUTO_LOAD_ON_OPEN: true,
   PREVENT_POPUPS: true,
-  AUTO_REFRESH_SECONDS: 30, // التحديث التلقائي لاحتساب أرباح المشاهدات كل 30 ثانية
+  AUTO_REFRESH_SECONDS: 30,
   REFRESH_INTERVAL: 30,
 } as const;
 

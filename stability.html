@@ -1297,7 +1297,7 @@
       width: 100%;
       min-width: 0;
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(48px, 1fr));
       align-items: stretch;
       gap: 0.75rem;
       padding: 0.6rem 0.85rem;
@@ -1317,7 +1317,7 @@
 
     .nav-dock-item {
       position: relative;
-      min-width: 0;
+      min-width: 48px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -1325,7 +1325,7 @@
       justify-content: center;
       gap: 0.32rem;
       padding: 0.65rem 0.6rem;
-      min-height: 4.5rem;
+      min-height: max(48px, 4.8rem);
       border-radius: 1.25rem;
       border: 1px solid rgba(39, 221, 248, 0.08);
       background: rgba(16, 35, 66, 0.25);
@@ -1471,6 +1471,8 @@
       .nav-dock-item {
         font-size: 1.05rem;
         padding: 0.55rem 0.25rem;
+        min-width: 48px;
+        min-height: max(48px, 4.8rem);
       }
       .nav-dock-item svg {
         width: 1.85rem;
@@ -1498,7 +1500,8 @@
       .nav-dock-item {
         font-size: 0.94rem;
         padding: 0.42rem 0.14rem;
-        min-height: 4.2rem;
+        min-width: 48px;
+        min-height: max(48px, 4.8rem);
       }
       .nav-dock-item svg {
         width: 1.65rem;
@@ -1957,6 +1960,11 @@
     var ROOT_PREFIX = IS_FRONTEND_SUBDIR ? "../" : "";
     var SPEEDTEST_SERVERS = "server-list.json";
     var WORKER_PATH = ROOT_PREFIX + "stability_worker.js";
+    if (IS_FRONTEND_SUBDIR) {
+      if (I("nav-speed-btn")) I("nav-speed-btn").setAttribute("href", "index.html");
+      if (I("nav-usage-btn")) I("nav-usage-btn").setAttribute("href", "index.html?tab=usage");
+      if (I("nav-settings-btn")) I("nav-settings-btn").setAttribute("href", "index.html?tab=settings");
+    }
 
     // Runtime state
     var worker = null;
@@ -2376,6 +2384,7 @@
       resetUI();
       if (window.TerraxSmartAdEngine) {
         window.TerraxSmartAdEngine.resetStabilityMilestones();
+        window.TerraxSmartAdEngine.setTestingState(true);
       }
 
       running = true;
@@ -2498,6 +2507,7 @@
       // Visual Toast Notification: Test completion or user stop
       if (!wasAborted) {
         if (window.TerraxSmartAdEngine) {
+          window.TerraxSmartAdEngine.setTestingState(false);
           window.TerraxSmartAdEngine.onStabilityElapsedTick(60);
           window.TerraxSmartAdEngine.onTestComplete("stability");
         }
@@ -2506,6 +2516,8 @@
           title: "اكتمل فحص الاستقرار بنجاح",
           message: "تم تسجيل كافة عينات زمن الاستجابة والتذبذب ونسبة الاستقرار بنجاح.",
         });
+      } else if (window.TerraxSmartAdEngine) {
+        window.TerraxSmartAdEngine.setTestingState(false);
       }
     }
 

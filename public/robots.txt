@@ -18,3 +18,6 @@ User-agent: *
 Allow: /
 Disallow: /backend/
 Disallow: /results/telemetry.php
+
+Sitemap: https://ais-pre-phrzns5yxrtvfauqr5qwp4-81506614204.europe-west2.run.app/sitemap.xml
+

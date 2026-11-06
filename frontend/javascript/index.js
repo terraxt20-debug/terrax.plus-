@@ -263,6 +263,11 @@ const testState = {
   prevStabNumber: "",
   dlDisplayMbps: 0,
   ulDisplayMbps: 0,
+  stabDisplayPercent: 0,
+  pingDisplayMs: 0,
+  jitterDisplayMs: 0,
+  dlProgressRatio: 0,
+  ulProgressRatio: 0,
   lastRenderTimestamp: 0,
   userAborted: false,
   _maxProgressPct: 0,
@@ -834,6 +839,46 @@ function cancelPendingTestWarmup() {
   }
 }
 
+function clearGaugeArcActivationFlicker() {
+  if (testState._arcFlickerTimeoutId) {
+    clearTimeout(testState._arcFlickerTimeoutId);
+    testState._arcFlickerTimeoutId = null;
+  }
+  if (typeof document !== "undefined") {
+    document
+      .querySelectorAll(
+        "#download-gauge, #stability-gauge, #upload-gauge, #dl-svg-arc, #stab-svg-arc, #ul-svg-arc"
+      )
+      .forEach((el) => el.classList.remove("cyber-arc-activating"));
+  }
+}
+
+function triggerGaugeArcActivationFlicker() {
+  clearGaugeArcActivationFlicker();
+  if (typeof document === "undefined") return;
+  const reducedMotion =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reducedMotion) return;
+
+  const targets = document.querySelectorAll(
+    "#download-gauge, #stability-gauge, #upload-gauge, #dl-svg-arc, #stab-svg-arc, #ul-svg-arc"
+  );
+  targets.forEach((el) => {
+    el.classList.remove("cyber-arc-activating");
+    // Force reflow so rapid re-starts cleanly re-trigger the CSS flicker sequence
+    void el.getBoundingClientRect();
+    el.classList.add("cyber-arc-activating");
+  });
+
+  testState._arcFlickerTimeoutId = setTimeout(() => {
+    testState._arcFlickerTimeoutId = null;
+    targets.forEach((el) => el.classList.remove("cyber-arc-activating"));
+  }, 620);
+}
+globalThis.triggerGaugeArcActivationFlicker = triggerGaugeArcActivationFlicker;
+
 /**
  * Clean up all active timers, animation loops, and network workers when leaving the Speed page
  * to guarantee 100% process isolation and zero memory leaks when switching to Stability or Gaming.
@@ -841,6 +886,7 @@ function cancelPendingTestWarmup() {
 function cleanupSpeedPageResources() {
   testState._startRunToken = (testState._startRunToken || 0) + 1;
   cancelPendingTestWarmup();
+  clearGaugeArcActivationFlicker();
   cancelStatCardsCountUp();
   cancelUsageTestsCountUp(false);
   if (testState._progressHideTimeoutId) {
@@ -1411,6 +1457,7 @@ function startButtonClickHandler() {
   if (testState.speedtest?.getState() === 3) {
     testState._startRunToken = (testState._startRunToken || 0) + 1;
     cancelPendingTestWarmup();
+    clearGaugeArcActivationFlicker();
     testState.userAborted = true;
     cancelStatCardsCountUp();
     globalThis.TerraxSmartAdEngine?.setTestingState(false);
@@ -1445,6 +1492,11 @@ function startButtonClickHandler() {
       testState.prevStabNumber = "";
       testState.dlDisplayMbps = 0;
       testState.ulDisplayMbps = 0;
+      testState.stabDisplayPercent = 0;
+      testState.pingDisplayMs = 0;
+      testState.jitterDisplayMs = 0;
+      testState.dlProgressRatio = 0;
+      testState.ulProgressRatio = 0;
       testState.lastRenderTimestamp = performance.now();
       testState.testData = null;
       testState.testDataDirty = true;
@@ -1460,6 +1512,7 @@ function startButtonClickHandler() {
       globalThis.TerraxSmartAdEngine?.setTestingState(true);
       testState.initialGaugeScrollPending = true;
       testState.state = RUNNING;
+      triggerGaugeArcActivationFlicker();
       syncConnectionCardState(true, false);
 
       // Pre-test socket warm-up to verify latency to 'Yemen' server and prioritize if <= threshold
@@ -2330,8 +2383,10 @@ function startRenderingLoop() {
   });
 
   let lastGaugeFrameMs = 0;
+  let lastRawVsyncMs = 0;
   let lastRenderedState = -1;
-  const TARGET_GAUGE_FPS = 60;
+  const detectedRefreshRateRef = { current: 60 };
+  const vsyncDeltaWindow = [];
 
   function renderUI(rafTimestamp) {
     const nowFrame =
@@ -2339,17 +2394,45 @@ function startRenderingLoop() {
         ? rafTimestamp
         : performance.now();
     const math = globalThis.TerraxTelemetryMath;
+
+    if (lastRawVsyncMs > 0) {
+      const rawDelta = nowFrame - lastRawVsyncMs;
+      if (rawDelta >= 2.5 && rawDelta <= 25) {
+        vsyncDeltaWindow.push(rawDelta);
+        if (vsyncDeltaWindow.length > 12) {
+          vsyncDeltaWindow.shift();
+        }
+        if (
+          vsyncDeltaWindow.length >= 4 &&
+          math &&
+          typeof math.estimateRefreshRateFromDeltas === "function"
+        ) {
+          const detectedHz = math.estimateRefreshRateFromDeltas(
+            vsyncDeltaWindow,
+            detectedRefreshRateRef.current
+          );
+          if (detectedHz !== detectedRefreshRateRef.current) {
+            detectedRefreshRateRef.current = detectedHz;
+            getStatCardsRafController()?.setTargetFps?.(detectedHz);
+          }
+        }
+      }
+    }
+    lastRawVsyncMs = nowFrame;
+
     const forceImmediateRender =
       lastRenderedState !== testState.state ||
       Boolean(testState.selectedServerDirty) ||
       (Boolean(testState.testDataDirty) && !testState.testData);
 
-    let frameDt = 1 / TARGET_GAUGE_FPS;
+    const activeTargetFps = detectedRefreshRateRef.current || 60;
+    const dynamicIntervalMs = 1000 / activeTargetFps;
+    let frameDt = 1 / activeTargetFps;
     if (math && typeof math.shouldRenderGaugeFrame === "function") {
       const gate = math.shouldRenderGaugeFrame(
         nowFrame,
         lastGaugeFrameMs,
-        TARGET_GAUGE_FPS,
+        detectedRefreshRateRef,
         forceImmediateRender
       );
       if (!gate.shouldRender) {
@@ -2359,12 +2442,18 @@ function startRenderingLoop() {
       frameDt = gate.dtSeconds;
       lastGaugeFrameMs = gate.nextLastFrameMs;
     } else {
-      const elapsedMs = lastGaugeFrameMs > 0 ? nowFrame - lastGaugeFrameMs : 16.67;
-      if (!forceImmediateRender && lastGaugeFrameMs > 0 && elapsedMs < 16.2) {
+      const elapsedMs =
+        lastGaugeFrameMs > 0 ? nowFrame - lastGaugeFrameMs : dynamicIntervalMs;
+      const minElapsedMs = Math.max(1, dynamicIntervalMs - 0.45);
+      if (
+        !forceImmediateRender &&
+        lastGaugeFrameMs > 0 &&
+        elapsedMs < minElapsedMs
+      ) {
         requestAnimationFrame(renderUI);
         return;
       }
-      frameDt = Math.min(0.05, Math.max(0.008, elapsedMs / 1000));
+      frameDt = Math.min(0.05, Math.max(0.002, elapsedMs / 1000));
       lastGaugeFrameMs = nowFrame;
     }
     lastRenderedState = testState.state;
@@ -2548,6 +2637,9 @@ function startRenderingLoop() {
         arc.classList.toggle("running", testState.state === RUNNING);
       }
     });
+    document.querySelectorAll(".gauge-outer-bezel").forEach((bezel) => {
+      bezel.classList.toggle("running", testState.state === RUNNING);
+    });
 
     if (
       testState.state === RUNNING &&
@@ -2596,11 +2688,19 @@ function startRenderingLoop() {
     if (data && testState.state === RUNNING && !reducedMotion) {
       const targetDl = Number(data.dlStatus) || 0;
       const targetUl = Number(data.ulStatus) || 0;
+      const targetDlProg = Math.max(0, Math.min(1, Number(data.dlProgress) || 0));
+      const targetUlProg = Math.max(0, Math.min(1, Number(data.ulProgress) || 0));
+      const targetPing = Number(data.pingStatus) || 0;
+      const targetJitter = Number(data.jitterStatus) || 0;
       if (
         (Number(data.testState) === 1 &&
           Math.abs(targetDl - testState.dlDisplayMbps) > 0.05) ||
         (Number(data.testState) === 3 &&
-          Math.abs(targetUl - testState.ulDisplayMbps) > 0.05)
+          Math.abs(targetUl - testState.ulDisplayMbps) > 0.05) ||
+        Math.abs(targetDlProg - testState.dlProgressRatio) > 0.002 ||
+        Math.abs(targetUlProg - testState.ulProgressRatio) > 0.002 ||
+        (targetPing > 0 && Math.abs(targetPing - testState.pingDisplayMs) > 0.05) ||
+        (targetJitter > 0 && Math.abs(targetJitter - testState.jitterDisplayMs) > 0.02)
       ) {
         interpolationActive = true;
       }
@@ -2615,6 +2715,11 @@ function startRenderingLoop() {
         // Reset state before test runs
         testState.dlDisplayMbps = 0;
         testState.ulDisplayMbps = 0;
+        testState.stabDisplayPercent = 0;
+        testState.pingDisplayMs = 0;
+        testState.jitterDisplayMs = 0;
+        testState.dlProgressRatio = 0;
+        testState.ulProgressRatio = 0;
         downloadProgress.style = `--progress-rotation: 0deg`;
         uploadProgress.style = `--progress-rotation: 0deg`;
         downloadGauge.style = `--speed-rotation: 0deg`;
@@ -2653,14 +2758,9 @@ function startRenderingLoop() {
         return;
       }
 
-      const snapDl =
-        reducedMotion ||
-        testState.state !== RUNNING ||
-        Number(data.testState) !== 1;
-      const snapUl =
-        reducedMotion ||
-        testState.state !== RUNNING ||
-        Number(data.testState) !== 3;
+      const snapGeneral = reducedMotion || testState.state !== RUNNING;
+      const snapDl = snapGeneral || Number(data.testState) !== 1;
+      const snapUl = snapGeneral || Number(data.testState) !== 3;
 
       testState.dlDisplayMbps = math?.smoothNumericValue
         ? math.smoothNumericValue(
@@ -2680,19 +2780,38 @@ function startRenderingLoop() {
           )
         : Number(data.ulStatus) || 0;
 
+      const rawDlProg = Math.max(0, Math.min(1, Number(data.dlProgress) || 0));
+      const rawUlProg = Math.max(0, Math.min(1, Number(data.ulProgress) || 0));
+
+      testState.dlProgressRatio = math?.smoothNumericValue
+        ? math.smoothNumericValue(
+            testState.dlProgressRatio,
+            rawDlProg,
+            frameDt,
+            snapGeneral
+          )
+        : rawDlProg;
+
+      testState.ulProgressRatio = math?.smoothNumericValue
+        ? math.smoothNumericValue(
+            testState.ulProgressRatio,
+            rawUlProg,
+            frameDt,
+            snapGeneral
+          )
+        : rawUlProg;
+
       const dlSourceVal = snapDl ? data.dlStatus : testState.dlDisplayMbps;
       const ulSourceVal = snapUl ? data.ulStatus : testState.ulDisplayMbps;
+      const dlProgSource = snapGeneral ? rawDlProg : testState.dlProgressRatio;
+      const ulProgSource = snapGeneral ? rawUlProg : testState.ulProgressRatio;
 
       const dlRot = mbpsToRotation(dlSourceVal, data.testState === 1);
       const ulRot = mbpsToRotation(ulSourceVal, data.testState === 3);
 
       // Set original CSS gauge rotations
-      downloadProgress.style = `--progress-rotation: ${
-        (Number(data.dlProgress) || 0) * 180
-      }deg`;
-      uploadProgress.style = `--progress-rotation: ${
-        (Number(data.ulProgress) || 0) * 180
-      }deg`;
+      downloadProgress.style = `--progress-rotation: ${dlProgSource * 180}deg`;
+      uploadProgress.style = `--progress-rotation: ${ulProgSource * 180}deg`;
       downloadGauge.style = `--speed-rotation: ${dlRot}deg`;
       uploadGauge.style = `--speed-rotation: ${ulRot}deg`;
 
@@ -2824,7 +2943,20 @@ function startRenderingLoop() {
         }
 
         if (metrics.stabilityPercent !== null && stabilityValueEl) {
-          const stabStr = String(metrics.stabilityPercent);
+          testState.stabDisplayPercent = math?.smoothNumericValue
+            ? math.smoothNumericValue(
+                testState.stabDisplayPercent > 0
+                  ? testState.stabDisplayPercent
+                  : metrics.stabilityPercent,
+                metrics.stabilityPercent,
+                frameDt,
+                snapGeneral
+              )
+            : metrics.stabilityPercent;
+          const stabSourceVal = snapGeneral
+            ? metrics.stabilityPercent
+            : testState.stabDisplayPercent;
+          const stabStr = String(Math.round(stabSourceVal));
           if (stabilityValueEl.textContent !== stabStr) {
             stabilityValueEl.textContent = stabStr;
             if (testState.state === RUNNING) {
@@ -2839,7 +2971,7 @@ function startRenderingLoop() {
               : metrics.stabilityLabelAr;
           }
           if (stabSvgArc) {
-            const stabRot = math.percentToRotation(metrics.stabilityPercent);
+            const stabRot = math.percentToRotation(stabSourceVal);
             const stabArcLen = Math.max(
               0,
               Math.min(415, (stabRot / 180) * 415)
@@ -2856,10 +2988,45 @@ function startRenderingLoop() {
         uploadText.textContent = numberToText(ulSourceVal);
       }
 
-      if (testState.testDataDirty) {
+      const rawPing = Number(data.pingStatus);
+      const rawJitter = Number(data.jitterStatus);
+      if (Number.isFinite(rawPing) && rawPing > 0) {
+        testState.pingDisplayMs = math?.smoothNumericValue
+          ? math.smoothNumericValue(
+              testState.pingDisplayMs > 0 ? testState.pingDisplayMs : rawPing,
+              rawPing,
+              frameDt,
+              snapGeneral
+            )
+          : rawPing;
+        const pingSourceVal = snapGeneral ? data.pingStatus : testState.pingDisplayMs;
+        const nextPingStr = numberToText(pingSourceVal);
+        if (ping.textContent !== nextPingStr) {
+          ping.textContent = nextPingStr;
+        }
+      } else if (testState.testDataDirty) {
         ping.textContent = numberToText(data.pingStatus);
-        jitter.textContent = numberToText(data.jitterStatus);
+      }
 
+      if (Number.isFinite(rawJitter) && rawJitter >= 0 && data.jitterStatus !== undefined && data.jitterStatus !== "") {
+        testState.jitterDisplayMs = math?.smoothNumericValue
+          ? math.smoothNumericValue(
+              testState.jitterDisplayMs > 0 ? testState.jitterDisplayMs : rawJitter,
+              rawJitter,
+              frameDt,
+              snapGeneral
+            )
+          : rawJitter;
+        const jitterSourceVal = snapGeneral ? data.jitterStatus : testState.jitterDisplayMs;
+        const nextJitterStr = numberToText(jitterSourceVal);
+        if (jitter.textContent !== nextJitterStr) {
+          jitter.textContent = nextJitterStr;
+        }
+      } else if (testState.testDataDirty) {
+        jitter.textContent = numberToText(data.jitterStatus);
+      }
+
+      if (testState.testDataDirty) {
         // Set user's IP and provider with sanitization
         if (data.clientIp) {
           privacyWarning.innerHTML = "";

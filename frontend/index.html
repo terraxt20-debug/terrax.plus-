@@ -622,16 +622,31 @@
     <button id="copy-link" type="button">نسخ رابط النتيجة</button>
   </dialog>
 
-  <!-- Privacy Policy Dialog -->
+  <!-- Privacy Policy, About Us, Terms of Use & Contact Dialog -->
   <dialog id="privacy">
     <div class="close-dialog" role="button" tabindex="0" aria-label="إغلاق">
       <img src="images/close-button.svg" alt="Close" />
     </div>
     <section>
-      <h1>سياسة الخصوصية وبيانات القياس (Privacy Policy)</h1>
+      <h1>سياسة الخصوصية، شروط الاستخدام، ونبذة عن المنصة (Privacy, Terms &amp; About)</h1>
       <p>
         يعمل خادم قياس السرعة هذا مع تفعيل حفظ نتائج القياس لمشاركتها وتحسين جودة الشبكة.
       </p>
+
+      <h2 id="about-terrax-heading">من نحن — نبذة عن منصة تيراكس بلاس (About Terrax Plus)</h2>
+      <p>
+        منصة <strong>تيراكس بلاس (Terrax Plus)</strong> هي منظومة عربية متخصصة لقياس سرعة الإنترنت الفائقة واستقرار الشبكة للألعاب التنافسية والبث المباشر بدقة 4K، مبنية على محرك القياس مفتوح المصدر <strong>LibreSpeed</strong> وتعمل عبر خيوط معالجة مستقلة (Web Workers) لضمان دقة القياس الفعلي دون أي تدخل برمجي.
+      </p>
+
+      <h2 id="technical-methodology-heading">الدليل التقني لمؤشرات قياس الشبكة (Network Telemetry Guide)</h2>
+      <ul>
+        <li><strong>سرعة التنزيل (Download Speed — Mbps/Gbps):</strong> تقيس قدرة خط الاتصال على استقبال تدفقات البيانات المتعددة من خادم القياس إلى جهازك.</li>
+        <li><strong>سرعة الرفع (Upload Speed — Mbps/Gbps):</strong> تقيس سعة إرسال البيانات من جهازك إلى الخادم، وهي حاسمة للبث المباشر ومؤتمرات الفيديو والألعاب السحابية.</li>
+        <li><strong>زمن الاستجابة (Ping / Latency — ms):</strong> يقيس الزمن الفعلي المستغرق لانتقال الحزمة ذهاباً وإياباً (RTT) عبر بروتوكول HTTP/XHR عالي الدقة.</li>
+        <li><strong>تذبذب الاستجابة (Jitter — ms):</strong> يقيس مدى استقرار وانتظام زمن الوصول بين الحزم المتتالية؛ كلما اقترب من الصفر كان الاتصال أكثر ثباتاً للألعاب التنافسية.</li>
+        <li><strong>فقدان الحزم وتضخم المخزن المؤقت (Packet Loss &amp; Bufferbloat):</strong> يرصد ضياع الحزم أو ارتفاع زمن الاستجابة أثناء تحميل الشبكة بالكامل.</li>
+      </ul>
+
       <h2>البيانات التي يتم جمعها عند انتهاء الاختبار</h2>
       <ul>
         <li>معرّف الاختبار (Test ID)</li>
@@ -645,13 +660,30 @@
         <li>إتاحة مشاركة صورة النتيجة عبر رابط مباشر.</li>
         <li>تحليل استقرار وجودة الاتصال بالخوادم.</li>
       </ul>
+
+      <h2 id="adsense-cookies-heading">إعلانات Google AdSense وملفات تعريف الارتباط (Cookies &amp; Consent Mode v2)</h2>
+      <p>
+        تستخدم منصة تيراكس بلاس خدمة <strong>Google AdSense</strong> لعرض مساحات إعلانية مدعومة في مناطق منفصلة ومعزولة تماماً عن محرك القياس:
+      </p>
+      <ul>
+        <li>تستخدم شركة Google ومورّدو الطرف الثالث ملفات تعريف الارتباط (مثل ملف تعريف الارتباط DART) لعرض الإعلانات بناءً على زيارات المستخدم السابقة لهذا الموقع أو لمواقع أخرى على الإنترنت.</li>
+        <li>تلتزم المنصة بمعيار <strong>Google Consent Mode v2</strong> ومعايير حماية البيانات الأوروبية (GDPR)، حيث يمكن للمستخدمين في أي وقت تعطيل تخصيص الإعلانات عبر <a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer">إعدادات إعلانات Google (My Ad Center)</a>.</li>
+        <li>تطبّق المنصة نظام <strong>العزل الشبكي الذكي (Smart Ad Lock)</strong> الذي يمنع تحميل أو تحديث أي وحدة إعلانية أثناء تشغيل اختبار السرعة لضمان نقاء ودقة القياس بنسبة 100%.</li>
+      </ul>
+
+      <h2 id="terms-of-use-heading">شروط الاستخدام (Terms of Use)</h2>
+      <ul>
+        <li>تُقدّم نتائج القياس لأغراض الفحص التقني وتشخيص جودة الاتصال، وقد تتأثر بعوامل الشبكة المحلية (Wi-Fi مقابل Ethernet)، أو ضغط مزود الخدمة (ISP)، أو المسافة الجغرافية للخادم.</li>
+        <li>يُحظر استخدام المنصة في هجمات إغراق الخوادم أو تشغيل سكربتات آلية تهدف إلى توليد زيارات غير صالحة أو نقرات إعلانية غير مشروعة.</li>
+      </ul>
+
       <p>لا يتم كشف أي بيانات شخصية لأي طرف ثالث.</p>
 
-
-      <h2>حذف البيانات</h2>
+      <h2 id="contact-us-heading">اتصل بنا وحذف البيانات (Contact Us &amp; Data Deletion)</h2>
       <p>
-        لحذف سجل اختبار معين، يرجى تزويدنا بمعرّف الاختبار (Test ID) عبر البريد:
-        <a href="mailto:PUT@YOUR_EMAIL.HERE">TO BE FILLED BY DEVELOPER</a>.
+        للتواصل مع إدارة منصة تيراكس بلاس أو لطلب حذف سجل اختبار معين (مع تزويدنا بمعرّف الاختبار Test ID)، يرجى مراسلتنا عبر البريد الإلكتروني الرسمي:
+        <a href="mailto:terrax.t20@gmail.com" id="official-privacy-email">terrax.t20@gmail.com</a>
+        أو عبر خدمة الدعم الفني المباشر: <span dir="ltr">+967772772814</span>.
       </p>
     </section>
     <button id="close-privacy" type="button">إغلاق</button>

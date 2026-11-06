@@ -99,16 +99,46 @@ interface TelemetryMathApi {
     snapImmediate: boolean
   ) => number;
   resolveRealConnectionInfo?: (navInput?: unknown, lang?: string) => RealConnectionInfo;
+  STANDARD_REFRESH_RATES?: number[];
+  quantizeRefreshRate?: (rawFps: number) => number;
+  estimateRefreshRateFromDeltas?: (deltaSamplesMs: number[], fallbackFps?: number) => number;
+  computeDynamicThrottleInterval?: (
+    refreshRateInput?: number | { current?: number } | (() => number)
+  ) => {
+    targetFps: number;
+    intervalMs: number;
+    jitterToleranceMs: number;
+    minElapsedMs: number;
+    minDtSeconds: number;
+  };
   shouldRenderGaugeFrame?: (
     nowMs: number,
     lastFrameMs: number,
-    targetFps?: number,
+    targetFps?: number | { current?: number } | (() => number),
     force?: boolean
-  ) => { shouldRender: boolean; dtSeconds: number; nextLastFrameMs: number };
+  ) => {
+    shouldRender: boolean;
+    dtSeconds: number;
+    nextLastFrameMs: number;
+    intervalMs?: number;
+    targetFps?: number;
+  };
   createRafGaugeThrottler?: (
-    renderCallback: (dtSeconds: number, nowMs: number) => boolean | void,
-    targetFps?: number
-  ) => { schedule: (force?: boolean) => void; cancel: () => void; isPending: () => boolean };
+    renderCallback: (
+      dtSeconds: number,
+      nowMs: number,
+      currentFps?: number,
+      intervalMs?: number
+    ) => boolean | void,
+    targetFps?: number | { current?: number } | (() => number)
+  ) => {
+    schedule: (force?: boolean) => void;
+    cancel: () => void;
+    setTargetFps?: (nextFps: number) => number;
+    getTargetFps?: () => number;
+    getThrottleIntervalMs?: () => number;
+    isPending: () => boolean;
+  };
   computeCountUpFrame?: (
     targetMbps: number | string | null | undefined,
     progress01: number,
@@ -167,6 +197,8 @@ interface TelemetryMathApi {
     syncFrame: (nowMs?: number, dtSeconds?: number) => boolean;
     reset: (defaultDisplay?: string, defaultUnit?: string) => void;
     cancel: () => void;
+    setTargetFps?: (nextFps: number) => number;
+    getTargetFps?: () => number;
     getState: () => {
       mode: string;
       lastMaxDisplay: string;
@@ -175,6 +207,7 @@ interface TelemetryMathApi {
       lastAvgUnit: string;
       lastCountingUp: boolean;
       commitCount: number;
+      targetFps?: number;
       isPending: boolean;
     };
   };
@@ -255,6 +288,122 @@ export const YANDEX_SILENT_REFRESH_INTERVAL_MS = 30000;
 
 const LANGUAGE_STORAGE_KEY = 'terrax_ui_lang_v1';
 const HISTORY_STORAGE_KEY = 'terrax_librespeed_history_v1';
+const AUTO_GBPS_STORAGE_KEY = 'terrax_auto_gbps_v1';
+
+export const STANDARD_REFRESH_RATES = [60, 75, 90, 120, 144, 165, 240] as const;
+
+/**
+ * Quantize a raw measured frame rate (Hz) to the nearest standard display refresh rate tier
+ * (60Hz, 75Hz, 90Hz, 120Hz, 144Hz, 165Hz, 240Hz) when within 8.5% tolerance, or clamp to [60, 240].
+ */
+export function quantizeDeviceRefreshRate(rawFps: number): number {
+  const math =
+    globalThis.window?.TerraxTelemetryMath ??
+    (globalThis as unknown as {TerraxTelemetryMath?: TelemetryMathApi}).TerraxTelemetryMath;
+  if (math?.quantizeRefreshRate) {
+    return math.quantizeRefreshRate(rawFps);
+  }
+  const numeric = Number(rawFps);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 60;
+  const clamped = Math.max(60, Math.min(240, numeric));
+  let bestTier = 60;
+  let smallestRatioDiff = Infinity;
+  for (const tier of STANDARD_REFRESH_RATES) {
+    const relDiff = Math.abs(clamped - tier) / tier;
+    if (relDiff < smallestRatioDiff) {
+      smallestRatioDiff = relDiff;
+      bestTier = tier;
+    }
+  }
+  return smallestRatioDiff <= 0.085 ? bestTier : Math.round(clamped);
+}
+
+/**
+ * Estimate the user's device refresh rate from a rolling window of window.requestAnimationFrame
+ * VSync frame deltas (ms), rejecting tab-switch pauses and outlier stalls.
+ */
+export function estimateRefreshRateFromDeltas(
+  deltaSamplesMs: number[],
+  fallbackFps = 60
+): number {
+  const math =
+    globalThis.window?.TerraxTelemetryMath ??
+    (globalThis as unknown as {TerraxTelemetryMath?: TelemetryMathApi}).TerraxTelemetryMath;
+  if (math?.estimateRefreshRateFromDeltas) {
+    return math.estimateRefreshRateFromDeltas(deltaSamplesMs, fallbackFps);
+  }
+  const defaultFps =
+    Number.isFinite(Number(fallbackFps)) && Number(fallbackFps) > 0
+      ? quantizeDeviceRefreshRate(Number(fallbackFps))
+      : 60;
+  if (!Array.isArray(deltaSamplesMs) || deltaSamplesMs.length === 0) {
+    return defaultFps;
+  }
+  const valid = deltaSamplesMs
+    .map(Number)
+    .filter((d) => Number.isFinite(d) && d >= 2.5 && d <= 25)
+    .sort((a, b) => a - b);
+  if (valid.length === 0) return defaultFps;
+  const mid = Math.floor(valid.length / 2);
+  const medianDeltaMs =
+    valid.length % 2 === 1 ? valid[mid] : (valid[mid - 1] + valid[mid]) * 0.5;
+  return medianDeltaMs > 0 ? quantizeDeviceRefreshRate(1000 / medianDeltaMs) : defaultFps;
+}
+
+/**
+ * Compute the dynamically scaled VSync throttle interval (ms), jitter tolerance, and minimum dt (s)
+ * directly from `detectedRefreshRateRef` (or a numeric Hz / getter).
+ */
+export function computeDynamicThrottleInterval(
+  refreshRateInput: number | { current?: number } | (() => number) = 60
+): {
+  targetFps: number;
+  intervalMs: number;
+  jitterToleranceMs: number;
+  minElapsedMs: number;
+  minDtSeconds: number;
+} {
+  const math =
+    globalThis.window?.TerraxTelemetryMath ??
+    (globalThis as unknown as {TerraxTelemetryMath?: TelemetryMathApi}).TerraxTelemetryMath;
+  if (math?.computeDynamicThrottleInterval) {
+    return math.computeDynamicThrottleInterval(refreshRateInput);
+  }
+  let rawValue: unknown = refreshRateInput;
+  if (typeof refreshRateInput === 'function') {
+    try {
+      rawValue = refreshRateInput();
+    } catch {
+      rawValue = 60;
+    }
+  } else if (
+    refreshRateInput &&
+    typeof refreshRateInput === 'object' &&
+    'current' in refreshRateInput
+  ) {
+    rawValue = refreshRateInput.current;
+  }
+  const numeric = Number(rawValue);
+  const targetFps =
+    Number.isFinite(numeric) && numeric > 0
+      ? Math.min(240, Math.max(30, numeric))
+      : 60;
+  const intervalMs = 1000 / targetFps;
+  const jitterToleranceMs =
+    targetFps <= 60 ? 0.45 : Math.min(0.45, intervalMs * 0.06);
+  const minElapsedMs = Math.max(1, intervalMs - jitterToleranceMs);
+  const minDtSeconds =
+    targetFps > 60
+      ? Math.max(0.002, Number((0.5 / targetFps).toFixed(4)))
+      : 0.008;
+  return {
+    targetFps,
+    intervalMs,
+    jitterToleranceMs,
+    minElapsedMs,
+    minDtSeconds,
+  };
+}
 
 /**
  * Convert a real LibreSpeed measurement in Mbps to a 4K gauge rotation angle (0..180 deg)
@@ -522,12 +671,24 @@ export default function App() {
       return 'ar';
     }
   });
-  const [autoGbps, setAutoGbps] = useState<boolean>(true);
+  const [autoGbps, setAutoGbps] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(AUTO_GBPS_STORAGE_KEY);
+      if (saved === '0' || saved === 'false') return false;
+      if (saved === '1' || saved === 'true') return true;
+    } catch {
+      // ignore storage errors
+    }
+    return true;
+  });
   const [servers, setServers] = useState<SpeedtestServer[]>([]);
   const [selectedServer, setSelectedServer] = useState<SpeedtestServer | null>(null);
   const [serverDropdownOpen, setServerDropdownOpen] = useState<boolean>(false);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [usageOpen, setUsageOpen] = useState<boolean>(false);
+  const [shareOpen, setShareOpen] = useState<boolean>(false);
+  const [privacyOpen, setPrivacyOpen] = useState<boolean>(false);
+  const [copyLinkActive, setCopyLinkActive] = useState<boolean>(false);
   const [testHistory, setTestHistory] = useState<NormalizedHistoryEntry[]>(() => {
     try {
       const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
@@ -591,6 +752,7 @@ export default function App() {
   const statCountUpCancelRef = useRef<(() => void) | null>(null);
   const statCardsLoopRef = useRef<ReturnType<NonNullable<TelemetryMathApi['createStatCardsRafLoop']>> | null>(null);
   const gaugeRafThrottlerRef = useRef<ReturnType<NonNullable<TelemetryMathApi['createRafGaugeThrottler']>> | null>(null);
+  const detectedRefreshRateRef = useRef<number>(60);
 
   useEffect(() => {
     uiStateRef.current = uiState;
@@ -846,7 +1008,20 @@ export default function App() {
           statCountUpCancelRef.current = null;
         }
         if (!aborted) {
-          // State-Driven Smart Refresh on test completion (onTestComplete)
+          // Release Network Isolation Lock and trigger State-Driven Smart Refresh on test completion
+          try {
+            const globalEngine = (
+              window as unknown as {
+                TerraxSmartAdEngine?: {
+                  setTestingState?: (isTesting: boolean) => boolean;
+                  onTestComplete?: (sourcePage: string) => boolean;
+                };
+              }
+            ).TerraxSmartAdEngine;
+            globalEngine?.onTestComplete?.('speed');
+          } catch {
+            // Ignore external engine sync errors
+          }
           refreshYandexAdUnits('onTestComplete');
 
           const math = window.TerraxTelemetryMath;
@@ -936,6 +1111,18 @@ export default function App() {
             }
           }
         } else {
+          try {
+            const globalEngine = (
+              window as unknown as {
+                TerraxSmartAdEngine?: {
+                  setTestingState?: (isTesting: boolean) => boolean;
+                };
+              }
+            ).TerraxSmartAdEngine;
+            globalEngine?.setTestingState?.(false);
+          } catch {
+            // Ignore external engine sync errors
+          }
           statCardsLoopRef.current?.reset('--', 'Mbps');
           setStatCountUp(null);
         }
@@ -1027,17 +1214,80 @@ export default function App() {
     };
   }, [refreshYandexAdUnits]);
 
-  // Unified 60fps requestAnimationFrame gauge rendering loop for all 4K telemetry UI updates
+  // Dynamic high-refresh-rate requestAnimationFrame gauge rendering loop for all 4K telemetry UI updates
   useEffect(() => {
-    const TARGET_FPS = 60;
-    const FRAME_INTERVAL_MS = 1000 / TARGET_FPS;
+    detectedRefreshRateRef.current = quantizeDeviceRefreshRate(
+      detectedRefreshRateRef.current || 60
+    );
     let fallbackRafId = 0;
+    let calibrationRafId = 0;
     let lastFrameTime = 0;
+    let lastVsyncTime = 0;
+    let fallbackPendingForce = false;
+    const vsyncDeltaWindow: number[] = [];
+
+    const scheduleWindowRaf = (cb: FrameRequestCallback): number => {
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        return window.requestAnimationFrame(cb);
+      }
+      return requestAnimationFrame(cb);
+    };
+
+    const cancelWindowRaf = (id: number): void => {
+      if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+        window.cancelAnimationFrame(id);
+        return;
+      }
+      cancelAnimationFrame(id);
+    };
+
+    const applyDetectedRefreshRate = (nextFps: number) => {
+      const quantized = quantizeDeviceRefreshRate(nextFps);
+      if (quantized !== detectedRefreshRateRef.current) {
+        detectedRefreshRateRef.current = quantized;
+        gaugeRafThrottlerRef.current?.setTargetFps?.(quantized);
+        statCardsLoopRef.current?.setTargetFps?.(quantized);
+      }
+    };
+
+    const recordVsyncTimestamp = (nowMs: number) => {
+      if (lastVsyncTime > 0) {
+        const deltaMs = nowMs - lastVsyncTime;
+        if (deltaMs >= 2.5 && deltaMs <= 25) {
+          vsyncDeltaWindow.push(deltaMs);
+          if (vsyncDeltaWindow.length > 12) {
+            vsyncDeltaWindow.shift();
+          }
+          if (vsyncDeltaWindow.length >= 4) {
+            const estimated = estimateRefreshRateFromDeltas(
+              vsyncDeltaWindow,
+              detectedRefreshRateRef.current
+            );
+            applyDetectedRefreshRate(estimated);
+          }
+        }
+      }
+      lastVsyncTime = nowMs;
+    };
+
+    // Initial VSync refresh rate calibration probe using window.requestAnimationFrame
+    let calibrationSamples = 0;
+    const calibrateStep = (timestamp: number) => {
+      calibrationRafId = 0;
+      const now =
+        Number.isFinite(timestamp) && timestamp > 0 ? timestamp : performance.now();
+      recordVsyncTimestamp(now);
+      calibrationSamples += 1;
+      if (calibrationSamples < 10) {
+        calibrationRafId = scheduleWindowRaf(calibrateStep);
+      }
+    };
+    calibrationRafId = scheduleWindowRaf(calibrateStep);
 
     const mathInit = window.TerraxTelemetryMath;
     if (mathInit?.createStatCardsRafLoop && !statCardsLoopRef.current) {
       statCardsLoopRef.current = mathInit.createStatCardsRafLoop({
-        targetFps: TARGET_FPS,
+        targetFps: detectedRefreshRateRef.current,
         onCommit: ({ maxDisplay, maxUnit, avgDisplay, avgUnit, countingUp }) => {
           setStatCountUp((prev) => {
             if (
@@ -1062,7 +1312,24 @@ export default function App() {
       });
     }
 
-    const renderGaugeFrame = (dt: number, now: number): boolean => {
+    const renderGaugeFrame = (
+      dt: number,
+      now: number,
+      throttlerDetectedFps?: number
+    ): boolean => {
+      if (
+        typeof throttlerDetectedFps === 'number' &&
+        Number.isFinite(throttlerDetectedFps) &&
+        throttlerDetectedFps > 0
+      ) {
+        applyDetectedRefreshRate(throttlerDetectedFps);
+      } else {
+        recordVsyncTimestamp(now);
+      }
+
+      const activeRefreshRate = detectedRefreshRateRef.current || 60;
+      statCardsLoopRef.current?.setTargetFps?.(activeRefreshRate);
+
       const math = window.TerraxTelemetryMath;
       const data = latestDataRef.current;
       let stillInterpolating = false;
@@ -1278,66 +1545,102 @@ export default function App() {
         statCardsActive = Boolean(statCardsLoopRef.current.syncFrame(now, dt));
       }
 
+      // Only continue scheduling frames while gauge values or stat cards are actively interpolating
+      // or dirty telemetry is queued, eliminating idle CPU waste between network samples.
       return Boolean(
         stillInterpolating ||
           statCardsActive ||
-          testDataDirtyRef.current ||
-          uiStateRef.current === RUNNING
+          testDataDirtyRef.current
       );
     };
 
     if (mathInit?.createRafGaugeThrottler) {
       gaugeRafThrottlerRef.current = mathInit.createRafGaugeThrottler(
         renderGaugeFrame,
-        TARGET_FPS
+        detectedRefreshRateRef
       );
     } else {
       const fallbackTick = (now: number) => {
         fallbackRafId = 0;
+        recordVsyncTimestamp(now);
         const math = window.TerraxTelemetryMath;
+        const {
+          targetFps: currentRefreshRate,
+          intervalMs: frameIntervalMs,
+          minElapsedMs,
+          minDtSeconds,
+        } = computeDynamicThrottleInterval(detectedRefreshRateRef);
         let shouldRender = true;
-        let dt = 1 / TARGET_FPS;
+        let dt = 1 / currentRefreshRate;
 
         if (math?.shouldRenderGaugeFrame) {
-          const gate = math.shouldRenderGaugeFrame(now, lastFrameTime, TARGET_FPS, false);
+          const gate = math.shouldRenderGaugeFrame(
+            now,
+            lastFrameTime,
+            detectedRefreshRateRef,
+            fallbackPendingForce
+          );
           shouldRender = gate.shouldRender;
           dt = gate.dtSeconds;
           if (shouldRender) {
+            fallbackPendingForce = false;
             lastFrameTime = gate.nextLastFrameMs;
           }
         } else {
-          const elapsed = lastFrameTime > 0 ? now - lastFrameTime : FRAME_INTERVAL_MS;
-          if (lastFrameTime > 0 && elapsed < FRAME_INTERVAL_MS - 0.45) {
+          const elapsed = lastFrameTime > 0 ? now - lastFrameTime : frameIntervalMs;
+          if (
+            !fallbackPendingForce &&
+            lastFrameTime > 0 &&
+            elapsed < minElapsedMs
+          ) {
             shouldRender = false;
           } else {
-            dt = Math.min(0.05, Math.max(0.008, elapsed / 1000));
+            fallbackPendingForce = false;
+            dt = Math.min(0.05, Math.max(minDtSeconds, elapsed / 1000));
             lastFrameTime = now;
           }
         }
 
-        const keepRunning = shouldRender ? renderGaugeFrame(dt, now) : true;
+        const keepRunning = shouldRender
+          ? renderGaugeFrame(dt, now, currentRefreshRate)
+          : true;
         if (keepRunning && fallbackRafId === 0) {
-          fallbackRafId = requestAnimationFrame(fallbackTick);
+          fallbackRafId = scheduleWindowRaf(fallbackTick);
         }
       };
 
       gaugeRafThrottlerRef.current = {
-        schedule: () => {
+        schedule: (force?: boolean) => {
+          if (force) {
+            fallbackPendingForce = true;
+          }
           if (fallbackRafId === 0) {
-            fallbackRafId = requestAnimationFrame(fallbackTick);
+            fallbackRafId = scheduleWindowRaf(fallbackTick);
           }
         },
         cancel: () => {
           if (fallbackRafId !== 0) {
-            cancelAnimationFrame(fallbackRafId);
+            cancelWindowRaf(fallbackRafId);
             fallbackRafId = 0;
           }
+          fallbackPendingForce = false;
         },
+        setTargetFps: (nextFps: number) => {
+          applyDetectedRefreshRate(nextFps);
+          return detectedRefreshRateRef.current;
+        },
+        getTargetFps: () => detectedRefreshRateRef.current,
+        getThrottleIntervalMs: () =>
+          computeDynamicThrottleInterval(detectedRefreshRateRef).intervalMs,
         isPending: () => fallbackRafId !== 0,
       };
     }
 
     return () => {
+      if (calibrationRafId !== 0) {
+        cancelWindowRaf(calibrationRafId);
+        calibrationRafId = 0;
+      }
       gaugeRafThrottlerRef.current?.cancel();
       statCardsLoopRef.current?.cancel();
     };
@@ -1355,6 +1658,45 @@ export default function App() {
   const startRunTokenRef = useRef<number>(0);
   const warmupAbortRef = useRef<AbortController | null>(null);
   const warmupTimeoutRef = useRef<number | null>(null);
+  const [arcFlickerActive, setArcFlickerActive] = useState<boolean>(false);
+  const arcFlickerTimeoutRef = useRef<number | null>(null);
+
+  const clearGaugeArcFlicker = useCallback(() => {
+    if (arcFlickerTimeoutRef.current !== null) {
+      window.clearTimeout(arcFlickerTimeoutRef.current);
+      arcFlickerTimeoutRef.current = null;
+    }
+    setArcFlickerActive(false);
+  }, []);
+
+  const triggerGaugeArcFlicker = useCallback(() => {
+    if (arcFlickerTimeoutRef.current !== null) {
+      window.clearTimeout(arcFlickerTimeoutRef.current);
+      arcFlickerTimeoutRef.current = null;
+    }
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      setArcFlickerActive(false);
+      return;
+    }
+    setArcFlickerActive(true);
+    arcFlickerTimeoutRef.current = window.setTimeout(() => {
+      arcFlickerTimeoutRef.current = null;
+      setArcFlickerActive(false);
+    }, 620);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (arcFlickerTimeoutRef.current !== null) {
+        window.clearTimeout(arcFlickerTimeoutRef.current);
+        arcFlickerTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const cancelPendingWarmup = useCallback(() => {
     if (warmupTimeoutRef.current !== null) {
@@ -1378,12 +1720,25 @@ export default function App() {
     if (uiState === RUNNING || st.getState() === 3) {
       startRunTokenRef.current += 1;
       cancelPendingWarmup();
+      clearGaugeArcFlicker();
       if (statCountUpCancelRef.current) {
         statCountUpCancelRef.current();
         statCountUpCancelRef.current = null;
       }
       statCardsLoopRef.current?.reset('--', 'Mbps');
       setStatCountUp(null);
+      try {
+        const globalEngine = (
+          window as unknown as {
+            TerraxSmartAdEngine?: {
+              setTestingState?: (isTesting: boolean) => boolean;
+            };
+          }
+        ).TerraxSmartAdEngine;
+        globalEngine?.setTestingState?.(false);
+      } catch {
+        // Ignore external engine sync errors
+      }
       try {
         if (st.getState() === 3) {
           st.abort();
@@ -1400,6 +1755,7 @@ export default function App() {
       startRunTokenRef.current += 1;
       const activeRunToken = startRunTokenRef.current;
       cancelPendingWarmup();
+      triggerGaugeArcFlicker();
       if (statCountUpCancelRef.current) {
         statCountUpCancelRef.current();
         statCountUpCancelRef.current = null;
@@ -1414,6 +1770,19 @@ export default function App() {
       historyRecordedForRunRef.current = false;
       latestDataRef.current = null;
       testDataDirtyRef.current = true;
+      // Activate Network Isolation Lock before starting bandwidth Web Worker
+      try {
+        const globalEngine = (
+          window as unknown as {
+            TerraxSmartAdEngine?: {
+              setTestingState?: (isTesting: boolean) => boolean;
+            };
+          }
+        ).TerraxSmartAdEngine;
+        globalEngine?.setTestingState?.(true);
+      } catch {
+        // Ignore external engine sync errors
+      }
       uiStateRef.current = RUNNING;
       setUiState(RUNNING);
       gaugeRafThrottlerRef.current?.schedule(true);
@@ -1472,7 +1841,7 @@ export default function App() {
         st.start();
       }
     }
-  }, [uiState, servers, cancelPendingWarmup]);
+  }, [uiState, servers, cancelPendingWarmup, clearGaugeArcFlicker, triggerGaugeArcFlicker]);
 
   const handleTabSwitch = useCallback(
     (tab: 'speed' | 'usage' | 'stability' | 'gaming' | 'settings') => {
@@ -1493,6 +1862,7 @@ export default function App() {
         isNavigatingRef.current = true;
         startRunTokenRef.current += 1;
         cancelPendingWarmup();
+        clearGaugeArcFlicker();
         if (statCountUpCancelRef.current) {
           statCountUpCancelRef.current();
           statCountUpCancelRef.current = null;
@@ -1510,7 +1880,7 @@ export default function App() {
       }
       refreshYandexAdUnits(`tab-switch:${tab}`);
     },
-    [activeTab, refreshYandexAdUnits, cancelPendingWarmup]
+    [activeTab, refreshYandexAdUnits, cancelPendingWarmup, clearGaugeArcFlicker]
   );
 
   const telemetry = computeRealTimeGaugeTelemetry(
@@ -1612,7 +1982,7 @@ export default function App() {
           <div
             className={`gauge download ${gaugesEnabled ? 'enabled' : ''} ${
               gaugesRunning ? 'running' : ''
-            }`}
+            } ${arcFlickerActive ? 'cyber-arc-activating' : ''}`}
             id="download-gauge"
           >
             <div
@@ -1636,7 +2006,12 @@ export default function App() {
                   <stop offset="100%" stopColor="#67e8f9" />
                 </linearGradient>
               </defs>
-              <circle cx="130" cy="130" r="124" className="gauge-outer-bezel" />
+              <circle
+                cx="130"
+                cy="130"
+                r="124"
+                className={`gauge-outer-bezel ${gaugesRunning ? 'running' : ''}`}
+              />
               <circle cx="130" cy="130" r="95" className="gauge-inner-border dl-inner-border" />
               <circle
                 cx="130"
@@ -1668,7 +2043,9 @@ export default function App() {
                 cy="130"
                 r="107"
                 id="dl-svg-arc"
-                className={`gauge-active-arc dl-arc ${gaugesRunning ? 'running' : ''}`}
+                className={`gauge-active-arc dl-arc ${gaugesRunning ? 'running' : ''} ${
+                  arcFlickerActive ? 'cyber-arc-activating' : ''
+                }`}
                 stroke="url(#dlGrad)"
                 strokeDasharray={telemetry.dlArcDash}
                 transform="rotate(135 130 130)"
@@ -1708,7 +2085,7 @@ export default function App() {
             <div
               className={`gauge stability ${gaugesEnabled ? 'enabled' : ''} ${
                 gaugesRunning ? 'running' : ''
-              }`}
+              } ${arcFlickerActive ? 'cyber-arc-activating' : ''}`}
               id="stability-gauge"
             >
               <svg className="cyber-gauge-svg" viewBox="0 0 220 220" aria-hidden="true">
@@ -1719,7 +2096,12 @@ export default function App() {
                     <stop offset="100%" stopColor="#f97316" />
                   </linearGradient>
                 </defs>
-                <circle cx="110" cy="110" r="104" className="gauge-outer-bezel stab-outer-bezel" />
+                <circle
+                  cx="110"
+                  cy="110"
+                  r="104"
+                  className={`gauge-outer-bezel stab-outer-bezel ${gaugesRunning ? 'running' : ''}`}
+                />
                 <circle cx="110" cy="110" r="77" className="gauge-inner-border stab-inner-border" />
                 <circle
                   cx="110"
@@ -1734,7 +2116,9 @@ export default function App() {
                   cy="110"
                   r="88"
                   id="stab-svg-arc"
-                  className={`gauge-active-arc stab-arc ${gaugesRunning ? 'running' : ''}`}
+                  className={`gauge-active-arc stab-arc ${gaugesRunning ? 'running' : ''} ${
+                    arcFlickerActive ? 'cyber-arc-activating' : ''
+                  }`}
                   stroke="url(#stabGrad)"
                   strokeDasharray={telemetry.stabilityArcDash}
                   transform="rotate(135 110 110)"
@@ -1768,7 +2152,7 @@ export default function App() {
             <div
               className={`gauge upload ${gaugesEnabled ? 'enabled' : ''} ${
                 gaugesRunning ? 'running' : ''
-              }`}
+              } ${arcFlickerActive ? 'cyber-arc-activating' : ''}`}
               id="upload-gauge"
             >
               <div
@@ -1792,7 +2176,12 @@ export default function App() {
                     <stop offset="100%" stopColor="#38bdf8" />
                   </linearGradient>
                 </defs>
-                <circle cx="110" cy="110" r="104" className="gauge-outer-bezel ul-outer-bezel" />
+                <circle
+                  cx="110"
+                  cy="110"
+                  r="104"
+                  className={`gauge-outer-bezel ul-outer-bezel ${gaugesRunning ? 'running' : ''}`}
+                />
                 <circle cx="110" cy="110" r="77" className="gauge-inner-border ul-inner-border" />
                 <circle
                   cx="110"
@@ -1807,7 +2196,9 @@ export default function App() {
                   cy="110"
                   r="88"
                   id="ul-svg-arc"
-                  className={`gauge-active-arc ul-arc ${gaugesRunning ? 'running' : ''}`}
+                  className={`gauge-active-arc ul-arc ${gaugesRunning ? 'running' : ''} ${
+                    arcFlickerActive ? 'cyber-arc-activating' : ''
+                  }`}
                   stroke="url(#ulGrad)"
                   strokeDasharray={telemetry.ulArcDash}
                   transform="rotate(135 110 110)"
@@ -2035,7 +2426,34 @@ export default function App() {
           </span>
         </div>
 
-        {/* Primary Action Button */}
+        <p id="privacy-warning" className={testData?.clientIp ? '' : 'hidden'}>
+          {testData?.clientIp ? (
+            <>
+              <span>{isEnglish ? 'Connected via:' : 'متصل عبر:'}</span>
+              <br />
+              {` ${String(testData.clientIp).slice(0, 60)}`}
+            </>
+          ) : (
+            <>
+              {isEnglish
+                ? 'By clicking start you agree to the service privacy policy'
+                : 'بالنقر على زر البدء فإنك توافق على سياسة الخصوصية الخاصة بالخدمة'}
+              <br />
+              <a
+                href="#"
+                id="choose-privacy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setPrivacyOpen(true);
+                }}
+              >
+                {isEnglish ? 'View privacy & data details' : 'عرض تفاصيل الخصوصية والبيانات'}
+              </a>
+            </>
+          )}
+        </p>
+
+        {/* Primary Action Button & Timeline Progress */}
         <div className="cta-button-container" data-layer="primary-controls">
           <div className="cta-button-row">
             <button
@@ -2048,7 +2466,82 @@ export default function App() {
             >
               {buttonLabel}
             </button>
+            <button
+              className={`small inverted ${
+                uiState === FINISHED && testData?.testId ? '' : 'hidden'
+              }`}
+              id="share-results"
+              type="button"
+              onClick={() => setShareOpen(true)}
+            >
+              {isEnglish ? 'Share Results' : 'مشاركة النتائج'}
+            </button>
           </div>
+          {(() => {
+            let overallProgress = 0;
+            let phaseText = isEnglish ? 'Ready' : 'جاهز للاختبار';
+            if (uiState === RUNNING) {
+              const s = Number(testData?.testState);
+              const dlP = Math.max(0, Math.min(1, Number(testData?.dlProgress) || 0));
+              const ulP = Math.max(0, Math.min(1, Number(testData?.ulProgress) || 0));
+              const pingP = Math.max(0, Math.min(1, Number(testData?.pingProgress) || 0));
+              if (s === 0) {
+                phaseText = isEnglish ? 'Connecting to server...' : 'جاري الاتصال بالخادم...';
+                overallProgress = Math.max(0.04, pingP * 0.08);
+              } else if (s === 2) {
+                phaseText = isEnglish
+                  ? 'Testing latency & jitter...'
+                  : 'قياس زمن الاستجابة والتذبذب...';
+                overallProgress = 0.08 + pingP * 0.12;
+              } else if (s === 1) {
+                phaseText = isEnglish ? 'Testing download speed...' : 'جاري فحص سرعة التنزيل...';
+                overallProgress = 0.2 + dlP * 0.42;
+              } else if (s === 3) {
+                phaseText = isEnglish ? 'Testing upload speed...' : 'جاري فحص سرعة الرفع...';
+                overallProgress = 0.62 + ulP * 0.37;
+              } else if (s >= 4) {
+                phaseText = isEnglish ? 'Test completed' : 'اكتمل الاختبار';
+                overallProgress = 1.0;
+              } else {
+                phaseText = isEnglish ? 'Initializing test...' : 'جاري تهيئة الفحص...';
+                overallProgress = 0.04;
+              }
+            } else if (uiState === FINISHED) {
+              phaseText = isEnglish ? 'Test completed' : 'اكتمل الاختبار';
+              overallProgress = 1.0;
+            }
+            const pct = Math.min(100, Math.max(0, Math.round(overallProgress * 100)));
+            const isTimelineActive = uiState === RUNNING || uiState === FINISHED;
+            return (
+              <div
+                className={`test-timeline-progress ${isTimelineActive ? 'active' : ''}`}
+                id="test-timeline-progress"
+                aria-hidden={!isTimelineActive}
+              >
+                <div
+                  className="progress-track"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={pct}
+                >
+                  <div
+                    className="progress-fill"
+                    id="test-progress-fill"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="progress-labels">
+                  <span className="progress-phase-text" id="test-progress-phase">
+                    {phaseText}
+                  </span>
+                  <span className="progress-pct-text" id="test-progress-pct">
+                    {`${pct}%`}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </main>
 
@@ -2190,11 +2683,207 @@ export default function App() {
                 type="checkbox"
                 id="toggle-auto-gbps"
                 checked={autoGbps}
-                onChange={(e) => setAutoGbps(e.target.checked)}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setAutoGbps(next);
+                  try {
+                    localStorage.setItem(AUTO_GBPS_STORAGE_KEY, next ? '1' : '0');
+                  } catch {
+                    // ignore storage errors
+                  }
+                }}
               />
             </label>
+            <div className="setting-row">
+              <span id="setting-stability-label">
+                {isEnglish
+                  ? 'Continuous Stability Monitor'
+                  : 'وضع الفحص المستمر (Stability Monitor)'}
+              </span>
+              <a href="stability.html" className="cyber-inline-link" id="setting-stability-link">
+                {isEnglish ? 'Open Stability Page →' : 'الانتقال إلى صفحة الاستقرار ←'}
+              </a>
+            </div>
+            <div className="setting-row">
+              <span id="setting-privacy-label">
+                {isEnglish ? 'Privacy Policy & Data Protection' : 'سياسة الخصوصية وحماية البيانات'}
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="small inverted"
+                  id="open-privacy-from-settings"
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    setPrivacyOpen(true);
+                  }}
+                >
+                  {isEnglish ? 'View Policy' : 'عرض السياسة'}
+                </button>
+              </div>
+            </div>
+            <div className="setting-row support-setting-row">
+              <div className="support-setting-info">
+                <span id="setting-support-label">
+                  {isEnglish ? 'Contact Support' : 'لتواصل لخدمة الدعم'}
+                </span>
+                <small className="support-phone-hint" dir="ltr">
+                  +967772772814
+                </small>
+              </div>
+              <a
+                href="https://wa.me/967772772814"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="whatsapp-support-btn"
+                id="whatsapp-support-btn"
+                role="button"
+                aria-label="لخدمة الدعم عبر واتساب +967772772814"
+              >
+                <span id="setting-support-btn-text">
+                  {isEnglish ? 'Support Service' : 'لخدمة الدعم'}
+                </span>
+              </a>
+            </div>
           </div>
         </section>
+      </dialog>
+
+      {/* Share Results Dialog */}
+      <dialog id="share" open={shareOpen}>
+        <div
+          className="close-dialog"
+          role="button"
+          tabIndex={0}
+          aria-label="إغلاق"
+          onClick={() => setShareOpen(false)}
+        >
+          ×
+        </div>
+        <h2 className="dialog-heading">
+          {isEnglish ? 'Share Result Card' : 'مشاركة بطاقة النتيجة'}
+        </h2>
+        <img
+          id="results"
+          src={
+            testData?.testId
+              ? `/results/?id=${encodeURIComponent(String(testData.testId))}&style=modern&dl=${encodeURIComponent(
+                  String(testData.dlStatus || '')
+                )}&ul=${encodeURIComponent(String(testData.ulStatus || ''))}&ping=${encodeURIComponent(
+                  String(testData.pingStatus || '')
+                )}&jitter=${encodeURIComponent(
+                  String(testData.jitterStatus || '')
+                )}&stab=${encodeURIComponent(String(telemetry.stabilityDisplay || ''))}`
+              : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='480' viewBox='0 0 800 480'/%3E"
+          }
+          alt="Test results in graphical form"
+        />
+        <button
+          id="copy-link"
+          type="button"
+          className={copyLinkActive ? 'active' : ''}
+          onClick={() => {
+            const imgEl = document.getElementById('results') as HTMLImageElement | null;
+            const shareUrl = imgEl?.src || window.location.href;
+            if (navigator.clipboard?.writeText) {
+              navigator.clipboard.writeText(shareUrl).catch(() => {});
+            }
+            setCopyLinkActive(true);
+            setTimeout(() => setCopyLinkActive(false), 2000);
+          }}
+        >
+          {copyLinkActive
+            ? isEnglish
+              ? 'Copied!'
+              : 'تم نسخ الرابط!'
+            : isEnglish
+              ? 'Copy Result Link'
+              : 'نسخ رابط النتيجة'}
+        </button>
+      </dialog>
+
+      {/* Privacy Policy, About Us, Terms of Use & Contact Dialog */}
+      <dialog id="privacy" open={privacyOpen}>
+        <div
+          className="close-dialog"
+          role="button"
+          tabIndex={0}
+          aria-label="إغلاق"
+          onClick={() => setPrivacyOpen(false)}
+        >
+          ×
+        </div>
+        <section>
+          <h1>
+            {isEnglish
+              ? 'Privacy Policy, Terms of Use & About Terrax Plus'
+              : 'سياسة الخصوصية، شروط الاستخدام، ونبذة عن المنصة (Privacy, Terms & About)'}
+          </h1>
+          <p>
+            {isEnglish
+              ? 'This speed test server records measurement results only for result sharing and network quality diagnostics.'
+              : 'يعمل خادم قياس السرعة هذا مع تفعيل حفظ نتائج القياس لمشاركتها وتحسين جودة الشبكة.'}
+          </p>
+
+          <h2 id="about-terrax-heading">
+            {isEnglish
+              ? 'About Terrax Plus — 4K Network Telemetry Platform'
+              : 'من نحن — نبذة عن منصة تيراكس بلاس (About Terrax Plus)'}
+          </h2>
+          <p>
+            {isEnglish
+              ? 'Terrax Plus is an advanced 4K network speed and stability measurement platform built on the open-source LibreSpeed engine, utilizing isolated Web Workers to measure Download, Upload, Ping, Jitter, and Packet Loss with zero main-thread interference.'
+              : 'منصة تيراكس بلاس (Terrax Plus) هي منظومة عربية متخصصة لقياس سرعة الإنترنت الفائقة واستقرار الشبكة للألعاب التنافسية والبث المباشر بدقة 4K، مبنية على محرك القياس مفتوح المصدر LibreSpeed وتعمل عبر خيوط معالجة مستقلة (Web Workers) لضمان دقة القياس الفعلي.'}
+          </p>
+
+          <h2 id="adsense-cookies-heading">
+            {isEnglish
+              ? 'Google AdSense, Cookies & Smart Ad Lock'
+              : 'إعلانات Google AdSense وملفات تعريف الارتباط (Cookies & Consent Mode v2)'}
+          </h2>
+          <p>
+            {isEnglish
+              ? 'Terrax Plus integrates Google AdSense in isolated, non-intrusive containers governed by Google Consent Mode v2 and Smart Ad Lock (which pauses all ad network activity during active speed tests). Users may manage personalized ad preferences at any time via Google My Ad Center.'
+              : 'تستخدم منصة تيراكس بلاس خدمة Google AdSense في حاويات معزولة تخضع لنظام العزل الشبكي الذكي (Smart Ad Lock) ومعيار Google Consent Mode v2، مع إتاحة التحكم الكامل في تخصيص الإعلانات وملفات تعريف الارتباط.'}
+          </p>
+
+          <h2 id="terms-of-use-heading">
+            {isEnglish ? 'Terms of Use' : 'شروط الاستخدام (Terms of Use)'}
+          </h2>
+          <p>
+            {isEnglish
+              ? 'Measurements are provided for technical diagnostics. Automated abuse, scraping, or invalid traffic generation is strictly prohibited.'
+              : 'تُقدّم نتائج القياس لأغراض الفحص التقني وتشخيص جودة الاتصال، ويُحظر استخدام أي أدوات آلية لتوليد زيارات أو نقرات غير صالحة.'}
+          </p>
+
+          <h2 id="contact-us-heading">
+            {isEnglish
+              ? 'Contact Us & Data Deletion'
+              : 'اتصل بنا وحذف البيانات (Contact Us & Data Deletion)'}
+          </h2>
+          <p>
+            {isEnglish ? (
+              <>
+                For support or data deletion requests (with your Test ID), contact:{' '}
+                <a href="mailto:terrax.t20@gmail.com" id="official-privacy-email">
+                  terrax.t20@gmail.com
+                </a>{' '}
+                or WhatsApp <span dir="ltr">+967772772814</span>.
+              </>
+            ) : (
+              <>
+                للتواصل مع إدارة المنصة أو لطلب حذف سجل اختبار معين، يرجى مراسلتنا عبر البريد الرسمي:{' '}
+                <a href="mailto:terrax.t20@gmail.com" id="official-privacy-email">
+                  terrax.t20@gmail.com
+                </a>{' '}
+                أو عبر خدمة الدعم الفني المباشر: <span dir="ltr">+967772772814</span>.
+              </>
+            )}
+          </p>
+        </section>
+        <button id="close-privacy" type="button" onClick={() => setPrivacyOpen(false)}>
+          {isEnglish ? 'Close' : 'إغلاق'}
+        </button>
       </dialog>
 
       {/* Data Consumption & Test History Dialog (Opened via الاستهلاك Tab) */}

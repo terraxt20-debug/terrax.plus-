@@ -98,6 +98,14 @@ class TerraxAdSenseManager {
       this.lastTestError = null;
     }
 
+    // Pause or resume Google AdSense runtime ad requests to isolate Web Worker bandwidth
+    if (typeof window !== 'undefined') {
+      window.adsbygoogle = window.adsbygoogle || [];
+      const savedConsent = getSavedConsentChoice();
+      window.adsbygoogle.pauseAdRequests =
+        this.isTesting || savedConsent === 'rejected' ? 1 : 0;
+    }
+
     // Update DOM containers to reflect locked state
     if (typeof document !== 'undefined') {
       const adContainers = document.querySelectorAll(

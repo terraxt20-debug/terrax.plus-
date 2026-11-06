@@ -23,6 +23,10 @@
     const urlParams = new URLSearchParams(window.location.search);
     const designParam = urlParams.get('design');
 
+    if (designParam === 'react') {
+        return;
+    }
+
     if (designParam === 'new') {
         redirectToNewDesign();
         return;

@@ -14,6 +14,20 @@
     <meta name="description" content="منصة تيراكس بلاس (Terrax Plus) لاختبار سرعة الإنترنت واستقرار الاتصال بهوية بصرية 4K عربية زجاجية متطورة مبنية على محرك LibreSpeed." />
     <meta property="og:title" content="Terrax Plus — LibreSpeed 4K" />
     <meta property="og:description" content="منصة تيراكس بلاس (Terrax Plus) لاختبار سرعة الإنترنت واستقرار الاتصال بهوية بصرية 4K عربية زجاجية متطورة مبنية على محرك LibreSpeed." />
+    <meta property="og:type" content="website" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Terrax Plus — LibreSpeed 4K",
+        "alternateName": "تيراكس بلاس لاختبار سرعة الإنترنت واستقرار الاتصال",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["ar", "en"],
+        "description": "منصة تيراكس بلاس (Terrax Plus) لاختبار سرعة الإنترنت واستقرار الاتصال بهوية بصرية 4K عربية زجاجية متطورة مبنية على محرك LibreSpeed.",
+        "email": "terrax.t20@gmail.com"
+      }
+    </script>
     <script>
       (function () {
         function isTransitionAbort(err) {
@@ -85,6 +99,16 @@
       })();
     </script>
     <link rel="stylesheet" type="text/css" href="ads/adsense.styles.css" />
+    <script>
+      (function () {
+        var link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.type = "text/css";
+        link.href = "frontend/styling/index.css";
+        document.head.appendChild(link);
+      })();
+    </script>
+    <script type="text/javascript" src="speedtest.js"></script>
     <script type="text/javascript" src="design-switch.js"></script>
     <script async custom-element="amp-auto-ads"
         src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
@@ -96,7 +120,8 @@
     <amp-auto-ads type="adsense"
         data-ad-client="ca-pub-1225026489802055">
     </amp-auto-ads>
-    <p>جاري التحويل إلى واجهة القياس...</p>
+    <p id="redirect-status-msg">جاري التحويل إلى واجهة القياس...</p>
+    <div id="root" style="width:100%;"></div>
     <!-- Zero-CLS Google AdSense Container (Auto-Collapses when unfilled) -->
     <div class="terrax-adsense-container terrax-smart-ad-slot terrax-smart-banner"
          id="terrax-smart-ad-entry-main"
@@ -114,6 +139,7 @@
         </div>
         <span class="terrax-ad-disclosure-label" data-label-ar="اعلان" data-label-en="Sponsored">اعلان • Sponsored</span>
     </div>
+    <script type="module" src="/src/main.tsx"></script>
 </body>
 
 </html>

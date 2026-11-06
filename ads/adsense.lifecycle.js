@@ -20,7 +20,13 @@ const activeObservers = [];
  */
 export function mountAllRegisteredContainers(options = {}) {
   if (typeof document === 'undefined') return 0;
-  const isTesting = options.isTesting ?? false;
+  const globalTesting =
+    typeof window !== 'undefined' &&
+    Boolean(
+      window.TerraxSmartAdEngine?.getState?.()?.isTesting ||
+        window.TerraxAdSense?.isTesting
+    );
+  const isTesting = Boolean(options.isTesting ?? globalTesting);
   let mountedCount = 0;
 
   const placements = getAllPlacements();

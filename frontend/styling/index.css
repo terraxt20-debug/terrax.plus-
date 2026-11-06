@@ -4,16 +4,16 @@
  * Terrax Plus (تيراكس بلاس) 4K Cyber Glass RTL Visual Identity
  */
 
-@import url("colors.css");
-@import url("fonts.css");
-@import url("main.css");
-@import url("server-selector.css");
-@import url("button.css");
-@import url("results.css");
-@import url("dialog.css");
-@import url("toast.css");
-@import url("smart-ads.css");
-@import url("adsense.styles.css");
+@import url("./colors.css");
+@import url("./fonts.css");
+@import url("./main.css");
+@import url("./server-selector.css");
+@import url("./button.css");
+@import url("./results.css");
+@import url("./dialog.css");
+@import url("./toast.css");
+@import url("./smart-ads.css");
+@import url("./adsense.styles.css");
 
 *,
 *::before,
@@ -450,7 +450,7 @@ body.terrax-page-leaving {
 
 @keyframes terraxShellStartup {
   0% {
-    opacity: 0;
+    opacity: 0.96;
     transform: translate3d(0, 0, 0) scale(1);
   }
   100% {
@@ -473,7 +473,7 @@ body.terrax-page-leaving {
 
 @keyframes terraxStaggerReveal {
   0% {
-    opacity: 0;
+    opacity: 0.96;
     transform: translate3d(0, 0, 0);
   }
   100% {
@@ -686,7 +686,7 @@ header.terrax-header::after {
   width: 100%;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(48px, 1fr));
   align-items: stretch;
   gap: clamp(0.35rem, 0.8vw, 0.75rem);
   padding: clamp(0.45rem, 0.75vw, 0.55rem) clamp(0.45rem, 0.9vw, 0.8rem);
@@ -726,7 +726,7 @@ header.terrax-header::after {
   justify-content: center;
   gap: 0.28rem;
   padding: 0.55rem 0.35rem;
-  min-width: 0;
+  min-width: 48px;
   border-radius: 1.15rem;
   border: 1px solid rgba(56, 189, 248, 0.16);
   background: rgba(16, 38, 78, 0.24);
@@ -743,7 +743,7 @@ header.terrax-header::after {
     box-shadow var(--motion-fast);
   position: relative;
   overflow: hidden;
-  min-height: 4.35rem;
+  min-height: max(48px, 4.8rem);
   text-align: center;
   white-space: nowrap;
   touch-action: manipulation;
@@ -899,7 +899,8 @@ footer > p.source a:hover {
   .terrax-bottom-nav .nav-dock-item {
     font-size: 1.06rem;
     padding: 0.55rem 0.2rem;
-    min-height: 4.5rem;
+    min-width: 48px;
+    min-height: max(48px, 4.8rem);
   }
 }
 
@@ -944,7 +945,8 @@ footer > p.source a:hover {
   .terrax-bottom-nav .nav-dock-item {
     font-size: 0.94rem;
     padding: 0.42rem 0.12rem;
-    min-height: 4.1rem;
+    min-width: 48px;
+    min-height: max(48px, 4.8rem);
     border-radius: 0.95rem;
   }
 

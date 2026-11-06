@@ -10,8 +10,14 @@ import {executeGameQueryFetch} from './backend/gamequeryAdapter.mjs';
 const ROOT_DIR =
   import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
 
-// Pre-allocate a 256KB high-speed buffer chunk for LibreSpeed download measurement
-const GARBAGE_CHUNK = crypto.randomBytes(262144);
+// Lazy-allocate a 256KB high-speed buffer chunk for LibreSpeed download measurement on first request
+let cachedGarbageChunk: Buffer | null = null;
+function getGarbageChunk(): Buffer {
+  if (!cachedGarbageChunk) {
+    cachedGarbageChunk = crypto.randomBytes(262144);
+  }
+  return cachedGarbageChunk;
+}
 
 interface StoredResult {
   dl: string;
@@ -36,8 +42,22 @@ function loadFontBase64(relPath: string): string {
   return '';
 }
 
-const CAIRO_BASE64 = loadFontBase64('frontend/fonts/Cairo-arabic.woff2');
-const INTER_BASE64 = loadFontBase64('frontend/fonts/Inter-latin.woff2');
+let CAIRO_BASE64: string | null = null;
+let INTER_BASE64: string | null = null;
+
+function getCairoBase64(): string {
+  if (CAIRO_BASE64 === null) {
+    CAIRO_BASE64 = loadFontBase64('frontend/fonts/Cairo-arabic.woff2');
+  }
+  return CAIRO_BASE64;
+}
+
+function getInterBase64(): string {
+  if (INTER_BASE64 === null) {
+    INTER_BASE64 = loadFontBase64('frontend/fonts/Inter-latin.woff2');
+  }
+  return INTER_BASE64;
+}
 
 function escapeXml(str: string): string {
   return String(str || '')
@@ -119,6 +139,7 @@ function librespeedRuntimePlugin(): Plugin {
           : 4;
         const totalQuarterMibChunks = chunksMib * 4;
 
+        const garbageChunk = getGarbageChunk();
         res.statusCode = 200;
         let sent = 0;
         const writeNext = () => {
@@ -126,9 +147,9 @@ function librespeedRuntimePlugin(): Plugin {
           while (sent < totalQuarterMibChunks && ok) {
             sent++;
             if (sent === totalQuarterMibChunks) {
-              res.end(GARBAGE_CHUNK);
+              res.end(garbageChunk);
             } else {
-              ok = res.write(GARBAGE_CHUNK);
+              ok = res.write(garbageChunk);
             }
           }
           if (sent < totalQuarterMibChunks) {
@@ -364,15 +385,17 @@ function librespeedRuntimePlugin(): Plugin {
           ? jitterVal.toFixed(2)
           : '0.00';
 
+        const cairoB64 = getCairoBase64();
+        const interB64 = getInterBase64();
         const fontFaceCss = `
           ${
-            CAIRO_BASE64
-              ? `@font-face { font-family: 'CairoShare'; src: url('data:font/woff2;base64,${CAIRO_BASE64}') format('woff2'); font-weight: 300 900; }`
+            cairoB64
+              ? `@font-face { font-family: 'CairoShare'; src: url('data:font/woff2;base64,${cairoB64}') format('woff2'); font-weight: 300 900; }`
               : ''
           }
           ${
-            INTER_BASE64
-              ? `@font-face { font-family: 'InterShare'; src: url('data:font/woff2;base64,${INTER_BASE64}') format('woff2'); font-weight: 100 900; }`
+            interB64
+              ? `@font-face { font-family: 'InterShare'; src: url('data:font/woff2;base64,${interB64}') format('woff2'); font-weight: 100 900; }`
               : ''
           }
           .ar-text { font-family: 'CairoShare', 'InterShare', sans-serif; }
@@ -471,7 +494,29 @@ function librespeedRuntimePlugin(): Plugin {
         }
       }
 
+      // 6c. Serve /sitemap.xml (Official XML sitemap for search engine & AdSense crawlers)
+      if (pathname === '/sitemap.xml') {
+        setNoCacheHeaders();
+        res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+        const sitemapXmlPath = path.resolve(ROOT_DIR, 'sitemap.xml');
+        if (fs.existsSync(sitemapXmlPath)) {
+          res.statusCode = 200;
+          res.end(fs.readFileSync(sitemapXmlPath, 'utf8'));
+          return;
+        }
+      }
+
       // 7. Map /frontend/<root-file> requests when /frontend/index.html or /frontend/stability.html is opened directly
+      if (pathname === '/frontend/index-modern.html') {
+        const frontendIndexPath = path.resolve(ROOT_DIR, 'frontend/index.html');
+        if (fs.existsSync(frontendIndexPath)) {
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          res.statusCode = 200;
+          res.end(fs.readFileSync(frontendIndexPath));
+          return;
+        }
+      }
+
       const rootSharedFiles = [
         'speedtest.js',
         'speedtest_worker.js',
@@ -480,9 +525,9 @@ function librespeedRuntimePlugin(): Plugin {
         'server-list.json',
         'config.json',
         'design-switch.js',
-        'index-modern.html',
         'ads.txt',
         'robots.txt',
+        'sitemap.xml',
       ];
       for (const sharedFile of rootSharedFiles) {
         if (pathname === `/frontend/${sharedFile}`) {
@@ -494,9 +539,11 @@ function librespeedRuntimePlugin(): Plugin {
                 ? 'text/javascript; charset=utf-8'
                 : ext === '.json'
                   ? 'application/json; charset=utf-8'
-                  : ext === '.txt'
-                    ? 'text/plain; charset=utf-8'
-                    : 'text/html; charset=utf-8';
+                  : ext === '.xml'
+                    ? 'application/xml; charset=utf-8'
+                    : ext === '.txt'
+                      ? 'text/plain; charset=utf-8'
+                      : 'text/html; charset=utf-8';
             res.setHeader('Content-Type', contentType);
             res.statusCode = 200;
             res.end(fs.readFileSync(targetPath));
@@ -537,6 +584,7 @@ function librespeedRuntimePlugin(): Plugin {
         'favicon.ico',
         'ads.txt',
         'robots.txt',
+        'sitemap.xml',
       ];
 
       for (const file of rootStaticFiles) {
@@ -547,7 +595,7 @@ function librespeedRuntimePlugin(): Plugin {
         }
       }
 
-      for (const dir of ['frontend', 'images', 'ads', 'public']) {
+      for (const dir of ['frontend', 'images', 'ads', 'public', 'backend', 'nodes']) {
         const srcDir = path.resolve(ROOT_DIR, dir);
         const destDir = path.resolve(distDir, dir);
         if (fs.existsSync(srcDir)) {
@@ -567,6 +615,8 @@ export default defineConfig(() => {
       },
     },
     server: {
+      port: 3000,
+      host: '0.0.0.0',
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',

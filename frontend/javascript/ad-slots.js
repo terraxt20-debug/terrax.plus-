@@ -23,7 +23,7 @@
   "use strict";
 
   var ADSTERRA_SMARTLINK_URL =
-    "https://asiafilm.org/4/f40a6dd77b401726a12dd304a72bafa5";
+    "#terrax-adsense-verified";
   var YANDEX_FALLBACK_TIMEOUT_MS = 2000;
   var AUTO_AD_ROTATION_INTERVAL_MS = 30000;
 
@@ -262,7 +262,7 @@
         analyticsStorage = "granted";
         root.adsbygoogle.requestNonPersonalizedAds = 0;
       }
-      root.adsbygoogle.pauseAdRequests = 0;
+      root.adsbygoogle.pauseAdRequests = engineState.isTesting ? 1 : 0;
     }
 
     var consentPayload = {
@@ -1053,6 +1053,15 @@
   function mountAutomaticEmbeddedAdFrame(card, slotKey) {
     if (!card || typeof document === "undefined") return;
     if (engineState.isTesting || isBrowserOffline() || !canLoadAdsUnderConsent()) return;
+    if (
+      !ADSTERRA_SMARTLINK_URL ||
+      ADSTERRA_SMARTLINK_URL.charAt(0) === "#" ||
+      engineState.adsenseEnabled !== false
+    ) {
+      card.setAttribute("data-auto-frame-loaded", "adsense-safe");
+      updateCardStatusIndicator(card, "ready");
+      return;
+    }
 
     var bodyEl = card.querySelector(".terrax-yan-body");
     if (!bodyEl) return;
@@ -1285,7 +1294,14 @@
    * (Also activates any inert <template id="terrax-yandex-sdk-tpl"> if present)
    */
   function ensureExternalYandexScriptLoaded() {
-    if (typeof document === "undefined" || isBrowserOffline() || !canLoadAdsUnderConsent()) return;
+    if (
+      typeof document === "undefined" ||
+      engineState.isTesting ||
+      isBrowserOffline() ||
+      !canLoadAdsUnderConsent()
+    ) {
+      return false;
+    }
 
     var tpl = document.getElementById("terrax-yandex-sdk-tpl");
     if (tpl && tpl.parentNode) {
@@ -1299,7 +1315,7 @@
       existingScripts.length > 0 ||
       document.getElementById("terrax-yandex-context-runtime")
     ) {
-      return;
+      return true;
     }
 
     var s = document.createElement("script");
@@ -1307,6 +1323,34 @@
     s.src = "https://yandex.ru/ads/system/context.js";
     s.async = true;
     (document.head || document.documentElement).appendChild(s);
+    return true;
+  }
+
+  /**
+   * Abort any in-flight Yandex RTB timers and pause Google AdSense background ad requests
+   * immediately when a measurement Web Worker enters the RUNNING state.
+   */
+  function abortInFlightAdOperationsForWorkerIsolation() {
+    if (typeof root !== "undefined") {
+      root.adsbygoogle = root.adsbygoogle || [];
+      root.adsbygoogle.pauseAdRequests = 1;
+      if (Array.isArray(root.yaContextCb) && (!root.Ya || !root.Ya.Context)) {
+        root.yaContextCb.length = 0;
+      }
+    }
+    var cards = getAdCards();
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      if (card._yanFallbackTimer) {
+        clearTimeout(card._yanFallbackTimer);
+        card._yanFallbackTimer = null;
+      }
+      if (card._yanCheckTimer) {
+        clearTimeout(card._yanCheckTimer);
+        card._yanCheckTimer = null;
+      }
+    }
+    return true;
   }
 
   /**
@@ -1530,6 +1574,7 @@
 
     card._yanFallbackTimer = setTimeout(function () {
       card._yanFallbackTimer = null;
+      if (engineState.isTesting) return;
       if (hasYandexContainerRendered(renderContainerId)) {
         activateYandexRtbBanner(card);
       } else {
@@ -1564,11 +1609,13 @@
                 async: true
               },
               function onFallback() {
+                if (engineState.isTesting) return;
                 activateSmartlinkFallback(card, "yandex-no-fill");
               }
             );
             card._yanCheckTimer = setTimeout(function () {
               card._yanCheckTimer = null;
+              if (engineState.isTesting) return;
               if (hasYandexContainerRendered(renderContainerId)) {
                 activateYandexRtbBanner(card);
               } else {
@@ -1579,7 +1626,9 @@
             activateSmartlinkFallback(card, "auto-inline-active");
           }
         } catch (err) {
-          activateSmartlinkFallback(card, "render-exception");
+          if (!engineState.isTesting) {
+            activateSmartlinkFallback(card, "render-exception");
+          }
         }
       });
     }
@@ -1618,6 +1667,23 @@
       engineState.lastTestError = null;
     }
 
+    if (engineState.isTesting) {
+      abortInFlightAdOperationsForWorkerIsolation();
+    } else if (wasTesting) {
+      syncGoogleConsentSignals();
+    }
+
+    if (
+      typeof root !== "undefined" &&
+      root.TerraxAdSense &&
+      typeof root.TerraxAdSense.setEngineTestState === "function" &&
+      root.TerraxAdSense.testEngineState !== normalized
+    ) {
+      try {
+        root.TerraxAdSense.setEngineTestState(normalized, errorDetails);
+      } catch (e) {}
+    }
+
     syncAdCardsVisualState();
 
     // If transitioning out of RUNNING to READY or FINISHED and a load was queued, flush safely
@@ -1644,9 +1710,7 @@
    */
   function setTestingState(isTesting) {
     var nextState = Boolean(isTesting);
-    engineState.isTesting = nextState;
-    engineState.testEngineState = nextState ? "RUNNING" : "READY";
-    syncAdCardsVisualState();
+    setEngineTestState(nextState ? "RUNNING" : "READY");
     return engineState.isTesting;
   }
 
@@ -1679,9 +1743,23 @@
    * Called immediately when a Speed Test, Gaming Test, or Stability Test finishes (onTestComplete)
    */
   function onTestComplete(sourcePage) {
+    var wasTesting = Boolean(engineState.isTesting);
     engineState.isTesting = false;
     engineState.testEngineState = "FINISHED";
     engineState.pendingAdLoadAfterTest = false;
+    if (wasTesting) {
+      syncGoogleConsentSignals();
+    }
+    if (
+      typeof root !== "undefined" &&
+      root.TerraxAdSense &&
+      typeof root.TerraxAdSense.setEngineTestState === "function" &&
+      root.TerraxAdSense.testEngineState !== "FINISHED"
+    ) {
+      try {
+        root.TerraxAdSense.setEngineTestState("FINISHED");
+      } catch (e) {}
+    }
     return refreshAllSlots("test-complete:" + String(sourcePage || "main"));
   }
 
@@ -1852,6 +1930,7 @@
    * Start automatic ad rotation timer when idle (paused automatically during active tests)
    */
   function startAutoAdRotation() {
+    if (engineState.adsenseEnabled !== false) return;
     if (autoRotationTimer || typeof setInterval !== "function") return;
     autoRotationTimer = setInterval(function () {
       if (!engineState.isTesting && getAdCards().length > 0) {
@@ -1904,6 +1983,8 @@
     configureAdSense: configureAdSense,
     ensureGoogleAdSenseVerificationMeta: ensureGoogleAdSenseVerificationMeta,
     ensureGoogleAdSenseScriptLoaded: ensureGoogleAdSenseScriptLoaded,
+    ensureExternalYandexScriptLoaded: ensureExternalYandexScriptLoaded,
+    abortInFlightAdOperationsForWorkerIsolation: abortInFlightAdOperationsForWorkerIsolation,
     mountOrPushAdSenseUnit: mountOrPushAdSenseUnit,
     setupViewportAdObserver: setupViewportAdObserver,
     observeAdCardInViewport: observeAdCardInViewport,

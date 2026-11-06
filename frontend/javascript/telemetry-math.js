@@ -332,9 +332,9 @@
       return target;
     }
     const dt = Number.isFinite(dtSeconds)
-      ? Math.max(0.004, Math.min(0.1, dtSeconds))
+      ? Math.max(0.002, Math.min(0.1, dtSeconds))
       : 0.016;
-    // Exponential damping factor (tau ~ 95ms) for silky 60Hz/120Hz glide
+    // Exponential damping factor (tau ~ 95ms) for silky 60Hz/120Hz/144Hz/240Hz glide
     const alpha = 1 - Math.exp(-dt / 0.095);
     const next = current + diff * alpha;
     return Math.abs(target - next) <= 0.05 ? target : next;
@@ -545,21 +545,148 @@
     }
   }
 
+  const STANDARD_REFRESH_RATES = [60, 75, 90, 120, 144, 165, 240];
+
   /**
-   * Pure 60fps frame-pacing evaluator for 4K glass gauge animations.
-   * Ensures consistent 60fps (~16.67ms) frame intervals even on 120Hz/144Hz/240Hz displays
-   * or under heavy multi-stream network load, while clamping dtSeconds to prevent jumps.
+   * Quantize a raw measured frame rate (Hz) to the nearest standard display refresh rate tier
+   * (60Hz, 75Hz, 90Hz, 120Hz, 144Hz, 165Hz, 240Hz) when within 8% tolerance, or clamp to [60, 240].
+   *
+   * @param {number} rawFps - Measured raw refresh rate in Hz
+   * @returns {number} Quantized refresh rate in Hz
+   */
+  function quantizeRefreshRate(rawFps) {
+    const numeric = Number(rawFps);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return 60;
+    }
+    const clamped = Math.max(60, Math.min(240, numeric));
+    let bestTier = 60;
+    let smallestRatioDiff = Infinity;
+    for (let i = 0; i < STANDARD_REFRESH_RATES.length; i++) {
+      const tier = STANDARD_REFRESH_RATES[i];
+      const relDiff = Math.abs(clamped - tier) / tier;
+      if (relDiff < smallestRatioDiff) {
+        smallestRatioDiff = relDiff;
+        bestTier = tier;
+      }
+    }
+    if (smallestRatioDiff <= 0.085) {
+      return bestTier;
+    }
+    return Math.round(clamped);
+  }
+
+  /**
+   * Estimate the device display refresh rate from a rolling window of requestAnimationFrame
+   * VSync frame deltas (in milliseconds), rejecting tab-switch pauses and outlier stalls.
+   *
+   * @param {number[]} deltaSamplesMs - Array of frame-to-frame delta intervals in ms
+   * @param {number} [fallbackFps=60] - Fallback FPS when insufficient valid samples exist
+   * @returns {number} Quantized target refresh rate (60..240 Hz)
+   */
+  function estimateRefreshRateFromDeltas(deltaSamplesMs, fallbackFps) {
+    const defaultFps =
+      Number.isFinite(Number(fallbackFps)) && Number(fallbackFps) > 0
+        ? quantizeRefreshRate(Number(fallbackFps))
+        : 60;
+    if (!Array.isArray(deltaSamplesMs) || deltaSamplesMs.length === 0) {
+      return defaultFps;
+    }
+    const valid = [];
+    for (let i = 0; i < deltaSamplesMs.length; i++) {
+      const d = Number(deltaSamplesMs[i]);
+      // Accept valid VSync intervals between 2.5ms (400Hz) and 25ms (40Hz)
+      if (Number.isFinite(d) && d >= 2.5 && d <= 25) {
+        valid.push(d);
+      }
+    }
+    if (valid.length === 0) {
+      return defaultFps;
+    }
+    valid.sort(function (a, b) {
+      return a - b;
+    });
+    const mid = Math.floor(valid.length / 2);
+    const medianDeltaMs =
+      valid.length % 2 === 1
+        ? valid[mid]
+        : (valid[mid - 1] + valid[mid]) * 0.5;
+    if (medianDeltaMs <= 0) {
+      return defaultFps;
+    }
+    return quantizeRefreshRate(1000 / medianDeltaMs);
+  }
+
+  /**
+   * Resolve a refresh rate input (number, React ref { current: number }, or getter function)
+   * and compute the dynamically scaled VSync throttle interval parameters.
+   *
+   * @param {number|{current?: number}|(() => number)} [refreshRateInput=60]
+   * @returns {{
+   *   targetFps: number,
+   *   intervalMs: number,
+   *   jitterToleranceMs: number,
+   *   minElapsedMs: number,
+   *   minDtSeconds: number
+   * }}
+   */
+  function computeDynamicThrottleInterval(refreshRateInput) {
+    let rawValue = refreshRateInput;
+    if (typeof refreshRateInput === "function") {
+      try {
+        rawValue = refreshRateInput();
+      } catch (e) {
+        rawValue = 60;
+      }
+    } else if (
+      refreshRateInput &&
+      typeof refreshRateInput === "object" &&
+      "current" in refreshRateInput
+    ) {
+      rawValue = refreshRateInput.current;
+    }
+
+    const numeric = Number(rawValue);
+    const targetFps =
+      Number.isFinite(numeric) && numeric > 0
+        ? Math.min(240, Math.max(30, numeric))
+        : 60;
+    const intervalMs = 1000 / targetFps;
+    // Allow proportional VSync jitter tolerance (0.45ms at 60Hz, scaled on 120Hz/144Hz/240Hz)
+    const jitterToleranceMs =
+      targetFps <= 60 ? 0.45 : Math.min(0.45, intervalMs * 0.06);
+    const minElapsedMs = Math.max(1, intervalMs - jitterToleranceMs);
+    const minDtSeconds =
+      targetFps > 60
+        ? Math.max(0.002, Number((0.5 / targetFps).toFixed(4)))
+        : 0.008;
+
+    return {
+      targetFps,
+      intervalMs,
+      jitterToleranceMs,
+      minElapsedMs,
+      minDtSeconds,
+    };
+  }
+
+  /**
+   * Precision VSync frame-pacing evaluator for 4K glass gauge animations.
+   * Dynamically scales the throttle interval from a numeric refresh rate or a live
+   * detectedRefreshRateRef ({ current: number }) to stay in lockstep with 60Hz–240Hz displays.
    *
    * @param {number} nowMs - Current high-resolution timestamp (performance.now())
    * @param {number} lastFrameMs - Timestamp of the last rendered gauge frame
-   * @param {number} [targetFps=60] - Target frame rate (default 60fps)
+   * @param {number|{current?: number}|(() => number)} [targetFps=60] - Target frame rate or ref (60..240fps)
    * @param {boolean} [force=false] - Force immediate render (e.g. on state transition)
    */
   function shouldRenderGaugeFrame(nowMs, lastFrameMs, targetFps, force) {
-    const fps = Number.isFinite(targetFps) && targetFps > 0 ? targetFps : 60;
-    const intervalMs = 1000 / fps;
-    // Allow 0.45ms VSync jitter tolerance so native 60Hz VSync ticks (~16.3ms-16.7ms) never drop
-    const minElapsedMs = Math.max(1, intervalMs - 0.45);
+    const {
+      targetFps: fps,
+      intervalMs,
+      minElapsedMs,
+      minDtSeconds,
+    } = computeDynamicThrottleInterval(targetFps);
     const now = Number.isFinite(nowMs) && nowMs > 0 ? nowMs : 0;
     const last = Number.isFinite(lastFrameMs) && lastFrameMs > 0 ? lastFrameMs : 0;
 
@@ -567,8 +694,10 @@
       const rawDt = last > 0 && now > last ? (now - last) / 1000 : 1 / fps;
       return {
         shouldRender: true,
-        dtSeconds: Math.min(0.05, Math.max(0.008, rawDt)),
+        dtSeconds: Math.min(0.05, Math.max(minDtSeconds, rawDt)),
         nextLastFrameMs: now > 0 ? now : 1,
+        intervalMs,
+        targetFps: fps,
       };
     }
 
@@ -578,10 +707,12 @@
         shouldRender: false,
         dtSeconds: 0,
         nextLastFrameMs: last,
+        intervalMs,
+        targetFps: fps,
       };
     }
 
-    const dtSeconds = Math.min(0.05, Math.max(0.008, elapsedMs / 1000));
+    const dtSeconds = Math.min(0.05, Math.max(minDtSeconds, elapsedMs / 1000));
     // Advance lastFrameMs aligned to the frame budget to prevent drift under load
     const remainder = elapsedMs % intervalMs;
     const nextLastFrameMs = remainder < intervalMs * 0.5 ? now - remainder : now;
@@ -590,36 +721,83 @@
       shouldRender: true,
       dtSeconds,
       nextLastFrameMs,
+      intervalMs,
+      targetFps: fps,
     };
   }
 
   /**
-   * Creates a requestAnimationFrame throttler for 4K glass gauge components.
-   * Coalesces bursty worker updates and throttles continuous gauge interpolation to a steady 60fps.
+   * Creates a high-precision requestAnimationFrame throttler for 4K glass gauge components.
+   * Uses window.requestAnimationFrame and dynamically scales the throttle interval using
+   * detectedRefreshRateRef (or numeric targetFps) for 60Hz, 75Hz, 90Hz, 120Hz, 144Hz, 165Hz, and 240Hz
+   * displays, halting automatically when idle to prevent CPU waste.
    *
-   * @param {(dtSeconds: number, nowMs: number) => boolean | void} renderCallback
-   *   Invoked at most at targetFps. If it returns true, the throttler automatically schedules the next frame.
-   * @param {number} [targetFps=60]
+   * @param {(dtSeconds: number, nowMs: number, currentFps: number, intervalMs: number) => boolean | void} renderCallback
+   *   Invoked at the active refresh rate interval. If it returns true, the throttler schedules the next frame;
+   *   if false, the loop halts immediately with zero idle CPU usage until schedule() is called again.
+   * @param {number|{current?: number}|(() => number)} [targetFps=60] - Initial target frame rate or detectedRefreshRateRef
    */
   function createRafGaugeThrottler(renderCallback, targetFps) {
-    const fps = Number.isFinite(targetFps) && targetFps > 0 ? targetFps : 60;
+    const isRefObject =
+      targetFps !== null &&
+      typeof targetFps === "object" &&
+      "current" in targetFps;
+    const isGetterFn = typeof targetFps === "function";
+
+    let fps = computeDynamicThrottleInterval(targetFps).targetFps;
     let rafId = 0;
     let lastFrameMs = 0;
+    let lastRawVsyncMs = 0;
     let pendingForce = false;
+    const vsyncDeltas = [];
+
+    function resolveActiveFps() {
+      if (isRefObject || isGetterFn) {
+        const synced = computeDynamicThrottleInterval(targetFps).targetFps;
+        fps = synced;
+      }
+      return fps;
+    }
+
+    function syncActiveFps(nextFps) {
+      const clamped = computeDynamicThrottleInterval(nextFps).targetFps;
+      fps = clamped;
+      if (isRefObject) {
+        try {
+          targetFps.current = clamped;
+        } catch (e) {
+          // ignore read-only ref
+        }
+      }
+      return fps;
+    }
+
+    const winObj =
+      typeof window !== "undefined" && window !== null ? window : null;
 
     const rafFn =
-      typeof requestAnimationFrame === "function"
-        ? requestAnimationFrame
-        : function (cb) {
-            return setTimeout(function () {
-              cb(typeof performance !== "undefined" && performance.now ? performance.now() : Date.now());
-            }, 1000 / fps);
-          };
+      winObj && typeof winObj.requestAnimationFrame === "function"
+        ? winObj.requestAnimationFrame.bind(winObj)
+        : typeof requestAnimationFrame === "function"
+          ? requestAnimationFrame
+          : function (cb) {
+              const currentIntervalMs =
+                computeDynamicThrottleInterval(resolveActiveFps()).intervalMs;
+              return setTimeout(function () {
+                cb(
+                  typeof performance !== "undefined" && performance.now
+                    ? performance.now()
+                    : Date.now()
+                );
+              }, currentIntervalMs);
+            };
 
     const cafFn =
-      typeof cancelAnimationFrame === "function"
-        ? cancelAnimationFrame
-        : clearTimeout;
+      winObj && typeof winObj.cancelAnimationFrame === "function"
+        ? winObj.cancelAnimationFrame.bind(winObj)
+        : typeof cancelAnimationFrame === "function"
+          ? cancelAnimationFrame
+          : clearTimeout;
 
     function onFrame(timestamp) {
       rafId = 0;
@@ -630,9 +808,36 @@
             ? performance.now()
             : Date.now();
 
-      const gate = shouldRenderGaugeFrame(now, lastFrameMs, fps, pendingForce);
+      let currentFps = resolveActiveFps();
+
+      if (lastRawVsyncMs > 0) {
+        const rawDelta = now - lastRawVsyncMs;
+        if (rawDelta >= 2.5 && rawDelta <= 25) {
+          vsyncDeltas.push(rawDelta);
+          if (vsyncDeltas.length > 12) {
+            vsyncDeltas.shift();
+          }
+          if (vsyncDeltas.length >= 4) {
+            const detectedFps = estimateRefreshRateFromDeltas(
+              vsyncDeltas,
+              currentFps
+            );
+            if (detectedFps !== currentFps) {
+              currentFps = syncActiveFps(detectedFps);
+            }
+          }
+        }
+      }
+      lastRawVsyncMs = now;
+
+      const gate = shouldRenderGaugeFrame(
+        now,
+        lastFrameMs,
+        currentFps,
+        pendingForce
+      );
       if (!gate.shouldRender) {
-        // Not yet at the 60fps boundary; wait for the next VSync frame
+        // Wait for the next VSync boundary matching the dynamically scaled throttle interval
         rafId = rafFn(onFrame);
         return;
       }
@@ -641,7 +846,14 @@
       lastFrameMs = gate.nextLastFrameMs;
       const keepRunning =
         typeof renderCallback === "function"
-          ? Boolean(renderCallback(gate.dtSeconds, now))
+          ? Boolean(
+              renderCallback(
+                gate.dtSeconds,
+                now,
+                gate.targetFps,
+                gate.intervalMs
+              )
+            )
           : false;
 
       if (keepRunning && rafId === 0) {
@@ -663,12 +875,28 @@
         cafFn(rafId);
         rafId = 0;
       }
+      lastRawVsyncMs = 0;
       pendingForce = false;
+    }
+
+    function setTargetFps(nextFps) {
+      return syncActiveFps(nextFps);
+    }
+
+    function getTargetFps() {
+      return resolveActiveFps();
+    }
+
+    function getThrottleIntervalMs() {
+      return computeDynamicThrottleInterval(resolveActiveFps()).intervalMs;
     }
 
     return {
       schedule,
       cancel,
+      setTargetFps,
+      getTargetFps,
+      getThrottleIntervalMs,
       isPending: function () {
         return rafId !== 0;
       },
@@ -877,9 +1105,9 @@
    */
   function createStatCardsRafLoop(options) {
     const opts = options || {};
-    const targetFps =
+    let targetFps =
       Number.isFinite(Number(opts.targetFps)) && Number(opts.targetFps) > 0
-        ? Number(opts.targetFps)
+        ? Math.min(240, Math.max(30, Number(opts.targetFps)))
         : 60;
     const onCommit = typeof opts.onCommit === "function" ? opts.onCommit : null;
 
@@ -892,19 +1120,26 @@
             return Date.now();
           };
 
+    const winObj =
+      typeof window !== "undefined" && window !== null ? window : null;
+
     const rafFn =
-      typeof requestAnimationFrame === "function"
-        ? requestAnimationFrame
-        : function (cb) {
-            return setTimeout(function () {
-              cb(nowFn());
-            }, 1000 / targetFps);
-          };
+      winObj && typeof winObj.requestAnimationFrame === "function"
+        ? winObj.requestAnimationFrame.bind(winObj)
+        : typeof requestAnimationFrame === "function"
+          ? requestAnimationFrame
+          : function (cb) {
+              return setTimeout(function () {
+                cb(nowFn());
+              }, 1000 / targetFps);
+            };
 
     const cafFn =
-      typeof cancelAnimationFrame === "function"
-        ? cancelAnimationFrame
-        : clearTimeout;
+      winObj && typeof winObj.cancelAnimationFrame === "function"
+        ? winObj.cancelAnimationFrame.bind(winObj)
+        : typeof cancelAnimationFrame === "function"
+          ? cancelAnimationFrame
+          : clearTimeout;
 
     let rafId = 0;
     let lastFrameMs = 0;
@@ -986,9 +1221,13 @@
     function syncFrame(nowMs, dtSeconds) {
       const now =
         typeof nowMs === "number" && nowMs > 0 ? nowMs : nowFn();
+      const minDt =
+        targetFps > 60
+          ? Math.max(0.002, Number((0.5 / targetFps).toFixed(4)))
+          : 0.008;
       const dt =
         typeof dtSeconds === "number" && dtSeconds > 0
-          ? Math.min(0.05, Math.max(0.008, dtSeconds))
+          ? Math.min(0.05, Math.max(minDt, dtSeconds))
           : 1 / targetFps;
 
       lastFrameMs = now;
@@ -1231,12 +1470,26 @@
       }
     }
 
+    function setTargetFps(nextFps) {
+      const numeric = Number(nextFps);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        targetFps = Math.min(240, Math.max(30, numeric));
+      }
+      return targetFps;
+    }
+
+    function getTargetFps() {
+      return targetFps;
+    }
+
     return {
       setLiveTargets,
       startCountUp,
       syncFrame,
       reset,
       cancel,
+      setTargetFps,
+      getTargetFps,
       getState: function () {
         return {
           mode,
@@ -1246,6 +1499,7 @@
           lastAvgUnit,
           lastCountingUp,
           commitCount,
+          targetFps,
           isPending: rafId !== 0,
         };
       },
@@ -1946,6 +2200,10 @@
     evaluateGamingStability,
     smoothNumericValue,
     resolveRealConnectionInfo,
+    STANDARD_REFRESH_RATES,
+    quantizeRefreshRate,
+    estimateRefreshRateFromDeltas,
+    computeDynamicThrottleInterval,
     shouldRenderGaugeFrame,
     createRafGaugeThrottler,
     computeCountUpFrame,

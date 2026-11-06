@@ -82,5 +82,10 @@ if (typeof window !== 'undefined') {
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
+  const redirectMsg = document.getElementById('redirect-status-msg');
+  if (redirectMsg) {
+    redirectMsg.style.display = 'none';
+  }
+  document.body.removeAttribute('style');
   createRoot(rootElement).render(<App />);
 }

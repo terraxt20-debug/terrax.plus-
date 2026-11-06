@@ -1908,6 +1908,519 @@ test('App.tsx event-driven 60fps requestAnimationFrame throttling and full smoot
   assert.equal(finishedTel.maxSpeedDisplay, '500');
 });
 
+test('Footer navigation buttons (.nav-dock-item) enforce at least 48px by 48px touch target dimensions across all pages and mobile breakpoints', async () => {
+  const fs = await import('node:fs');
+  const indexCss = fs.readFileSync(new URL('../frontend/styling/index.css', import.meta.url), 'utf8');
+  const resultsCss = fs.readFileSync(new URL('../frontend/styling/results.css', import.meta.url), 'utf8');
+  const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
+  const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
+  const gamingHtml = fs.readFileSync(new URL('../gaming.html', import.meta.url), 'utf8');
+  const frontendGamingHtml = fs.readFileSync(new URL('../frontend/gaming.html', import.meta.url), 'utf8');
 
+  for (const [name, content] of [
+    ['frontend/styling/index.css', indexCss],
+    ['stability.html', stabilityHtml],
+    ['frontend/stability.html', frontendStabilityHtml],
+    ['gaming.html', gamingHtml],
+    ['frontend/gaming.html', frontendGamingHtml],
+  ]) {
+    assert.ok(
+      content.includes('grid-template-columns: repeat(5, minmax(48px, 1fr));'),
+      `${name} must define 5-column grid with minmax(48px, 1fr) for .terrax-bottom-nav`
+    );
+    assert.ok(
+      content.includes('min-width: 48px;') && content.includes('min-height: max(48px, 4.8rem);'),
+      `${name} must enforce min-width: 48px and min-height: max(48px, 4.8rem) on .nav-dock-item`
+    );
+  }
+
+  assert.ok(
+    resultsCss.includes('min-width: 48px;') && resultsCss.includes('min-height: max(48px, 4.8rem);'),
+    'frontend/styling/results.css must enforce min-width: 48px and min-height: max(48px, 4.8rem) on .nav-dock-item in landscape'
+  );
+  assert.ok(
+    !resultsCss.includes('min-height: 3.6rem;'),
+    'frontend/styling/results.css must not shrink .nav-dock-item below 48px'
+  );
+});
+
+test('Full 5-Point Architectural & 4K Telemetry Audit: React/HTML entry point bridge, 100% App.tsx feature parity, 9-channel smoothNumericValue in index.js, on-disk nodes/* endpoints, and subdirectory href resolution', async () => {
+  const fs = await import('node:fs');
+  const indexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const designSwitchJs = fs.readFileSync(new URL('../design-switch.js', import.meta.url), 'utf8');
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
+  const serverList = JSON.parse(fs.readFileSync(new URL('../server-list.json', import.meta.url), 'utf8'));
+  const viteConfig = fs.readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8');
+  const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
+  const gamingHtml = fs.readFileSync(new URL('../gaming.html', import.meta.url), 'utf8');
+
+  // 1. React/HTML entry bridge in index.html + design-switch.js
+  assert.ok(indexHtml.includes('<div id="root"'), 'index.html must include #root mount point');
+  assert.ok(indexHtml.includes('src="/src/main.tsx"'), 'index.html must link /src/main.tsx for Vite bundling');
+  assert.ok(designSwitchJs.includes("designParam === 'react'"), 'design-switch.js must allow ?design=react to mount React shell');
+
+  // 2. 100% Feature Parity between src/App.tsx and index-modern.html
+  assert.ok(appTsx.includes("const AUTO_GBPS_STORAGE_KEY = 'terrax_auto_gbps_v1'"), 'App.tsx must persist Auto-Gbps to localStorage');
+  assert.ok(appTsx.includes('id="test-timeline-progress"'), 'App.tsx must render #test-timeline-progress');
+  assert.ok(appTsx.includes('id="test-progress-fill"'), 'App.tsx must render #test-progress-fill');
+  assert.ok(appTsx.includes('id="share-results"'), 'App.tsx must render #share-results button');
+  assert.ok(appTsx.includes('<dialog id="share"'), 'App.tsx must render <dialog id="share">');
+  assert.ok(appTsx.includes('<dialog id="privacy"'), 'App.tsx must render <dialog id="privacy">');
+  assert.ok(appTsx.includes('id="open-privacy-from-settings"'), 'App.tsx must render #open-privacy-from-settings');
+  assert.ok(appTsx.includes('id="whatsapp-support-btn"'), 'App.tsx must render #whatsapp-support-btn');
+
+  // 3. Full 9-channel smoothNumericValue interpolation in frontend/javascript/index.js
+  assert.ok(indexJs.includes('testState.stabDisplayPercent'), 'index.js must smooth stability percentage');
+  assert.ok(indexJs.includes('testState.pingDisplayMs'), 'index.js must smooth ping readout');
+  assert.ok(indexJs.includes('testState.jitterDisplayMs'), 'index.js must smooth jitter readout');
+  assert.ok(indexJs.includes('testState.dlProgressRatio'), 'index.js must smooth download progress arc');
+  assert.ok(indexJs.includes('testState.ulProgressRatio'), 'index.js must smooth upload progress arc');
+
+  // 4. All 6 servers in server-list.json have real on-disk PHP endpoints
+  assert.ok(Array.isArray(serverList) && serverList.length >= 6, 'server-list.json must contain all configured servers');
+  for (const srv of serverList) {
+    for (const key of ['dlURL', 'ulURL', 'pingURL', 'getIpURL']) {
+      const relEndpoint = `${srv.server || ''}${srv[key]}`;
+      assert.ok(
+        fs.existsSync(new URL(`../${relEndpoint}`, import.meta.url)),
+        `On-disk endpoint must exist for ${srv.name}: ${relEndpoint}`
+      );
+    }
+  }
+
+  // 5. Subdirectory navigation safety in stability.html, gaming.html, and vite.config.ts
+  assert.ok(
+    viteConfig.includes("pathname === '/frontend/index-modern.html'"),
+    'vite.config.ts must map /frontend/index-modern.html to frontend/index.html'
+  );
+  assert.ok(
+    stabilityHtml.includes('I("nav-speed-btn").setAttribute("href", "index.html")'),
+    'stability.html must rewrite nav-speed-btn href when IS_FRONTEND_SUBDIR is true'
+  );
+  assert.ok(
+    gamingHtml.includes('I("nav-speed-btn").setAttribute("href", "index.html")'),
+    'gaming.html must rewrite nav-speed-btn href when IS_FRONTEND_SUBDIR is true'
+  );
+});
+
+test('Dynamic high-refresh-rate requestAnimationFrame gauge throttle in App.tsx and telemetry-math.js adapts accurately to 60Hz, 90Hz, 120Hz, 144Hz, 165Hz, and 240Hz monitors', async () => {
+  const fs = await import('node:fs');
+  const math = globalThis.TerraxTelemetryMath;
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const { quantizeDeviceRefreshRate, estimateRefreshRateFromDeltas } = await import('../src/App.tsx');
+
+  // 1. Verify standard refresh rate quantization (60, 75, 90, 120, 144, 165, 240 Hz)
+  assert.equal(quantizeDeviceRefreshRate(59.94), 60);
+  assert.equal(quantizeDeviceRefreshRate(74.8), 75);
+  assert.equal(quantizeDeviceRefreshRate(89.9), 90);
+  assert.equal(quantizeDeviceRefreshRate(119.88), 120);
+  assert.equal(quantizeDeviceRefreshRate(143.9), 144);
+  assert.equal(quantizeDeviceRefreshRate(164.8), 165);
+  assert.equal(quantizeDeviceRefreshRate(239.76), 240);
+
+  // 2. Verify VSync delta estimation rejects background-tab outlier stalls (>25ms) and snaps to true monitor Hz
+  assert.equal(
+    estimateRefreshRateFromDeltas([16.67, 16.65, 16.68, 450.0, 16.66, 16.67], 60),
+    60
+  );
+  assert.equal(
+    estimateRefreshRateFromDeltas([8.33, 8.34, 8.32, 8.33, 8.35, 120.0], 60),
+    120
+  );
+  assert.equal(
+    estimateRefreshRateFromDeltas([6.94, 6.95, 6.94, 6.93, 6.95], 60),
+    144
+  );
+  assert.equal(
+    estimateRefreshRateFromDeltas([4.16, 4.17, 4.17, 4.16, 4.18], 60),
+    240
+  );
+
+  // 3. Verify shouldRenderGaugeFrame preserves sub-16ms dtSeconds on 120Hz (~8.33ms) and 240Hz (~4.17ms) monitors
+  const g120First = math.shouldRenderGaugeFrame(100, 0, 120, false);
+  assert.equal(g120First.shouldRender, true);
+  assert.ok(Math.abs(g120First.dtSeconds - 1 / 120) < 0.001);
+
+  const g120TooEarly = math.shouldRenderGaugeFrame(104.0, g120First.nextLastFrameMs, 120, false);
+  assert.equal(g120TooEarly.shouldRender, false);
+
+  const g120Next = math.shouldRenderGaugeFrame(108.33, g120First.nextLastFrameMs, 120, false);
+  assert.equal(g120Next.shouldRender, true);
+  assert.ok(g120Next.dtSeconds >= 0.008 && g120Next.dtSeconds <= 0.009);
+
+  const g240First = math.shouldRenderGaugeFrame(200, 0, 240, false);
+  const g240Next = math.shouldRenderGaugeFrame(204.17, g240First.nextLastFrameMs, 240, false);
+  assert.equal(g240Next.shouldRender, true);
+  assert.ok(g240Next.dtSeconds >= 0.004 && g240Next.dtSeconds <= 0.0045);
+
+  // 4. Verify createRafGaugeThrottler and createStatCardsRafLoop expose dynamic setTargetFps/getTargetFps
+  const throttler = math.createRafGaugeThrottler(() => false, 60);
+  assert.equal(throttler.getTargetFps(), 60);
+  throttler.setTargetFps(144);
+  assert.equal(throttler.getTargetFps(), 144);
+  throttler.cancel();
+
+  const statLoop = math.createStatCardsRafLoop({ targetFps: 60 });
+  assert.equal(statLoop.getTargetFps(), 60);
+  statLoop.setTargetFps(120);
+  assert.equal(statLoop.getTargetFps(), 120);
+  statLoop.cancel();
+
+  // 5. Verify App.tsx uses window.requestAnimationFrame and dynamic refresh-rate calibration
+  assert.ok(appTsx.includes('window.requestAnimationFrame'), 'App.tsx must use window.requestAnimationFrame for VSync calibration and gauge loop');
+  assert.ok(appTsx.includes('estimateRefreshRateFromDeltas'), 'App.tsx must dynamically estimate device refresh rate from VSync deltas');
+  assert.ok(appTsx.includes('gaugeRafThrottlerRef.current?.setTargetFps?.(quantized)'), 'App.tsx must dynamically update gaugeRafThrottler target FPS');
+  assert.ok(appTsx.includes('statCardsLoopRef.current?.setTargetFps?.(quantized)'), 'App.tsx must dynamically update statCardsLoop target FPS');
+});
+
+test('Gauge arc activation flicker animation reinforces cyber aesthetic when Start button is clicked across results.css, index.js, and App.tsx', async () => {
+  const fs = await import('node:fs');
+  const resultsCss = fs.readFileSync(new URL('../frontend/styling/results.css', import.meta.url), 'utf8');
+  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+
+  // 1. Verify cyber arc activation flicker keyframes and classes in results.css
+  assert.ok(resultsCss.includes('@keyframes cyberArcActivationFlicker'), 'results.css must define @keyframes cyberArcActivationFlicker for download arc');
+  assert.ok(resultsCss.includes('@keyframes cyberArcActivationFlickerStab'), 'results.css must define @keyframes cyberArcActivationFlickerStab for stability arc');
+  assert.ok(resultsCss.includes('@keyframes cyberArcActivationFlickerUl'), 'results.css must define @keyframes cyberArcActivationFlickerUl for upload arc');
+  assert.ok(resultsCss.includes('@keyframes cyberTrackActivationFlicker'), 'results.css must define @keyframes cyberTrackActivationFlicker for initial track ring ignition');
+  assert.ok(resultsCss.includes('.gauge.cyber-arc-activating .gauge-active-arc'), 'results.css must bind .cyber-arc-activating to .gauge-active-arc');
+  assert.ok(resultsCss.includes('.gauge.cyber-arc-activating .gauge-track-bg'), 'results.css must bind .cyber-arc-activating to .gauge-track-bg');
+  assert.ok(
+    resultsCss.includes('@media (prefers-reduced-motion: reduce)') &&
+      resultsCss.includes('.gauge.cyber-arc-activating .gauge-active-arc'),
+    'results.css must respect prefers-reduced-motion for cyber-arc-activating'
+  );
+
+  // 2. Verify index.js triggers and cleans up cyber-arc-activating on Start button click
+  assert.ok(indexJs.includes('function triggerGaugeArcActivationFlicker()'), 'index.js must define triggerGaugeArcActivationFlicker()');
+  assert.ok(indexJs.includes('function clearGaugeArcActivationFlicker()'), 'index.js must define clearGaugeArcActivationFlicker()');
+  assert.ok(
+    indexJs.includes('classList.add("cyber-arc-activating")') ||
+      indexJs.includes("classList.add('cyber-arc-activating')"),
+    'index.js must add cyber-arc-activating class to gauges and arcs'
+  );
+  assert.ok(indexJs.includes('triggerGaugeArcActivationFlicker();'), 'startButtonClickHandler in index.js must invoke triggerGaugeArcActivationFlicker()');
+
+  // 3. Verify App.tsx triggers and cleans up cyber-arc-activating on Start button click
+  assert.ok(appTsx.includes('triggerGaugeArcFlicker'), 'App.tsx must define and call triggerGaugeArcFlicker on start button click');
+  assert.ok(appTsx.includes('clearGaugeArcFlicker'), 'App.tsx must define and call clearGaugeArcFlicker on abort/cleanup');
+  assert.ok(appTsx.includes("arcFlickerActive ? 'cyber-arc-activating' : ''"), 'App.tsx must apply cyber-arc-activating class to gauges and SVG arcs');
+});
+
+test('Gauge rendering loop dynamically scales throttle interval using detectedRefreshRateRef without idle CPU waste', async () => {
+  const fs = await import('node:fs');
+  const math = globalThis.TerraxTelemetryMath;
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
+  const { computeDynamicThrottleInterval } = await import('../src/App.tsx');
+
+  // 1. Verify computeDynamicThrottleInterval scales intervalMs directly from a live detectedRefreshRateRef object
+  const detectedRefreshRateRef = { current: 60 };
+  const t60 = computeDynamicThrottleInterval(detectedRefreshRateRef);
+  assert.equal(t60.targetFps, 60);
+  assert.ok(Math.abs(t60.intervalMs - 1000 / 60) < 0.001);
+
+  detectedRefreshRateRef.current = 120;
+  const t120 = computeDynamicThrottleInterval(detectedRefreshRateRef);
+  assert.equal(t120.targetFps, 120);
+  assert.ok(Math.abs(t120.intervalMs - 1000 / 120) < 0.001);
+
+  detectedRefreshRateRef.current = 144;
+  const t144 = computeDynamicThrottleInterval(detectedRefreshRateRef);
+  assert.equal(t144.targetFps, 144);
+  assert.ok(Math.abs(t144.intervalMs - 1000 / 144) < 0.001);
+
+  detectedRefreshRateRef.current = 240;
+  const t240 = computeDynamicThrottleInterval(detectedRefreshRateRef);
+  assert.equal(t240.targetFps, 240);
+  assert.ok(Math.abs(t240.intervalMs - 1000 / 240) < 0.001);
+
+  // 2. Verify shouldRenderGaugeFrame and createRafGaugeThrottler dynamically track mutations to detectedRefreshRateRef.current
+  const liveRef = { current: 60 };
+  const throttler = math.createRafGaugeThrottler(() => false, liveRef);
+  assert.equal(throttler.getTargetFps(), 60);
+  assert.ok(Math.abs(throttler.getThrottleIntervalMs() - 16.6667) < 0.01);
+
+  // Mutating liveRef.current directly immediately scales the throttler interval without recreating the loop
+  liveRef.current = 144;
+  assert.equal(throttler.getTargetFps(), 144);
+  assert.ok(Math.abs(throttler.getThrottleIntervalMs() - 1000 / 144) < 0.01);
+
+  const gate144First = math.shouldRenderGaugeFrame(100, 0, liveRef, false);
+  assert.equal(gate144First.shouldRender, true);
+  assert.equal(gate144First.targetFps, 144);
+  assert.ok(Math.abs(gate144First.intervalMs - 1000 / 144) < 0.01);
+
+  const gate144Early = math.shouldRenderGaugeFrame(103.5, gate144First.nextLastFrameMs, liveRef, false);
+  assert.equal(gate144Early.shouldRender, false);
+
+  const gate144Ready = math.shouldRenderGaugeFrame(106.95, gate144First.nextLastFrameMs, liveRef, false);
+  assert.equal(gate144Ready.shouldRender, true);
+  throttler.cancel();
+
+  // 3. Verify App.tsx and index.js wire detectedRefreshRateRef directly into the gauge throttle loop and halt when idle
+  assert.ok(
+    appTsx.includes('computeDynamicThrottleInterval(detectedRefreshRateRef)'),
+    'App.tsx must compute dynamic throttle interval directly from detectedRefreshRateRef'
+  );
+  assert.ok(
+    appTsx.includes('mathInit.createRafGaugeThrottler(\n        renderGaugeFrame,\n        detectedRefreshRateRef\n      )'),
+    'App.tsx must pass detectedRefreshRateRef into createRafGaugeThrottler'
+  );
+  assert.ok(
+    !appTsx.includes('testDataDirtyRef.current ||\n          uiStateRef.current === RUNNING'),
+    'App.tsx renderGaugeFrame must not spin unconditionally on uiStateRef.current === RUNNING when idle'
+  );
+  assert.ok(
+    indexJs.includes('const detectedRefreshRateRef = { current: 60 };'),
+    'index.js must maintain detectedRefreshRateRef for dynamic throttle interval scaling'
+  );
+});
+
+test('CSS animation gently pulses gauge-outer-bezel elements when application state is RUNNING across results.css, App.tsx, and index.js', async () => {
+  const fs = await import('node:fs');
+  const resultsCss = fs.readFileSync(new URL('../frontend/styling/results.css', import.meta.url), 'utf8');
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
+
+  // 1. Verify @keyframes gaugeOuterBezelPulse, gaugeOuterBezelPulseStab, and gaugeOuterBezelPulseUl in results.css
+  assert.ok(
+    resultsCss.includes('@keyframes gaugeOuterBezelPulse'),
+    'results.css must define @keyframes gaugeOuterBezelPulse for download gauge outer bezel'
+  );
+  assert.ok(
+    resultsCss.includes('@keyframes gaugeOuterBezelPulseStab'),
+    'results.css must define @keyframes gaugeOuterBezelPulseStab for stability gauge outer bezel'
+  );
+  assert.ok(
+    resultsCss.includes('@keyframes gaugeOuterBezelPulseUl'),
+    'results.css must define @keyframes gaugeOuterBezelPulseUl for upload gauge outer bezel'
+  );
+
+  // 2. Verify RUNNING state selectors and prefers-reduced-motion protection in results.css
+  assert.ok(
+    resultsCss.includes('.gauge.running .gauge-outer-bezel') &&
+      resultsCss.includes('.gauge-outer-bezel.running'),
+    'results.css must activate gaugeOuterBezelPulse on .gauge.running .gauge-outer-bezel and .gauge-outer-bezel.running'
+  );
+  assert.ok(
+    resultsCss.includes('@media (prefers-reduced-motion: reduce)') &&
+      resultsCss.includes('.gauge-outer-bezel.running'),
+    'results.css must disable gauge-outer-bezel pulse animation under prefers-reduced-motion: reduce'
+  );
+
+  // 3. Verify App.tsx and index.js toggle running class on gauge-outer-bezel when state is RUNNING
+  assert.ok(
+    appTsx.includes("gauge-outer-bezel ${gaugesRunning ? 'running' : ''}") &&
+      appTsx.includes("gauge-outer-bezel stab-outer-bezel ${gaugesRunning ? 'running' : ''}") &&
+      appTsx.includes("gauge-outer-bezel ul-outer-bezel ${gaugesRunning ? 'running' : ''}"),
+    'App.tsx must toggle running class on all three gauge-outer-bezel elements when gaugesRunning is true'
+  );
+  assert.ok(
+    indexJs.includes('document.querySelectorAll(".gauge-outer-bezel").forEach((bezel) =>') &&
+      indexJs.includes('bezel.classList.toggle("running", testState.state === RUNNING)'),
+    'index.js must toggle running class on .gauge-outer-bezel elements when testState.state === RUNNING'
+  );
+});
+
+test('Google AdSense Complete Engineering Audit & Safe Integration: policy compliance, zero external smartlink/1x1 iframe, complete eligibility disclosures (About, Terms, Contact, Cookies), and sitemap/JSON-LD readiness', async () => {
+  const fs = await import('node:fs');
+  const adSlotsJs = fs.readFileSync(new URL('../frontend/javascript/ad-slots.js', import.meta.url), 'utf8');
+  const adsConfigTs = fs.readFileSync(new URL('../src/config/adsConfig.ts', import.meta.url), 'utf8');
+  const autoRefreshCardTsx = fs.readFileSync(
+    new URL('../src/components/ads/AutoRefreshHybridAdCard.tsx', import.meta.url),
+    'utf8'
+  );
+  const indexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const indexModernHtml = fs.readFileSync(new URL('../index-modern.html', import.meta.url), 'utf8');
+  const frontendIndexHtml = fs.readFileSync(new URL('../frontend/index.html', import.meta.url), 'utf8');
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const robotsTxt = fs.readFileSync(new URL('../robots.txt', import.meta.url), 'utf8');
+  const publicRobotsTxt = fs.readFileSync(new URL('../public/robots.txt', import.meta.url), 'utf8');
+  const sitemapXml = fs.readFileSync(new URL('../sitemap.xml', import.meta.url), 'utf8');
+  const publicSitemapXml = fs.readFileSync(new URL('../public/sitemap.xml', import.meta.url), 'utf8');
+
+  // 1. Policy Compliance: No external unverified smartlink URLs (asiafilm.org) in ad-slots.js or adsConfig.ts
+  assert.ok(!adSlotsJs.includes('asiafilm.org'), 'ad-slots.js must not reference external unverified smartlink domain');
+  assert.ok(!adsConfigTs.includes('asiafilm.org'), 'adsConfig.ts must not reference external unverified smartlink domain');
+  assert.equal(globalThis.TerraxSmartAdEngine.ADSTERRA_SMARTLINK_URL, '#terrax-adsense-verified');
+  assert.ok(
+    adSlotsJs.includes('card.setAttribute("data-auto-frame-loaded", "adsense-safe")'),
+    'mountAutomaticEmbeddedAdFrame must short-circuit safely without injecting 1x1 hidden iframes in AdSense mode'
+  );
+  assert.ok(
+    autoRefreshCardTsx.includes('!smartlinkUrl.startsWith(\'#\') && !ADS_CONFIG.ADSENSE.ENABLE_ADSENSE'),
+    'AutoRefreshHybridAdCard.tsx must not mount hidden 1x1 iframe when AdSense is enabled'
+  );
+
+  // 2. AdSense Eligibility Pages/Sections: No developer placeholders (PUT@YOUR_EMAIL.HERE), complete About, Terms, Cookies, and Contact sections
+  for (const [name, content] of [
+    ['index-modern.html', indexModernHtml],
+    ['frontend/index.html', frontendIndexHtml],
+    ['src/App.tsx', appTsx],
+  ]) {
+    assert.ok(!content.includes('PUT@YOUR_EMAIL.HERE'), `${name} must not contain PUT@YOUR_EMAIL.HERE placeholder`);
+    assert.ok(!content.includes('TO BE FILLED BY DEVELOPER'), `${name} must not contain TO BE FILLED BY DEVELOPER placeholder`);
+    assert.ok(content.includes('id="about-terrax-heading"'), `${name} must include About Terrax Plus section`);
+    assert.ok(content.includes('id="adsense-cookies-heading"'), `${name} must include Google AdSense & Cookies disclosure section`);
+    assert.ok(content.includes('id="terms-of-use-heading"'), `${name} must include Terms of Use section`);
+    assert.ok(content.includes('id="contact-us-heading"'), `${name} must include Contact Us section`);
+    assert.ok(content.includes('mailto:terrax.t20@gmail.com'), `${name} must include official contact email`);
+  }
+
+  // 3. SEO, Sitemap, robots.txt & Schema.org JSON-LD readiness
+  assert.ok(sitemapXml.includes('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'));
+  assert.ok(sitemapXml.includes('/index-modern.html</loc>'));
+  assert.ok(sitemapXml.includes('/stability.html</loc>'));
+  assert.ok(sitemapXml.includes('/gaming.html</loc>'));
+  assert.equal(sitemapXml, publicSitemapXml, 'root sitemap.xml and public/sitemap.xml must match');
+  assert.ok(robotsTxt.includes('Sitemap:'), 'robots.txt must declare Sitemap URL');
+  assert.ok(publicRobotsTxt.includes('Sitemap:'), 'public/robots.txt must declare Sitemap URL');
+  assert.ok(indexHtml.includes('"@type": "WebApplication"'), 'index.html must include Schema.org WebApplication JSON-LD');
+  assert.ok(indexModernHtml.includes('"@type": "WebApplication"'), 'index-modern.html must include Schema.org WebApplication JSON-LD');
+});
+
+test('Web Worker RUNNING State Ad-Request Isolation: strict prevention of AdSense and Yandex requests, in-flight timer cancellation, and pauseAdRequests=1 across all test controllers', async () => {
+  const fs = await import('node:fs');
+  await import('../frontend/javascript/ad-slots.js');
+  const engine = globalThis.TerraxSmartAdEngine;
+  const adsManagerMod = await import('../ads/adsense.manager.js');
+  const adsLifecycleMod = await import('../ads/adsense.lifecycle.js');
+
+  // 1. Ensure clean READY state before starting test
+  engine.setConsentChoice('personalized');
+  engine.setTestingState(false);
+  engine.resetStabilityMilestones();
+  assert.equal(engine.getState().isTesting, false);
+  assert.equal(engine.getState().testEngineState, 'READY');
+  assert.equal(globalThis.adsbygoogle.pauseAdRequests, 0);
+
+  // Queue an unexecuted Yandex callback before entering RUNNING
+  globalThis.yaContextCb = [() => {}];
+
+  // 2. Enter RUNNING state (simulating Web Worker measurement launch)
+  const isNowTesting = engine.setTestingState(true);
+  assert.equal(isNowTesting, true);
+  assert.equal(engine.getState().isTesting, true);
+  assert.equal(engine.getState().testEngineState, 'RUNNING');
+
+  // Google AdSense runtime must be paused (pauseAdRequests = 1) during RUNNING
+  assert.equal(
+    globalThis.adsbygoogle.pauseAdRequests,
+    1,
+    'Google AdSense pauseAdRequests must be set to 1 while Web Worker is in RUNNING state'
+  );
+
+  // Pending Yandex callback queue must be flushed/aborted on transition to RUNNING
+  assert.equal(
+    globalThis.yaContextCb.length,
+    0,
+    'Pending Yandex callback queue must be cleared when entering RUNNING state'
+  );
+
+  // AdSense & Yandex script loaders and slot refreshers must be strictly blocked during RUNNING
+  assert.equal(
+    engine.ensureGoogleAdSenseScriptLoaded(),
+    false,
+    'ensureGoogleAdSenseScriptLoaded must return false during RUNNING state'
+  );
+  assert.equal(
+    engine.ensureExternalYandexScriptLoaded(),
+    false,
+    'ensureExternalYandexScriptLoaded must return false during RUNNING state'
+  );
+  assert.equal(
+    engine.refreshAllSlots('attempt-during-worker-run'),
+    false,
+    'refreshAllSlots must return false during RUNNING state'
+  );
+  assert.equal(
+    engine.onTabChange('servers'),
+    false,
+    'onTabChange must not trigger ad requests during RUNNING state'
+  );
+
+  // Stability 30s elapsed tick during active stability_worker.js run must be suppressed and queued for post-test
+  engine.resetStabilityMilestones();
+  const tick30WhileRunning = engine.onStabilityElapsedTick(30);
+  assert.equal(
+    tick30WhileRunning,
+    false,
+    'onStabilityElapsedTick(30) must not trigger live ad refreshes while stability_worker.js is in RUNNING state'
+  );
+  assert.equal(
+    engine.getState().pendingAdLoadAfterTest,
+    true,
+    'Suppressed stability tick during RUNNING must queue pendingAdLoadAfterTest for post-worker flush'
+  );
+
+  // AdSenseManager & AdSenseLifecycle also enforce pauseAdRequests=1 and zero mounting during RUNNING
+  adsManagerMod.AdSenseManager.setEngineTestState('RUNNING');
+  assert.equal(adsManagerMod.AdSenseManager.getState().isTesting, true);
+  assert.equal(globalThis.adsbygoogle.pauseAdRequests, 1);
+  assert.equal(adsLifecycleMod.mountAllRegisteredContainers({ isTesting: true }), 0);
+
+  // 3. Complete test (onTestComplete) -> releases lock and restores pauseAdRequests = 0
+  engine.onTestComplete('speed');
+  adsManagerMod.AdSenseManager.onTestComplete('speed');
+  assert.equal(engine.getState().isTesting, false);
+  assert.equal(engine.getState().testEngineState, 'FINISHED');
+  assert.equal(
+    globalThis.adsbygoogle.pauseAdRequests,
+    0,
+    'pauseAdRequests must be restored to 0 once Web Worker completes'
+  );
+
+  // Reset to READY and unset consent
+  engine.setTestingState(false);
+  engine.setConsentChoice('unset');
+
+  // 4. Verify all JS/TS speed, stability, and gaming controllers lock TerraxSmartAdEngine before spawning Web Workers
+  const indexJs = fs.readFileSync(new URL('../frontend/javascript/index.js', import.meta.url), 'utf8');
+  const appTsx = fs.readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const stabilityHtml = fs.readFileSync(new URL('../stability.html', import.meta.url), 'utf8');
+  const frontendStabilityHtml = fs.readFileSync(new URL('../frontend/stability.html', import.meta.url), 'utf8');
+  const gamingHtml = fs.readFileSync(new URL('../gaming.html', import.meta.url), 'utf8');
+  const frontendGamingHtml = fs.readFileSync(new URL('../frontend/gaming.html', import.meta.url), 'utf8');
+
+  assert.ok(
+    indexJs.includes('globalThis.TerraxSmartAdEngine?.setTestingState(true)'),
+    'frontend/javascript/index.js must lock TerraxSmartAdEngine before starting speedtest_worker.js'
+  );
+  assert.ok(
+    appTsx.includes('globalEngine?.setTestingState?.(true)') &&
+      appTsx.includes('globalEngine?.setTestingState?.(false)') &&
+      appTsx.includes("globalEngine?.onTestComplete?.('speed')"),
+    'src/App.tsx must synchronize setTestingState(true/false) and onTestComplete with TerraxSmartAdEngine'
+  );
+  for (const [label, html] of [
+    ['stability.html', stabilityHtml],
+    ['frontend/stability.html', frontendStabilityHtml],
+  ]) {
+    assert.ok(
+      html.includes('window.TerraxSmartAdEngine.setTestingState(true);'),
+      `${label} startTest() must lock TerraxSmartAdEngine before launching stability_worker.js`
+    );
+    assert.ok(
+      html.includes('window.TerraxSmartAdEngine.setTestingState(false);'),
+      `${label} stopTest() must release TerraxSmartAdEngine lock when stability_worker.js stops`
+    );
+  }
+  for (const [label, html] of [
+    ['gaming.html', gamingHtml],
+    ['frontend/gaming.html', frontendGamingHtml],
+  ]) {
+    assert.ok(
+      html.includes('window.TerraxSmartAdEngine.setTestingState(true);'),
+      `${label} must lock TerraxSmartAdEngine before starting gaming measurement worker`
+    );
+    assert.ok(
+      html.includes('window.TerraxSmartAdEngine.setTestingState(false);'),
+      `${label} must release TerraxSmartAdEngine lock on gaming test abort`
+    );
+  }
+});
 
 

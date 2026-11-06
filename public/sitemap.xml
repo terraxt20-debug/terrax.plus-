@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://ais-pre-phrzns5yxrtvfauqr5qwp4-81506614204.europe-west2.run.app/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://ais-pre-phrzns5yxrtvfauqr5qwp4-81506614204.europe-west2.run.app/index-modern.html</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://ais-pre-phrzns5yxrtvfauqr5qwp4-81506614204.europe-west2.run.app/stability.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ais-pre-phrzns5yxrtvfauqr5qwp4-81506614204.europe-west2.run.app/gaming.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+</urlset>

@@ -1410,7 +1410,7 @@
     .terrax-bottom-nav {
       width: 100%;
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(48px, 1fr));
       align-items: stretch;
       gap: clamp(0.35rem, 0.8vw, 0.75rem);
       padding: clamp(0.45rem, 0.8vw, 0.6rem) clamp(0.45rem, 1vw, 0.85rem);
@@ -1433,8 +1433,8 @@
       justify-content: center;
       gap: 0.28rem;
       padding: 0.55rem 0.35rem;
-      min-height: 4.5rem;
-      min-width: 0;
+      min-height: max(48px, 4.8rem);
+      min-width: 48px;
       border-radius: 1.2rem;
       border: 1px solid rgba(39, 221, 248, 0.08);
       background: rgba(16, 35, 66, 0.25);
@@ -1746,7 +1746,8 @@
       .terrax-bottom-nav .nav-dock-item {
         font-size: 1.04rem;
         padding: 0.5rem 0.2rem;
-        min-height: 4.4rem;
+        min-width: 48px;
+        min-height: max(48px, 4.8rem);
       }
       .terrax-bottom-nav .nav-dock-item svg {
         width: 1.85rem;
@@ -1823,7 +1824,8 @@
       .terrax-bottom-nav .nav-dock-item {
         font-size: 0.94rem;
         padding: 0.42rem 0.12rem;
-        min-height: 4.2rem;
+        min-width: 48px;
+        min-height: max(48px, 4.8rem);
         border-radius: 0.95rem;
       }
       .terrax-bottom-nav .nav-dock-item svg {
@@ -2428,6 +2430,11 @@
     function I(id) {
       return document.getElementById(id);
     }
+    if (IS_FRONTEND_SUBDIR) {
+      if (I("nav-speed-btn")) I("nav-speed-btn").setAttribute("href", "index.html");
+      if (I("nav-usage-btn")) I("nav-usage-btn").setAttribute("href", "index.html?tab=usage");
+      if (I("nav-settings-btn")) I("nav-settings-btn").setAttribute("href", "index.html?tab=settings");
+    }
 
     function joinServerUrl(server, path) {
       if (!server) return path;
@@ -2628,6 +2635,9 @@
       }
 
       try {
+        if (window.TerraxSmartAdEngine) {
+          window.TerraxSmartAdEngine.setTestingState(true);
+        }
         var worker = new Worker(STABILITY_WORKER_PATH + "?r=" + Math.random());
         gamingState.pingWorker = worker;
         worker.onmessage = function (e) {
